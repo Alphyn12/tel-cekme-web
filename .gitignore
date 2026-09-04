@@ -1,0 +1,22 @@
+# İşletim sistemi
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Editör
+.vscode/
+.idea/
+*.swp
+*~
+
+# Tarayıcı testleri
+.playwright-mcp/
+
+# Geçici / yerel
+*.log
+tmp/
+scratch/
+*.local.html
+
+# Claude Code yerel ayarları
+.claude/settings.local.json

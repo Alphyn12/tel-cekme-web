@@ -1,0 +1,3944 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tel Çekme Pas Programı Hesaplayıcısı</title>
+<meta name="description" content="Bakır tel çekme hattı için pas programı kuran, her pasta kopma riskini hesaplayan ve sonucun belirsizliğini birlikte raporlayan tek dosyalık ön tasarım aracı.">
+<meta name="theme-color" content="#EDEFEE" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121615" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://tel-cekme.vercel.app/">
+<meta property="og:title" content="Tel Çekme Pas Programı Hesaplayıcısı">
+<meta property="og:description" content="Pas programı, kopma riski ve belirsizlik bir arada: Siebel çekme gerilmesi, eşit gerinim / kademeli azalan / eşit emniyet dağıtımı, sekiz canlı doğrulama testi.">
+<meta property="og:image" content="https://tel-cekme.vercel.app/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="tr_TR">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ==== TASARIM SİSTEMİ ====
+   Renkler CSS değişkeni olarak. Açık tema :root'ta tam tanımlı; koyu tema hem sistem
+   tercihinde hem de data-theme="dark" ile yeniden tanımlanıyor. Hiçbir renk yalnızca
+   koyu tema bloğunda tanımlı değil. */
+
+:root {
+  --bg:#EDEFEE;  --surface:#F8F9F8;  --sunk:#E7EBE9;
+  --ink:#141A19; --ink2:#414B49;     --ink3:#6C7775;
+  --line:#D2D8D6; --line-strong:#B9C2BF;
+  --copper:#A6512A; --copper-tint:#F0DED3;
+  --patina:#2C6E64; --patina-tint:#D9E6E2;
+  --warn:#8A6410;   --warn-tint:#F0E5CC;
+  --crit:#8E3140;   --crit-tint:#F2DCDF;
+
+  /* Tipografi ölçeği — dışına çıkılmaz */
+  --t11:11px; --t125:12.5px; --t14:14px; --t16:16px;
+  --t19:19px; --t24:24px; --t32:32px; --t44:44px;
+
+  /* Boşluk ölçeği — ara değer yok */
+  --s4:4px; --s8:8px; --s12:12px; --s16:16px;
+  --s24:24px; --s32:32px; --s48:48px; --s64:64px;
+
+  --gecis:160ms ease-out;
+  --dokunma:44px;               /* en küçük dokunma hedefi */
+
+  --yazi-baslik:'Archivo', system-ui, sans-serif;
+  --yazi-govde:'IBM Plex Sans', system-ui, sans-serif;
+  --yazi-mono:'IBM Plex Mono', ui-monospace, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#121615;  --surface:#1A201F;  --sunk:#161C1B;
+    --ink:#E8EDEB; --ink2:#AEBAB7;     --ink3:#7C8886;
+    --line:#2C3533; --line-strong:#3C4644;
+    --copper:#E09258; --copper-tint:#3A2519;
+    --patina:#6FB3A6; --patina-tint:#16302C;
+    --warn:#D2A345;   --warn-tint:#33290F;
+    --crit:#D97A85;   --crit-tint:#361A1F;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg:#121615;  --surface:#1A201F;  --sunk:#161C1B;
+  --ink:#E8EDEB; --ink2:#AEBAB7;     --ink3:#7C8886;
+  --line:#2C3533; --line-strong:#3C4644;
+  --copper:#E09258; --copper-tint:#3A2519;
+  --patina:#6FB3A6; --patina-tint:#16302C;
+  --warn:#D2A345;   --warn-tint:#33290F;
+  --crit:#D97A85;   --crit-tint:#361A1F;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 var(--t14)/1.6 var(--yazi-govde);
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Odak halkası: outline sıfırlanmıyor, kendi halkamız tanımlanıyor. */
+:focus-visible {
+  outline: 2px solid var(--copper);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+
+/* ---- Düzen ---- */
+.kabuk {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: var(--s16);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s24);
+}
+
+.ust {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s12);
+  padding-bottom: var(--s12);
+  border-bottom: 1px solid var(--line-strong);
+}
+.ust h1 {
+  font: 700 var(--t24)/1.15 var(--yazi-baslik);
+  margin: 0;
+  text-wrap: balance;
+}
+.ust p {
+  margin: var(--s4) 0 0;
+  color: var(--ink3);
+  font-size: var(--t125);
+  max-width: 65ch;
+}
+@media (min-width: 720px) { .ust h1 { font-size: var(--t32); } }
+
+/* ---- Segment düğmesi (dil) ---- */
+.segment { display: flex; border: 1px solid var(--line-strong); }
+.segment button {
+  min-height: var(--dokunma);
+  min-width: var(--dokunma);
+  padding: 0 var(--s12);
+  border: 0;
+  background: var(--surface);
+  color: var(--ink2);
+  font: 600 var(--t125)/1 var(--yazi-govde);
+  letter-spacing: .08em;
+  cursor: pointer;
+  transition: background var(--gecis), color var(--gecis);
+}
+.segment button + button { border-left: 1px solid var(--line-strong); }
+.segment button[aria-pressed="true"] { background: var(--copper-tint); color: var(--copper); }
+
+/* ---- Bölüm başlıkları ---- */
+.bolum { display: flex; flex-direction: column; gap: var(--s12); }
+.bolum-basligi {
+  font: 600 var(--t11)/1 var(--yazi-mono);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink3);
+  margin: 0;
+}
+
+/* ---- Girdi paneli ---- */
+.panel {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  padding: var(--s12);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: var(--s12) var(--s16);
+}
+.panel[hidden] { display: none; }
+
+.alan { display: flex; flex-direction: column; gap: var(--s4); min-width: 0; }
+.alan label, .alan .etiket {
+  font: 500 var(--t11)/1.2 var(--yazi-mono);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink3);
+  /* İki satıra taşan etiketlerde kutular hizada kalsın */
+  min-height: calc(2 * 1.2 * var(--t11));
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 0 var(--s4);
+}
+.alan .birim { color: var(--ink3); font-weight: 400; letter-spacing: 0; text-transform: none; }
+
+input[type="number"], input[type="text"], textarea, select {
+  font: 500 var(--t16)/1 var(--yazi-mono);   /* sayısal değerler mono */
+  color: var(--ink);
+  background: var(--sunk);
+  border: 1px solid var(--line-strong);
+  border-radius: 2px;
+  min-height: var(--dokunma);
+  padding: 0 var(--s8);
+  width: 100%;
+  min-width: 0;
+  transition: border-color var(--gecis), background var(--gecis);
+}
+/* Cümle ve kontrol metinleri Sans; mono yalnızca sayı, etiket ve formül için. */
+select, textarea { font-family: var(--yazi-govde); font-weight: 400; }
+::placeholder { font-family: var(--yazi-govde); color: var(--ink3); opacity: 1; }
+textarea {
+  padding: var(--s8);
+  line-height: 1.6;
+  resize: vertical;
+  min-height: 72px;
+  font-size: var(--t14);
+  font-family: var(--yazi-mono);   /* içine çap dizisi yazılır */
+}
+input[type="number"]:hover, select:hover, textarea:hover { border-color: var(--ink3); }
+input:disabled, select:disabled, textarea:disabled { color: var(--ink3); background: var(--bg); cursor: not-allowed; }
+
+/* Tarayıcının sayı okları ve select oku gizleniyor; kendi görünümümüz kullanılıyor. */
+input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+.secim { position: relative; display: flex; }
+select { appearance: none; -webkit-appearance: none; padding-right: var(--s32); }
+.secim svg { position: absolute; right: var(--s8); top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--ink3); }
+
+/* ---- Düğmeler ---- */
+.dugme {
+  min-height: var(--dokunma);
+  padding: 0 var(--s12);
+  border: 1px solid var(--line-strong);
+  border-radius: 2px;
+  background: var(--surface);
+  color: var(--ink);
+  font: 500 var(--t125)/1 var(--yazi-govde);
+  cursor: pointer;
+  transition: background var(--gecis), border-color var(--gecis), color var(--gecis);
+}
+.dugme:hover { background: var(--sunk); border-color: var(--ink3); }
+.dugme[aria-pressed="true"] { border-color: var(--copper); color: var(--copper); background: var(--copper-tint); }
+.dugme.sessiz { border-color: var(--line); color: var(--ink2); font-size: var(--t11); min-height: var(--dokunma); }
+
+.dugme-sirasi { display: flex; flex-wrap: wrap; gap: var(--s8); }
+
+/* ---- Bölüm başlığı satırı ve kapalı panel özeti ---- */
+.baslik-satiri { display: flex; align-items: center; justify-content: space-between; gap: var(--s12); }
+.ozet {
+  margin: 0;
+  padding: var(--s12);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font: 500 var(--t14)/1.4 var(--yazi-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.ozet .ayrac { color: var(--ink3); padding: 0 var(--s4); }
+.ozet .sozcuk { font-family: var(--yazi-govde); font-weight: 400; color: var(--ink2); }
+
+/* ---- Pas sayısı alanı ---- */
+.pas-sayisi-satiri { display: flex; flex-wrap: wrap; gap: var(--s8); align-items: stretch; }
+.pas-sayisi-satiri input { flex: 1 1 96px; }
+.pas-sayisi-satiri .dugme { flex: 0 1 auto; white-space: nowrap; }
+.ipucu { font: 400 var(--t11)/1.4 var(--yazi-mono); color: var(--ink3); }
+.gerekce { font-size: var(--t125); color: var(--ink3); margin: 0; max-width: 65ch; }
+
+/* ---- Onay kutusu ---- */
+.kutu { display: inline-flex; align-items: center; justify-content: center;
+        min-width: var(--dokunma); min-height: var(--dokunma); cursor: pointer; }
+.kutu input { position: absolute; opacity: 0; width: 0; height: 0; }
+.kutu .gorsel {
+  width: 18px; height: 18px; border: 1px solid var(--line-strong); border-radius: 2px;
+  background: var(--sunk); display: inline-flex; align-items: center; justify-content: center;
+  transition: background var(--gecis), border-color var(--gecis);
+}
+.kutu .gorsel svg { opacity: 0; color: var(--copper); transition: opacity var(--gecis); }
+.kutu input:checked + .gorsel { border-color: var(--copper); background: var(--copper-tint); }
+.kutu input:checked + .gorsel svg { opacity: 1; }
+.kutu input:focus-visible + .gorsel { outline: 2px solid var(--copper); outline-offset: 2px; }
+
+/* ---- Özet şeridi ---- */
+.serit {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+.serit .hucre {
+  background: var(--surface);
+  padding: var(--s12);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+  min-width: 0;
+}
+.serit .etiket {
+  font: 500 var(--t11)/1.2 var(--yazi-mono);
+  letter-spacing: .12em; text-transform: uppercase; color: var(--ink3);
+}
+.serit .deger {
+  font: 600 var(--t24)/1 var(--yazi-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  display: flex; align-items: baseline; gap: var(--s4); flex-wrap: wrap;
+}
+.serit .deger .birim { font: 400 var(--t125)/1 var(--yazi-mono); color: var(--ink3); }
+.serit .not { font: 400 var(--t11)/1.3 var(--yazi-govde); color: var(--ink3); }
+.serit .hucre.crit .deger { color: var(--crit); }
+.serit .hucre.warn .deger { color: var(--warn); }
+.serit .hucre.ok   .deger { color: var(--patina); }
+
+/* ---- Öneri cümlesi ---- */
+.oneri {
+  margin: 0;
+  padding: var(--s12);
+  border: 1px solid var(--line-strong);
+  border-left: 2px solid var(--copper);
+  background: var(--surface);
+  font-size: var(--t14);
+  color: var(--ink);
+  max-width: 80ch;
+  display: flex; flex-direction: column; gap: var(--s8);
+}
+.oneri b { font-weight: 600; }
+.oneri .sayi { font-family: var(--yazi-mono); font-variant-numeric: tabular-nums; }
+
+/* ---- Karşılaştırma ---- */
+.degisen {
+  margin: 0;
+  padding: var(--s8) var(--s12);
+  border: 1px solid var(--warn);
+  background: var(--warn-tint);
+  color: var(--ink);
+  font-size: var(--t125);
+}
+.degisen.temiz { border-color: var(--line-strong); background: var(--sunk); color: var(--ink2); }
+
+.karsilastirma td, .karsilastirma th { text-align: right; }
+.karsilastirma td:first-child, .karsilastirma th:first-child { text-align: left; }
+.karsilastirma tbody tr:last-child td { border-bottom: 0; font-weight: 600; }
+.karsilastirma .fark-iyi { color: var(--patina); }
+.karsilastirma .fark-kotu { color: var(--crit); }
+
+/* ---- Tablo ---- */
+.tablo-kabi { overflow-x: auto; border: 1px solid var(--line); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; }
+th, td { padding: var(--s8) var(--s4); text-align: right; white-space: nowrap; }
+/* İki kelimelik başlıklar alt satıra sarsın; sütunlar dar kalsın, sayılar sarmasın. */
+thead th { white-space: normal; max-width: 96px; }
+th:first-child, td:first-child, th:last-child, td:last-child { text-align: left; }
+thead th {
+  font: 500 var(--t11)/1.3 var(--yazi-mono);
+  letter-spacing: .12em; text-transform: uppercase; color: var(--ink3);
+  border-bottom: 1px solid var(--line-strong); vertical-align: bottom;
+}
+thead th .birim { display: block; color: var(--ink3); font-weight: 400; letter-spacing: 0; text-transform: none; }
+tbody td {
+  font: 400 var(--t125)/1 var(--yazi-mono);
+  font-variant-numeric: tabular-nums;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+}
+tbody tr:hover td, tbody tr:active td { background: var(--sunk); }
+tbody td.ikincil { color: var(--ink2); }
+/* Eşik renkleri. Renk tek başına bilgi taşımaz: uyarı ve tehlike hücrelerinde
+   ayrıca simge ve okunabilir durum metni (aria-label) bulunur. */
+tbody td.crit { background: var(--crit-tint); color: var(--crit); font-weight: 500; }
+tbody td.warn { background: var(--warn-tint); color: var(--warn); font-weight: 500; }
+tbody td.ok   { color: var(--patina); }
+tbody td { position: relative; }   /* gizli durum metni hücrenin içinde kalsın */
+tbody td .durum { display: inline-flex; align-items: center; gap: var(--s4); justify-content: flex-end; }
+tbody td .durum svg { flex: none; }
+
+tbody tr.tavlandi td { background: var(--copper-tint); }
+tbody tr.tavlandi td:first-child { box-shadow: inset 2px 0 0 var(--copper); }
+.tavlama-etiketi { font: 500 var(--t11)/1 var(--yazi-mono); color: var(--copper); letter-spacing: .12em; }
+
+/* ---- Görseller ----
+   Bütün renkler tema değişkenlerinden gelir; SVG içinde sabit renk yoktur. */
+.gorsel-bolum { display: grid; grid-template-columns: 1fr; gap: var(--s16); }
+@media (min-width: 900px) { .gorsel-bolum { grid-template-columns: 1fr 1fr; } }
+
+.gorsel-kutu {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  padding: var(--s12);
+  display: flex; flex-direction: column; gap: var(--s8);
+  min-width: 0;
+}
+.gorsel-kutu h3 {
+  margin: 0;
+  font: 600 var(--t125)/1.2 var(--yazi-govde);
+  color: var(--ink);
+}
+.gorsel-kutu .gorsel-not { font: 400 var(--t11)/1.4 var(--yazi-govde); color: var(--ink3); margin: 0; }
+.g-svg { display: block; width: 100%; height: auto; }
+
+.g-aciklama { display: flex; flex-wrap: wrap; gap: var(--s4) var(--s12); }
+.g-orn { display: inline-flex; align-items: center; gap: var(--s4);
+         font: 400 var(--t11)/1.2 var(--yazi-govde); color: var(--ink2); }
+.g-orn-kutu { width: 12px; height: 12px; border: 1px solid transparent; flex: none; }
+.g-orn-dayanim { background: var(--ink2); }
+.g-orn-gerilme { background: var(--copper); }
+.g-orn-pay     { background: var(--patina-tint); border-color: var(--patina); }
+.g-orn-crit    { background: var(--crit); }
+.g-orn-warn    { background: var(--warn); }
+.g-orn-ok      { background: var(--patina); }
+
+/* SVG sınıfları — renk ya var(--...) ya currentColor */
+.g-etiket { font: 400 11px var(--yazi-mono); fill: var(--ink3); }
+.g-eksen-adi { font: 500 11px var(--yazi-mono); fill: var(--ink3); letter-spacing: .08em; }
+.g-deger { font: 500 12px var(--yazi-mono); fill: var(--ink2); }
+.g-deger-vurgu { font: 600 12px var(--yazi-mono); fill: var(--copper); }
+.g-not { font: 400 11px var(--yazi-govde); fill: var(--ink3); }
+.g-izgara { stroke: var(--line); stroke-width: 1; }
+.g-eksen { stroke: var(--line-strong); stroke-width: 1; }
+.g-merkez { stroke: var(--line-strong); stroke-width: 1; stroke-dasharray: 4 4; }
+.g-dayanim { stroke: var(--ink2); stroke-width: 2; }
+.g-gerilme { stroke: var(--copper); stroke-width: 2; }
+.g-pay { fill: var(--patina); opacity: .16; }
+.g-bant { fill: var(--copper); opacity: .22; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .g-pay { opacity: .24; } }
+:root[data-theme="dark"] .g-pay { opacity: .24; }
+.g-nokta-gerilme { fill: var(--copper); }
+.g-nokta-dayanim { fill: var(--ink2); }
+.g-tavlama { stroke: var(--copper); stroke-width: 1; stroke-dasharray: 3 3; }
+.g-tavlama-etiket { font: 500 11px var(--yazi-mono); fill: var(--copper); }
+.g-bar-ok { fill: var(--patina); }
+.g-bar-warn { fill: var(--warn); }
+.g-bar-crit { fill: var(--crit); }
+.g-bar-vurgu { stroke: var(--ink); stroke-width: 1.5; }
+.g-esik-crit { stroke: var(--crit); stroke-width: 1; stroke-dasharray: 5 3; }
+.g-esik-crit-etiket { font: 500 11px var(--yazi-mono); fill: var(--crit); }
+.g-esik-warn { stroke: var(--warn); stroke-width: 1; stroke-dasharray: 5 3; }
+.g-esik-warn-etiket { font: 500 11px var(--yazi-mono); fill: var(--warn); }
+.g-profil { fill: var(--copper-tint); }
+.g-profil-kenar { stroke: var(--copper); stroke-width: 1.5; }
+.g-profil-kalip { stroke: var(--copper); stroke-width: 1; opacity: .5; }
+.g-tel { fill: var(--copper-tint); stroke: var(--copper); stroke-width: 1.5; }
+.g-kalip { fill: var(--sunk); stroke: var(--line-strong); stroke-width: 1.5; }
+.g-aci { stroke: var(--copper); stroke-width: 1.5; }
+.g-olcu { stroke: var(--ink3); stroke-width: 1; }
+.g-olcu-ince { stroke: var(--line-strong); stroke-width: 1; stroke-dasharray: 3 3; }
+.g-ok { stroke: var(--copper); stroke-width: 2; }
+
+/* Kaydırıcı — tarayıcı varsayılanı kullanılmaz, kendi rayı ve tutamağı */
+.kaydirici-satiri { display: flex; align-items: center; gap: var(--s12); flex-wrap: wrap; }
+.kaydirici-alan { display: flex; flex-direction: column; gap: var(--s4); flex: 1 1 160px; min-width: 0; }
+.kaydirici-basligi { display: flex; justify-content: space-between; gap: var(--s8);
+  font: 500 var(--t11)/1.2 var(--yazi-mono); letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ink3); }
+.kaydirici-basligi .deger { font-family: var(--yazi-mono); color: var(--ink); letter-spacing: 0; }
+input[type="range"] {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; min-height: var(--dokunma); background: transparent; margin: 0;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px; border: 1px solid var(--line-strong); border-radius: 2px;
+  background: linear-gradient(to right, var(--copper) 0 var(--dolgu, 50%), var(--sunk) var(--dolgu, 50%) 100%);
+}
+input[type="range"]::-moz-range-track {
+  height: 4px; border: 1px solid var(--line-strong); border-radius: 2px;
+  background: linear-gradient(to right, var(--copper) 0 var(--dolgu, 50%), var(--sunk) var(--dolgu, 50%) 100%);
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 18px; height: 18px; margin-top: -8px; border-radius: 2px;
+  background: var(--surface); border: 2px solid var(--copper); cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 18px; height: 18px; border-radius: 2px;
+  background: var(--surface); border: 2px solid var(--copper); cursor: pointer;
+}
+tbody tr.secili td { box-shadow: inset 0 0 0 1px var(--copper); }
+
+/* ---- Güven katmanı: sekmeler, testler, formüller ---- */
+.sekme-satiri { display: flex; flex-wrap: wrap; gap: 0; border-bottom: 1px solid var(--line-strong); }
+.sekme-satiri button {
+  min-height: var(--dokunma); padding: 0 var(--s16);
+  border: 1px solid transparent; border-bottom: 0; background: transparent;
+  color: var(--ink2); font: 500 var(--t125)/1 var(--yazi-govde); cursor: pointer;
+  transition: color var(--gecis), background var(--gecis);
+}
+.sekme-satiri button:hover { background: var(--sunk); color: var(--ink); }
+.sekme-satiri button[aria-selected="true"] {
+  background: var(--surface); border-color: var(--line-strong); color: var(--copper);
+  margin-bottom: -1px; border-bottom: 1px solid var(--surface);
+}
+.sekme-paneli { border: 1px solid var(--line); border-top: 0; background: var(--surface);
+  padding: var(--s16); display: flex; flex-direction: column; gap: var(--s16); }
+.sekme-paneli h3 { margin: 0; font: 600 var(--t14)/1.2 var(--yazi-govde); color: var(--ink); }
+.sekme-paneli p { margin: 0; font-size: var(--t125); color: var(--ink2); max-width: 72ch; }
+.sekme-paneli ul { margin: 0; padding-left: var(--s16); font-size: var(--t125); color: var(--ink2);
+  display: flex; flex-direction: column; gap: var(--s4); max-width: 72ch; }
+
+/* Sekme içi tablolar metin taşır: satırlar sarar, sayılar sağa hizalanır. */
+.sekme-paneli td, .sekme-paneli th {
+  white-space: normal; text-align: left; vertical-align: top;
+  font-family: var(--yazi-govde); font-size: var(--t125);
+}
+.sekme-paneli thead th { font-family: var(--yazi-mono); }
+.sekme-paneli td.mono, .sekme-paneli td.sayi {
+  font-family: var(--yazi-mono); font-variant-numeric: tabular-nums;
+}
+.sekme-paneli td.sayi { text-align: right; white-space: nowrap; }
+.sekme-paneli td.aciklama { max-width: 38ch; color: var(--ink3); }
+.sekme-paneli td.durum-hucresi { text-align: right; white-space: nowrap; }
+
+.rozet { display: inline-block; padding: 2px var(--s8); border: 1px solid currentColor;
+  font: 600 var(--t11)/1.4 var(--yazi-mono); letter-spacing: .08em; }
+.rozet.gecti { color: var(--patina); }
+.rozet.kaldi { color: var(--crit); }
+tbody td.ok { color: var(--patina); }
+
+.formul { display: flex; flex-direction: column; gap: var(--s4); padding: var(--s12) 0;
+  border-top: 1px solid var(--line); }
+.formul:first-child { border-top: 0; }
+.formul code { font: 500 var(--t14)/1.5 var(--yazi-mono); color: var(--ink);
+  background: var(--sunk); border: 1px solid var(--line); padding: var(--s8); display: block;
+  overflow-x: auto; }
+.formul-alt { font: 400 var(--t11)/1.5 var(--yazi-govde); color: var(--ink3); }
+
+/* ---- Belirsizlik bandı ---- */
+.bant-kutusu { border: 1px solid var(--line); background: var(--surface); padding: var(--s12);
+  display: flex; flex-direction: column; gap: var(--s12); }
+.bant-satiri { display: flex; flex-wrap: wrap; gap: var(--s12); }
+.bant-alan { display: flex; flex-direction: column; gap: var(--s4); flex: 1 1 150px; min-width: 0; }
+.bant-alan .ikili { display: flex; gap: var(--s8); }
+.bant-anahtari { display: flex; align-items: center; gap: var(--s8); cursor: pointer;
+  font: 500 var(--t125)/1 var(--yazi-govde); color: var(--ink); min-height: var(--dokunma); }
+.bant-deger { white-space: nowrap; }
+.bant-koseler { border: 0; padding: 0; gap: var(--s8); }
+
+/* ---- Tornado ---- */
+.g-tornado { fill: var(--copper); }
+.g-tornado-sifir { fill: var(--line-strong); }
+
+/* ---- Pas kartları (dar ekran) ---- */
+.kart-listesi { display: flex; flex-direction: column; gap: var(--s8); }
+.pas-karti {
+  border: 1px solid var(--line); background: var(--surface);
+  padding: var(--s12); display: flex; flex-direction: column; gap: var(--s8);
+}
+.pas-karti.tavlandi { border-left: 2px solid var(--copper); background: var(--copper-tint); }
+.pas-karti .kart-ust { display: flex; align-items: center; justify-content: space-between; gap: var(--s8); }
+.pas-karti .kart-no {
+  font: 500 var(--t11)/1 var(--yazi-mono); letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ink3);
+}
+.pas-karti .kart-tavlama { display: flex; align-items: center; gap: var(--s4);
+  font: 500 var(--t11)/1 var(--yazi-mono); color: var(--copper); letter-spacing: .08em; }
+.pas-karti .kart-orta { display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--s12); flex-wrap: wrap; }
+.pas-karti .kart-cap {
+  font: 600 var(--t19)/1 var(--yazi-mono); font-variant-numeric: tabular-nums; color: var(--ink);
+}
+.pas-karti .kart-cap .birim { font: 400 var(--t125)/1 var(--yazi-mono); color: var(--ink3); }
+.rozet-emniyet {
+  display: inline-flex; align-items: center; gap: var(--s4);
+  padding: var(--s4) var(--s8); border: 1px solid currentColor;
+  font: 600 var(--t16)/1 var(--yazi-mono); font-variant-numeric: tabular-nums;
+}
+.rozet-emniyet.ok { color: var(--patina); }
+.rozet-emniyet.warn { color: var(--warn); background: var(--warn-tint); }
+.rozet-emniyet.crit { color: var(--crit); background: var(--crit-tint); }
+.kart-ikincil { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4) var(--s12); margin: 0; }
+.kart-ikincil div { display: flex; justify-content: space-between; gap: var(--s8); min-width: 0; }
+.kart-ikincil dt { font: 400 var(--t11)/1.4 var(--yazi-govde); color: var(--ink3); }
+.kart-ikincil dd {
+  margin: 0; font: 400 var(--t125)/1.4 var(--yazi-mono);
+  font-variant-numeric: tabular-nums; color: var(--ink2); white-space: nowrap;
+}
+.kart-ikincil dd.warn { color: var(--warn); }
+.kart-ikincil dd.crit { color: var(--crit); }
+
+/* ---- Kimlik başlığı ---- */
+.ust-kontroller { display: flex; gap: var(--s8); align-items: stretch; }
+.kimlik {
+  display: flex; flex-wrap: wrap; gap: var(--s4) var(--s12); align-items: baseline;
+  font-size: var(--t125); color: var(--ink3);
+  border-bottom: 1px solid var(--line); padding-bottom: var(--s12);
+}
+.kimlik-ad { font: 600 var(--t14)/1.2 var(--yazi-govde); color: var(--ink); }
+.kimlik-unvan { color: var(--ink2); }
+.kimlik-bag { color: var(--copper); text-decoration: none; border-bottom: 1px solid var(--copper); }
+.kimlik-bag:hover { color: var(--ink); border-color: var(--ink); }
+.muafiyet { font-size: var(--t11); color: var(--ink3); }
+.alt-metin { display: flex; flex-direction: column; gap: var(--s4); }
+
+/* ---- Alt not ---- */
+.alt-not {
+  border-top: 1px solid var(--line-strong);
+  padding-top: var(--s12);
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--s12);
+  justify-content: space-between;
+}
+.alt-not p { margin: 0; font-size: var(--t125); color: var(--ink3); max-width: 72ch; }
+
+/* ---- Hata / bilgi kutusu ---- */
+.uyari {
+  border: 1px solid var(--crit); background: var(--crit-tint); color: var(--ink);
+  padding: var(--s12); font-size: var(--t125);
+}
+.bilgi {
+  border: 1px solid var(--line-strong); background: var(--sunk); color: var(--ink2);
+  padding: var(--s12); font-size: var(--t125);
+}
+[hidden] { display: none !important; }
+
+/* Ekran okuyucuya açık, gözle görünmez metin (durum açıklamaları) */
+.gorsel-gizli {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+}
+
+/* Geniş ekranda yöntem ve pas sayısı iki sütun kaplasın (metinleri uzun) */
+@media (min-width: 720px) {
+  .alan.genis { grid-column: span 2; }
+}
+
+/* ---- Yazdırma: iki sayfa ----
+   Sayfa 1: kimlik, girdiler, özet, ana grafik, pas tablosu.
+   Sayfa 2: bant köşeleri, doğrulama ve kabuller.
+   Renkler yazdırmada her zaman açık temadan gelir. */
+@media print {
+  :root, :root[data-theme="dark"] {
+    --bg:#fff; --surface:#fff; --sunk:#f4f5f4;
+    --ink:#111; --ink2:#333; --ink3:#555;
+    --line:#ccc; --line-strong:#999;
+    --copper:#8a4423; --copper-tint:#f4e7de;
+    --patina:#245b53; --patina-tint:#e2eeeb;
+    --warn:#6f5010; --warn-tint:#f5eddb;
+    --crit:#7a2937; --crit-tint:#f6e3e6;
+  }
+  @page { size: A4; margin: 9mm 9mm; }
+  body { background: #fff; font-size: 10px; }
+  .kabuk { max-width: none; padding: 0; gap: var(--s8); display: block; }
+  .kabuk > * { margin-bottom: var(--s8); }
+  .ust h1 { font-size: 18px; }
+  .ust p { display: none; }
+  .bolum-basligi { font-size: 9px; }
+  .panel { padding: var(--s8); gap: var(--s4) var(--s8); }
+  .serit .deger { font-size: 15px; }
+  .serit .hucre { padding: var(--s8); }
+  th, td { padding: 3px 4px; font-size: 9px !important; }
+  .sekme-paneli { padding: var(--s8); gap: var(--s8); }
+  .sekme-paneli td, .sekme-paneli th { font-size: 9px !important; }
+  .sekme-paneli td.aciklama { max-width: 30ch; }
+  .gorsel-kutu { padding: var(--s8); }
+  .oneri { padding: var(--s8); font-size: 10px; }
+  .bant-kutusu { padding: var(--s8); gap: var(--s8); }
+  .gerekce, .ipucu { font-size: 9px; }
+
+  /* Kontroller ve etkileşimli parçalar basılmaz */
+  .ust-kontroller, #senaryoDugmeleri, #panelKatla, .dugme-sirasi, .sekme-satiri,
+  #bantAlanlari, .kaydirici-satiri, #paylasimDurumu, .alt-not .dugme { display: none !important; }
+
+  /* Sayfa 1'de yalnızca ana grafik kalır */
+  .gorsel-bolum .gorsel-kutu:not(:first-child) { display: none; }
+  .gorsel-bolum { grid-template-columns: 1fr; }
+
+  /* Sayfa düzeni: 1 — kimlik, girdiler, özet, ana grafik, pas tablosu;
+                   2 — belirsizlik köşeleri, doğrulama özeti, kabuller. */
+  /* DOM sırası zaten yazdırma sırası: sayfa 2 belirsizlik bandıyla başlar. */
+  #bantBolumu { break-before: page; }
+  #senaryoBolumu, #hataKutusu, #bilgiKutusu { display: none !important; }
+
+  .sekme-paneli[hidden] { display: flex !important; }
+  #bantKoseler[hidden] { display: flex !important; }
+  /* Formüller sekmesi basılmaz — özgülük sırası gereği bu kural sonra gelir */
+  #guvenBolumu [data-panel="formuller"] { display: none !important; }
+
+  /* Sıkıştırma: yazdırmada girdi paneli ve özet şeridi daha küçük */
+  #girdiBolumu .gerekce, #pasSayisiIpucu, #yontemGerekcesi,
+  #bantBolumu .gerekce, .bant-anahtari { display: none !important; }
+  input, select, textarea { min-height: 22px !important; font-size: 10px !important; }
+  .serit .deger { font-size: 13px; }
+  .serit .hucre { padding: var(--s8) var(--s8); }
+  .sekme-paneli ul { gap: 2px; }
+  .sekme-paneli p, .sekme-paneli li { font-size: 9px; }
+  .alt-not { padding-top: var(--s8); }
+  .alt-not p { font-size: 8.5px; }
+  #bantKoseler .ipucu { font-size: 8.5px; }
+  #bantBolumu thead th, #bantBolumu tbody td { padding: 1px 4px; }
+  [data-panel="kabuller"] li, [data-panel="kabuller"] p { line-height: 1.3; font-size: 8.5px; }
+  .sekme-paneli { gap: var(--s4); }
+
+  /* Grafik, tek sütunda oransal olarak büyümesin */
+  .gorsel-kutu svg.g-svg { height: 196px; width: auto; max-width: 100%; }
+
+  /* Tablo satırları: dokunma hedefi yazdırmada gerekmez */
+  .kutu { min-height: 0 !important; min-width: 0 !important; }
+  .kutu .gorsel { display: none; }
+  tbody td { padding: 2px 4px; }
+
+  /* Doğrulama özeti: test tablosu yeter, açıklama sütunu ve referans tablosu değil */
+  .sekme-paneli td.aciklama, .sekme-paneli th:nth-child(3),
+  [data-panel="dogrulama"] > h3, #referansBaslikSatiri, #referansGovde { display: none !important; }
+  [data-panel="dogrulama"] > .tablo-kabi:last-of-type { display: none !important; }
+
+  /* Duyarlılık, manuel giriş, formüller ve karşılaştırma basılmaz:
+     hedef iki sayfa — mühendislik özeti ve arkasında güven katmanı. */
+  #duyarlilikBolumu, #manuelBolumu, [data-panel="formuller"],
+  #karsilastirmaKabi, #degisenGirdiler { display: none !important; }
+
+  .panel { break-inside: avoid; }
+  table { break-inside: auto; }
+  tr, .pas-karti, .formul, .gorsel-kutu { break-inside: avoid; }
+  .tablo-kabi { overflow: visible; }
+  a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 9px; color: #555; }
+}
+
+/* ---- Dar ekran ---- */
+@media (max-width: 719px) {
+  .kabuk { padding: var(--s12); gap: var(--s16); }
+}
+</style>
+</head>
+<body>
+<div class="kabuk">
+
+  <header class="ust">
+    <div>
+      <h1 data-t="baslik">Tel Çekme Pas Programı Hesaplayıcısı</h1>
+      <p data-t="altBaslik"></p>
+    </div>
+    <div class="ust-kontroller">
+      <div class="segment" role="group" aria-label="Dil / Language">
+        <button type="button" id="dilTR" aria-pressed="true">TR</button>
+        <button type="button" id="dilEN" aria-pressed="false">EN</button>
+      </div>
+      <button type="button" class="dugme" id="temaDugmesi" aria-pressed="false"></button>
+    </div>
+  </header>
+
+  <div class="kimlik">
+    <span class="kimlik-ad">Barış Kırlı</span>
+    <span class="kimlik-unvan" data-t="unvan"></span>
+    <a class="kimlik-bag" href="mailto:bariskirli9@gmail.com">bariskirli9@gmail.com</a>
+    <a class="kimlik-bag" href="https://www.linkedin.com/in/bariskirli" target="_blank" rel="noopener">linkedin.com/in/bariskirli</a>
+  </div>
+
+  <section class="bolum" id="senaryoBolumu">
+    <h2 class="bolum-basligi" data-t="senaryolar"></h2>
+    <div class="dugme-sirasi" id="senaryoDugmeleri"></div>
+  </section>
+
+  <section class="bolum" id="girdiBolumu">
+    <div class="baslik-satiri">
+      <h2 class="bolum-basligi" data-t="girdiler"></h2>
+      <button type="button" class="dugme sessiz" id="panelKatla" aria-expanded="true"
+              aria-controls="girdiPaneli" data-t="gizle"></button>
+    </div>
+    <p class="ozet" id="panelOzet" hidden></p>
+    <div class="panel" id="girdiPaneli"></div>
+    <p class="gerekce" id="yontemGerekcesi"></p>
+  </section>
+
+  <div class="uyari" id="hataKutusu" hidden></div>
+  <div class="bilgi" id="bilgiKutusu" hidden></div>
+
+  <section class="bolum" id="ozetBolumu">
+    <h2 class="bolum-basligi" data-t="ozetBaslik"></h2>
+    <div class="serit" id="ozetSeridi"></div>
+    <p class="oneri" id="oneriKutusu"></p>
+    <div class="dugme-sirasi">
+      <button type="button" class="dugme" id="karsilastirSabitle" data-t="karsilastirSabitle"></button>
+      <button type="button" class="dugme sessiz" id="karsilastirKapat" data-t="karsilastirKapat" hidden></button>
+      <button type="button" class="dugme sessiz" id="baglantiKopyala" data-t="baglantiKopyala"></button>
+      <button type="button" class="dugme sessiz" id="csvIndir" data-t="csvIndir"></button>
+      <button type="button" class="dugme sessiz" id="yazdir" data-t="yazdir"></button>
+    </div>
+    <p class="ipucu" id="paylasimDurumu" hidden></p>
+    <p class="degisen" id="degisenGirdiler" hidden></p>
+    <div class="tablo-kabi" id="karsilastirmaKabi" hidden>
+      <table class="karsilastirma" id="karsilastirmaTablosu">
+        <thead><tr id="karsilastirmaBaslik"></tr></thead>
+        <tbody id="karsilastirmaGovde"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="bolum" id="gorselBolumu">
+    <h2 class="bolum-basligi" data-t="gorsellerBaslik"></h2>
+    <div class="gorsel-bolum">
+      <div class="gorsel-kutu">
+        <h3 data-t="gorselAnaBaslik"></h3>
+        <div id="gorselAna"></div>
+      </div>
+      <div class="gorsel-kutu">
+        <h3 data-t="gorselEmniyetBaslik"></h3>
+        <div id="gorselEmniyet"></div>
+        <div class="g-aciklama" id="gorselEmniyetAciklama"></div>
+      </div>
+      <div class="gorsel-kutu">
+        <h3 data-t="gorselProfilBaslik"></h3>
+        <div id="gorselProfil"></div>
+      </div>
+      <div class="gorsel-kutu">
+        <h3 data-t="gorselKalipBaslik"></h3>
+        <p class="gorsel-not" id="kalipPasEtiketi"></p>
+        <div id="gorselKalip"></div>
+        <div class="kaydirici-satiri">
+          <div class="kaydirici-alan">
+            <label class="kaydirici-basligi" for="kalipAlpha">
+              <span data-t="kalipAlphaEtiket"></span><span class="deger" id="kalipAlphaDeger"></span>
+            </label>
+            <input type="range" id="kalipAlpha" min="2" max="16" step="0.5">
+          </div>
+          <div class="kaydirici-alan">
+            <label class="kaydirici-basligi" for="kalipR">
+              <span data-t="kalipREtiket"></span><span class="deger" id="kalipRDeger"></span>
+            </label>
+            <input type="range" id="kalipR" min="2" max="60" step="0.5">
+          </div>
+        </div>
+        <p class="gorsel-not" id="kalipOzet"></p>
+        <p class="gorsel-not" data-t="kalipSematikNot"></p>
+        <p class="gorsel-not" data-t="kalipKaydiriciNot"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="bolum" id="pasBolumu">
+    <h2 class="bolum-basligi" data-t="pasTablosu"></h2>
+    <div class="tablo-kabi" id="pasTablosuKabi">
+      <table id="pasTablosu">
+        <thead><tr id="tabloBaslik"></tr></thead>
+        <tbody id="tabloGovde"></tbody>
+      </table>
+    </div>
+    <div class="kart-listesi" id="pasKartlari" hidden></div>
+  </section>
+
+  <section class="bolum" id="bantBolumu">
+    <h2 class="bolum-basligi" data-t="bantBaslik"></h2>
+    <div class="bant-kutusu">
+      <label class="bant-anahtari">
+        <span class="kutu"><input type="checkbox" id="bantAnahtari"><span class="gorsel"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3.5 8.5 L6.5 11.5 L12.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span>
+        <span data-t="bantAc"></span>
+      </label>
+      <p class="gerekce" data-t="bantYontem"></p>
+      <div class="bant-satiri" id="bantAlanlari" hidden></div>
+      <div class="bant-koseler sekme-paneli" id="bantKoseler" hidden></div>
+    </div>
+  </section>
+
+  <section class="bolum" id="duyarlilikBolumu">
+    <h2 class="bolum-basligi" data-t="duyarlilikBaslik"></h2>
+    <p class="gerekce" data-t="duyarlilikAciklama"></p>
+    <div class="gorsel-bolum">
+      <div class="gorsel-kutu">
+        <h3 id="tornadoEmniyetBaslik"></h3>
+        <div id="tornadoEmniyet"></div>
+        <p class="gorsel-not" data-t="duyarlilikEmniyetNot"></p>
+      </div>
+      <div class="gorsel-kutu">
+        <h3 data-t="duyarlilikEnerjiBaslik"></h3>
+        <div id="tornadoEnerji"></div>
+        <p class="gorsel-not" data-t="duyarlilikEnerjiNot"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="bolum" id="guvenBolumu">
+    <h2 class="bolum-basligi" data-t="guvenBaslik"></h2>
+    <div class="sekme-satiri" role="tablist">
+      <button type="button" role="tab" data-sekme="dogrulama" aria-selected="true" data-t="sekmeDogrulama"></button>
+      <button type="button" role="tab" data-sekme="formuller" aria-selected="false" data-t="sekmeFormuller"></button>
+      <button type="button" role="tab" data-sekme="kabuller" aria-selected="false" data-t="sekmeKabuller"></button>
+    </div>
+
+    <div class="sekme-paneli" data-panel="dogrulama" role="tabpanel">
+      <p id="testOzeti"></p>
+      <div class="tablo-kabi">
+        <table>
+          <thead><tr id="testBaslik"></tr></thead>
+          <tbody id="testGovde"></tbody>
+        </table>
+      </div>
+      <h3 data-t="referansBaslik"></h3>
+      <div class="tablo-kabi">
+        <table>
+          <thead><tr id="referansBaslikSatiri"></tr></thead>
+          <tbody id="referansGovde"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="sekme-paneli" data-panel="formuller" role="tabpanel" hidden>
+      <div id="formulListesi"></div>
+    </div>
+
+    <div class="sekme-paneli" data-panel="kabuller" role="tabpanel" hidden>
+      <div id="kabulListesi"></div>
+    </div>
+  </section>
+
+  <section class="bolum" id="manuelBolumu">
+    <h2 class="bolum-basligi" data-t="manuelBaslik"></h2>
+    <p class="gerekce" data-t="manuelAciklama"></p>
+    <label class="etiket" for="manuelMetin" style="display:none"></label>
+    <textarea id="manuelMetin" rows="3" aria-describedby="manuelIpucu"></textarea>
+    <div class="dugme-sirasi">
+      <button type="button" class="dugme" id="manuelHesapla" data-t="manuelHesapla"></button>
+      <button type="button" class="dugme sessiz" id="manuelTemizle" data-t="manuelTemizle"></button>
+    </div>
+    <p class="ipucu" id="manuelIpucu"></p>
+  </section>
+
+  <footer class="alt-not">
+    <div class="alt-metin">
+      <p data-t="altNot"></p>
+      <p class="muafiyet" data-t="muafiyet"></p>
+    </div>
+    <button type="button" class="dugme sessiz" id="kabullereGit" data-t="kabullereGit"></button>
+  </footer>
+
+</div>
+<script>
+/* ============================================================================
+   TEL ÇEKME PAS PROGRAMI HESAPLAYICISI
+   Barış Kırlı — bağımsız mühendislik çalışması — MIT lisansı
+
+   NE YAPAR
+   Bakır filmaşinden (8 mm) ince tele inen çekme hattı için pas programı kurar,
+   her pasta çekme gerilmesini ve kopma riskini hesaplar, sonucun belirsizliğini
+   de birlikte raporlar.
+
+   KULLANILAN MODEL
+     - Çekme gerilmesi : Siebel yaklaşımı — şekil verme + sürtünme + fazlalık iş
+                         sigma_d = sigmaBar * ((1 + mu/alpha)*eps + (2/3)*alpha)
+     - Pekleşme        : Hollomon, sigma_f = max(K * eps^n, 70 MPa)
+                         Birikmiş gerinim taşınır, ara tavlamada sıfırlanır.
+     - Ortalama akma   : Hollomon'un pas boyunca integrali
+     - Emniyet oranı   : sigma_d / sigma_f,çıkış   (0,60 üstü kopma riski)
+     - Delta faktörü   : alpha*(1+sqrt(1-r))^2/r  (1,5–3,0 arası uygun)
+     - Adyabatik ΔT    : sigma_d / (rho*cp)       (üst sınırdır)
+     - Hız zincirlenir : pas i'nin girişi, pas i-1'in çıkışı; kütle debisi sabit.
+
+   PAS DAĞITIM YÖNTEMLERİ
+     equalStrain (eşit gerinim) · tapered (kademeli azalan) · equalSafety
+     (eşit emniyet, hedefi tutan en küçük pas sayısı) · manuel çap dizisi.
+
+   DOĞRULAMA
+   Sekiz test sayfa her açıldığında canlı çalışır (Doğrulama sekmesi): sıfır
+   limiti, alt sınır, teorik maksimum, kütle korunumu, iki yöntemin otomatik pas
+   sayısı, toplam iş / ideal iş oranı ve emniyet oranının K'dan bağımsızlığı.
+
+   SINIRLAR
+   Ön tasarım aracıdır, üretim reçetesi değildir. Kalıp esnemesi, yağ filmi
+   rejimi, geri gerilim, şekil değiştirme hızı, kalıp aşınması ve artık
+   gerilmeler hesaba katılmaz. Tamamı: Kabuller sekmesi ve docs/kabuller.md.
+
+   KAYNAKLAR
+   G. E. Dieter, Mechanical Metallurgy (3. baskı) · S. Kalpakjian & S. Schmid,
+   Manufacturing Engineering and Technology · B. Avitzur, Metal Forming ·
+   J. G. Wistreich, The Fundamentals of Wire Drawing, Metallurgical Reviews (1958).
+
+   YAPISI
+   Tek dosya, sıfır bağımlılık, çevrimdışı çalışır. Sıra: hesap çekirdeği (saf
+   fonksiyonlar, DOM'a dokunmaz) · doğrulama · belirsizlik ve duyarlılık · metin
+   sözlüğü · durum · biçimlendirme · eşikler ve öneri · arayüz kurulumu · olaylar ·
+   çizim · tema, bağlantı ve CSV · başlangıç.
+   ========================================================================== */
+
+'use strict';
+
+/* ==== HESAP ÇEKİRDEĞİ ====
+   Saf fonksiyonlar. DOM'a dokunmaz, yan etkisi yoktur. */
+
+// --- Malzeme ve proses sabitleri ---
+const RHO       = 8960;   // kg/m3   bakır yoğunluğu
+const CP        = 385;    // J/(kg·K) bakır özgül ısı
+const SIGMA_Y0  = 70;     // MPa      tavlanmış ETP bakır akma gerilmesi tabanı
+
+// --- Pas programı sabitleri ---
+const MAX_R_PER_PASS    = 0.20;          // eşit gerinim / kademeli azalanda otomatik N için
+                                         // pas başına maks kesit azalma (baş parmak kuralı)
+const TAPER_RATIO       = 0.65;          // kademeli azalanda son pasın ilk pasa gerinim oranı
+const TARGET_SAFETY     = 0.50;          // eşit emniyet yönteminin hedefi
+const DAR_PAY_ORANI     = 0.90;          // emniyet bu oranın üstündeyse "pay dar" denir
+const R_THEORETICAL_MAX = 1 - 1 / Math.E; // = 0,63212 — tek pasta teorik sınır
+const MAX_PASSES        = 60;            // iterasyon güvenlik sınırı
+
+// --- Eşikler (Faz 3'te renklendirme bunları kullanacak) ---
+const SAFETY_CRITICAL = 0.60;  // üstü: kopma riski
+const SAFETY_WARNING  = 0.50;  // üstü: sınıra yakın
+const DELTA_MIN       = 1.5;   // altı: aşırı sürtünme, kalıp aşınması
+const DELTA_MAX       = 3.0;   // üstü: merkezi çatlak (chevron) riski
+const DT_WARNING      = 100;   // °C üstü: yağ bozunma riski. Hesaplanan ΔT adyabatiktir
+                               // (bütün iş ısıya döner, kayıp yok) — yani bir üst sınırdır.
+
+// --- İterasyon ayarları ---
+const EPS_PER_PASS_MAX  = -Math.log(1 - R_THEORETICAL_MAX); // teorik maks pas gerinimi
+const SAFETY_SEARCH_MIN = 0.05;   // eşit emniyet dış aramasının alt ucu
+const SAFETY_SEARCH_MAX = 0.62;   // eşit emniyet dış aramasının üst ucu
+const BISECTION_STEPS   = 80;     // ikili arama adım sayısı
+const DIAMETER_TOL      = 0.001;  // mm, son pasın hedef çapa oturma toleransı
+
+// --- Belirsizlik bandı varsayılan aralıkları (literatür) ---
+const BANT_VARSAYILAN = { K: [380, 520], n: [0.33, 0.45], mu: [0.03, 0.08] };
+
+// --- Manuel dizi ayrıştırma sınırları (akla yatkın çap aralığı) ---
+const MANUAL_D_MIN = 0.01;  // mm
+const MANUAL_D_MAX = 50;    // mm
+
+/* Hesap hatası. `code` makine tarafı içindir (Faz 2'de METIN sözlüğüne bağlanacak),
+   `message` Türkçe insan okunur karşılığıdır. */
+class DrawingError extends Error {
+  constructor(code, message, info) {
+    super(message);
+    this.name = 'DrawingError';
+    this.code = code;
+    this.info = info || {};
+  }
+}
+
+/* Oran -> Türkçe yüzde metni (ondalık virgül). Hata mesajlarında kullanılır;
+   Faz 2'de arayüzün sayı biçimlendiricisi bunun yerini alacak. */
+function yuzdeTR(oran) {
+  return (oran * 100).toFixed(1).replace('.', ',');
+}
+
+/* Bir pasın gerilme büyüklükleri — fiziğin TEK kaynağı.
+   Çaptan bağımsızdır: Siebel bağıntısında yalnızca gerinimler, sürtünme ve kalıp açısı geçer.
+   Hem calcPass hem eşit emniyet çözücüsü bunu çağırır; formül başka hiçbir yerde tekrarlanmaz. */
+function passStress(epsIn, epsPas, { alphaRad, mu, K, n }) {
+  const epsOut = epsIn + epsPas;
+
+  // Pas boyunca ortalama akma gerilmesi (Hollomon'un integrali) — tabana tabi değil.
+  const sigmaBar = K * (epsOut ** (n + 1) - epsIn ** (n + 1)) / ((n + 1) * epsPas);
+
+  // SIEBEL: şekil verme + sürtünme + fazlalık (redundant) iş
+  const sigmaD = sigmaBar * ((1 + mu / alphaRad) * epsPas + (2 / 3) * alphaRad);
+
+  // Hollomon eps=0'da sıfır verir; tavlanmış bakır tabanı uygulanır.
+  const sigmaFOut = Math.max(K * epsOut ** n, SIGMA_Y0);
+
+  return { epsOut, sigmaBar, sigmaD, sigmaFOut, safety: sigmaD / sigmaFOut };
+}
+
+/* Verilen gerinim için emniyet oranı. Eşit emniyet çözücüsünün iç fonksiyonu. */
+function safetyForStrain(epsPas, epsIn, params) {
+  return passStress(epsIn, epsPas, params).safety;
+}
+
+/* Tek pasın bütün çıktıları. Girdiler: çaplar mm, açı derece, hız m/s, K MPa. */
+function calcPass({ d0, d1, epsIn = 0, alphaDeg, mu, K, n, v0 }) {
+  if (!(d0 > 0) || !(d1 > 0)) {
+    throw new DrawingError('GECERSIZ_CAP', 'Çaplar sıfırdan büyük olmalı.', { d0, d1 });
+  }
+  if (d1 >= d0) {
+    throw new DrawingError('CIKIS_CAPI_BUYUK',
+      'Çıkış çapı giriş çapından küçük olmalı.', { d0, d1 });
+  }
+  if (!(alphaDeg > 0)) {
+    throw new DrawingError('GECERSIZ_ACI', 'Kalıp yarı açısı sıfırdan büyük olmalı.', { alphaDeg });
+  }
+
+  const alphaRad = alphaDeg * Math.PI / 180;
+  const r = 1 - (d1 / d0) ** 2;
+
+  // Teorik sınır: tek pasta bu azalmanın üstü mümkün değil, hesap durur.
+  if (r > R_THEORETICAL_MAX) {
+    throw new DrawingError('R_TEORIK_ASIM',
+      'Bu pasta %' + yuzdeTR(r) + ' kesit azalma gerekiyor; teorik sınır %' +
+      yuzdeTR(R_THEORETICAL_MAX) + '.', { r, d0, d1 });
+  }
+
+  const epsPas = 2 * Math.log(d0 / d1);
+
+  // Gerilmeler tek kaynaktan (passStress) gelir.
+  const { epsOut, sigmaBar, sigmaD, sigmaFOut, safety } =
+    passStress(epsIn, epsPas, { alphaRad, mu, K, n });
+  const sigmaFIn = Math.max(K * epsIn ** n, SIGMA_Y0);
+
+  const delta = alphaRad * (1 + Math.sqrt(1 - r)) ** 2 / r;
+
+  // Adyabatik sıcaklık artışı: bütün iş ısıya döner, kayıp yok kabulü — üst sınırdır.
+  const dT = sigmaD * 1e6 / (RHO * CP);   // sigmaD MPa -> Pa
+
+  const A0 = Math.PI * d0 ** 2 / 4;           // mm2
+  const A1 = Math.PI * d1 ** 2 / 4;           // mm2
+  const F  = sigmaD * A1;                     // MPa * mm2 = N
+  const v1 = v0 * (d0 / d1) ** 2;             // hacim korunumu
+  const P  = F * v1;                          // W
+
+  return { d0, d1, r, epsPas, epsIn, epsOut, sigmaFIn, sigmaFOut, sigmaBar,
+           sigmaD, safety, delta, dT, A0, A1, F, v0, v1, P, alphaDeg, mu, K, n };
+}
+
+/* Hedef emniyeti veren pas gerinimini ikili aramayla bulur.
+   Ulaşılamıyorsa teorik maksimuma kadar açar. */
+function strainForSafety(targetSafety, epsIn, params) {
+  let lo = 1e-9, hi = EPS_PER_PASS_MAX;
+  if (safetyForStrain(hi, epsIn, params) < targetSafety) return hi;
+  for (let i = 0; i < BISECTION_STEPS; i++) {
+    const mid = (lo + hi) / 2;
+    if (safetyForStrain(mid, epsIn, params) < targetSafety) lo = mid; else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+/* Otomatik pas sayısı: pas başına en fazla MAX_R_PER_PASS kesit azalma kabulüyle. */
+function autoPassCount(d0, dTarget) {
+  const epsTotal = 2 * Math.log(d0 / dTarget);
+  const epsMax   = Math.log(1 / (1 - MAX_R_PER_PASS));
+  return Math.max(1, Math.ceil(epsTotal / epsMax));
+}
+
+/* Eşit gerinim: her pasta aynı gerçek gerinim, dolayısıyla aynı % kesit azalma. */
+function strainsEqual(epsTotal, N) {
+  return new Array(N).fill(epsTotal / N);
+}
+
+/* Kademeli azalan: gerinim ağırlıkları ilk pastan son pasa doğrusal iner.
+   Gerekçe: bakır pastan pasa sertleşir ve tel incelir; ikisi de riski artırır. */
+function strainsTapered(epsTotal, N) {
+  const w = [];
+  for (let i = 1; i <= N; i++) {
+    w.push(N === 1 ? 1 : 1 - (1 - TAPER_RATIO) * (i - 1) / (N - 1));
+  }
+  const sumW = w.reduce((a, b) => a + b, 0);
+  return w.map(wi => epsTotal * wi / sumW);
+}
+
+/* Eşit emniyet: dış döngü hedef emniyet üzerinde, iç döngü pas gerinimi üzerinde
+   ikili arama. Ara tavlama, malzemenin gördüğü birikmiş gerinimi sıfırlar.
+   Hedefe ulaşılamayan N'lerde hata verilmez; şekil korunarak toplam gerinime ölçeklenir. */
+function strainsEqualSafety(epsTotal, N, params, anneals) {
+  const strainsFor = (targetSafety) => {
+    const eps = [];
+    let epsMat = 0;                     // malzemenin gördüğü birikmiş gerinim
+    for (let i = 1; i <= N; i++) {
+      const e = strainForSafety(targetSafety, epsMat, params);
+      eps.push(e);
+      epsMat = anneals.includes(i) ? 0 : epsMat + e;
+    }
+    return eps;
+  };
+
+  let lo = SAFETY_SEARCH_MIN, hi = SAFETY_SEARCH_MAX, eps = strainsFor(hi);
+  const sum = (a) => a.reduce((x, y) => x + y, 0);
+
+  if (sum(eps) > epsTotal) {                       // hedef aralık içinde: ikili arama
+    for (let i = 0; i < BISECTION_STEPS; i++) {
+      const mid = (lo + hi) / 2;
+      if (sum(strainsFor(mid)) < epsTotal) lo = mid; else hi = mid;
+    }
+    eps = strainsFor((lo + hi) / 2);
+  }
+
+  // Kalan farkı kapat: şekli koru, toplamı hedefe ölçekle (K-04).
+  const k = epsTotal / sum(eps);
+  return eps.map(e => e * k);
+}
+
+/* Gerinim dizisinden çap dizisini kurar; son çap hedefe tam oturur. */
+function diametersFromStrains(d0, dTarget, strains) {
+  const d = [d0];
+  let epsAcc = 0;
+  for (let i = 0; i < strains.length; i++) {
+    epsAcc += strains[i];
+    d.push(i === strains.length - 1 ? dTarget : d0 * Math.exp(-epsAcc / 2));
+  }
+  return d;
+}
+
+/* Pas programını kurar ve her pas için calcPass çağırır.
+   `passes` verilmezse (null / "auto") pas sayısı otomatik hesaplanır.
+   `method`: "equalStrain" | "tapered" | "equalSafety" | "manual"
+   `diameters`: yalnızca "manual" yönteminde, d0 dahil azalan çap dizisi.
+   `anneals`: 1-indeksli pas numaraları; o pastan sonra birikmiş gerinim sıfırlanır. */
+function buildSchedule({ d0, dTarget, method = 'equalStrain', passes = null, diameters = null,
+                         alphaDeg, mu, K, n, v0, anneals = [] }) {
+  const anneal = Array.isArray(anneals) ? anneals : [];
+  let d, autoN_sonuc = null;   // yöntemine göre hesaplanan otomatik pas sayısı
+
+  if (method === 'manual') {
+    if (!Array.isArray(diameters) || diameters.length < 2) {
+      throw new DrawingError('MANUEL_DIZI_YOK', 'Manuel pas programı için çap dizisi gerekli.', {});
+    }
+    d = diameters.slice();
+  } else {
+    if (!(d0 > 0) || !(dTarget > 0)) {
+      throw new DrawingError('GECERSIZ_CAP', 'Çaplar sıfırdan büyük olmalı.', { d0, dTarget });
+    }
+    if (dTarget >= d0) {
+      throw new DrawingError('HEDEF_CAP_BUYUK',
+        'Hedef çap başlangıç çapından küçük olmalı.', { d0, dTarget });
+    }
+
+    const epsTotal = 2 * Math.log(d0 / dTarget);
+    const params   = { alphaRad: alphaDeg * Math.PI / 180, mu, K, n };
+    const autoN    = method === 'equalSafety'
+      ? autoPassCountEqualSafety(epsTotal, params, anneal)
+      : autoPassCount(d0, dTarget);
+
+    let N;
+    if (passes === null || passes === undefined || passes === 'auto') {
+      N = autoN;
+    } else {
+      N = Number(passes);
+      if (!Number.isInteger(N) || N < 1) {
+        throw new DrawingError('GECERSIZ_PAS_SAYISI',
+          'Pas sayısı 1 veya daha büyük bir tam sayı olmalı.', { passes });
+      }
+    }
+
+    const strains = method === 'equalStrain' ? strainsEqual(epsTotal, N)
+                  : method === 'tapered'     ? strainsTapered(epsTotal, N)
+                  : method === 'equalSafety' ? strainsEqualSafety(epsTotal, N, params, anneal)
+                  : null;
+    if (!strains) {
+      throw new DrawingError('BILINMEYEN_YONTEM', 'Bilinmeyen pas dağıtım yöntemi.', { method });
+    }
+
+    // Dağıtım gerçekten toplam gerinime yakınsadı mı? (Çapa bakmak anlamsız: son çap
+    // hedefe zaten eşitleniyor; asıl kontrol gerinim toplamında.)
+    const sapma = Math.abs(strains.reduce((a, b) => a + b, 0) - epsTotal) / epsTotal;
+    if (sapma > 1e-6) {
+      throw new DrawingError('YAKINSAMADI',
+        'Pas dağıtımı hedef gerinime yakınsamadı.', { sapma, method, N });
+    }
+    d = diametersFromStrains(d0, dTarget, strains);
+    autoN_sonuc = autoN;
+  }
+
+  // Pasları sırayla hesapla. İki büyüklük hat boyunca taşınır:
+  //   - birikmiş gerinim (tavlamada sıfırlanır),
+  //   - hız: pas i'nin giriş hızı, pas i-1'in çıkış hızıdır. Sürekli bir hatta
+  //     bütün kalıplardan aynı kütle geçer; kütle debisi sabit kalmalıdır.
+  const list = [];
+  let epsIn = 0;
+  let hiz = v0;                 // hat girişi hızı (8 mm filmaşin)
+  for (let i = 0; i < d.length - 1; i++) {
+    const no = i + 1;
+    let pass;
+    try {
+      pass = calcPass({ d0: d[i], d1: d[i + 1], epsIn, alphaDeg, mu, K, n, v0: hiz });
+    } catch (err) {
+      if (err instanceof DrawingError && err.code === 'R_TEORIK_ASIM') {
+        throw new DrawingError('R_TEORIK_ASIM',
+          'Bu pas sayısıyla ' + no + '. pasta %' + yuzdeTR(err.info.r) +
+          ' kesit azalma gerekiyor; teorik sınır %' + yuzdeTR(R_THEORETICAL_MAX) +
+          '. Pas sayısını artırın.',
+          Object.assign({ pas: no }, err.info));
+      }
+      throw err;
+    }
+    pass.no = no;
+    pass.anneal = anneal.includes(no);
+    list.push(pass);
+    epsIn = pass.anneal ? 0 : pass.epsOut;
+    hiz = pass.v1;
+  }
+
+  return {
+    passes: list,
+    method,
+    passCount: list.length,
+    // "Otomatik: X pas" satırı bunu kullanır — seçili yöntemin kendi otomatik değeri.
+    autoPassCount: method === 'manual' ? list.length : autoN_sonuc,
+    epsTotal: 2 * Math.log(d[0] / d[d.length - 1]),
+    anneals: anneal.slice(),
+    // Hat büyüklükleri: kütle debisi (kg/s) sabittir, çıkış hızı son pasın hızıdır.
+    massFlow: massFlowOf(list[0]),
+    v0Line: list[0].v0,
+    v1Line: list[list.length - 1].v1,
+    totalPower: list.reduce((a, b) => a + b.P, 0)
+  };
+}
+
+/* Eşit emniyet yönteminin otomatik pas sayısı (K-07): N = 1'den yukarı ara, hem
+   max emniyet <= TARGET_SAFETY hem de her pasta r <= R_THEORETICAL_MAX koşulunu
+   sağlayan EN KÜÇÜK N'i seç. Arama yalnızca bu iki koşula bakar; ortaya çıkan
+   delta veya sıcaklık uyarıları bastırılmaz, kullanıcıya gösterilir.
+   Arama çaptan bağımsızdır; yalnızca gerinimler, sürtünme ve kalıp açısı belirleyicidir. */
+function autoPassCountEqualSafety(epsTotal, params, anneals) {
+  for (let N = 1; N <= MAX_PASSES; N++) {
+    const strains = strainsEqualSafety(epsTotal, N, params, anneals);
+    let epsMat = 0, worst = 0, ok = true;
+    for (let i = 0; i < strains.length; i++) {
+      if (strains[i] > EPS_PER_PASS_MAX) { ok = false; break; }   // r teorik sınırı aşıyor
+      worst = Math.max(worst, safetyForStrain(strains[i], epsMat, params));
+      epsMat = anneals.includes(i + 1) ? 0 : epsMat + strains[i];
+    }
+    if (ok && worst <= TARGET_SAFETY) return N;
+  }
+  throw new DrawingError('PAS_SAYISI_YAKINSAMADI',
+    'Hedef emniyet oranına ' + MAX_PASSES + ' pasa kadar ulaşılamadı.', { epsTotal });
+}
+
+/* Bir pasın taşıdığı kütle debisi (kg/s), raporlanan çap ve hızdan.
+   A mm² -> m² için 1e-6. Sürekli hatta bu değer bütün paslarda aynı olmalıdır. */
+function massFlowOf(pass) {
+  return RHO * pass.A0 * 1e-6 * pass.v0;
+}
+
+/* Kullanıcının yapıştırdığı çap listesini sayı dizisine çevirir.
+   Ayırıcı: boşluk, satır sonu, noktalı virgül veya virgül. Virgül aynı zamanda
+   ondalık ayırıcı olabildiği için iki okuma denenir, geçerli olan seçilir. */
+function parseManualSchedule(text) {
+  if (typeof text !== 'string' || text.trim() === '') {
+    throw new DrawingError('MANUEL_BOS', 'Çap listesi boş.', {});
+  }
+
+  const okuma = (virgulAyirici) => {
+    const ham = virgulAyirici ? text.split(/[\s;,]+/) : text.split(/[\s;]+/);
+    const sayilar = [];
+    for (const parca of ham) {
+      if (parca === '') continue;
+      const t = virgulAyirici ? parca : parca.replace(',', '.');
+      if (!/^\d*\.?\d+$/.test(t)) return null;
+      sayilar.push(parseFloat(t));
+    }
+    return sayilar;
+  };
+
+  const gecerli = (a) => a && a.length >= 2 &&
+    a.every(x => Number.isFinite(x) && x >= MANUAL_D_MIN && x <= MANUAL_D_MAX) &&
+    a.every((x, i) => i === 0 || x < a[i - 1]);
+
+  const ondalikVirgul = okuma(false);   // "8,00 7,16" — virgül ondalık
+  const ayiriciVirgul = okuma(true);    // "8.00,7.16" — virgül ayırıcı
+  const secilen = gecerli(ondalikVirgul) ? ondalikVirgul
+                : gecerli(ayiriciVirgul) ? ayiriciVirgul : null;
+
+  if (!secilen) {
+    // Virgül hem ondalık hem ayırıcı olarak kullanılmışsa ("8,00,7,16") iki okuma da
+    // geçersiz kalır ve asıl sorun sıralama değil, belirsizliktir.
+    const virgulVar = text.includes(',');
+    const bosluklaAyrilmis = /[\s;]/.test(text.trim());
+    if (virgulVar && !bosluklaAyrilmis) {
+      throw new DrawingError('MANUEL_BELIRSIZ',
+        'Virgül hem ondalık hem ayırıcı olarak kullanılmış, liste okunamadı. ' +
+        'Ayırıcı olarak boşluk veya noktalı virgül kullanın: 8,00 7,16 6,40', { text });
+    }
+    const aday = ondalikVirgul || ayiriciVirgul;
+    if (!aday || aday.length < 2) {
+      throw new DrawingError('MANUEL_GECERSIZ',
+        'Çap listesi okunamadı. En az iki çap girin; ayırıcı olarak boşluk, satır sonu, ' +
+        'noktalı virgül veya virgül kullanın.', { text });
+    }
+    if (!aday.every(x => x >= MANUAL_D_MIN && x <= MANUAL_D_MAX)) {
+      throw new DrawingError('MANUEL_ARALIK_DISI',
+        'Çaplar ' + MANUAL_D_MIN + ' – ' + MANUAL_D_MAX + ' mm aralığında olmalı.', { aday });
+    }
+    const i = aday.findIndex((x, k) => k > 0 && x >= aday[k - 1]);
+    throw new DrawingError('MANUEL_SIRA',
+      'Çaplar azalan sırada olmalı: ' + (i + 1) + '. değer (' + aday[i] +
+      ') kendinden öncekinden küçük değil.', { aday, index: i });
+  }
+  return secilen;
+}
+
+/* ==== DOĞRULAMA ====
+   BÖLÜM 1'deki beş test. Sonuç: [{id, ad, gecti, beklenen, bulunan}] */
+
+// Referans pas — BÖLÜM 1'deki doğrulama örneğinin girdileri.
+const REFERANS_GIRDI = { d0: 8.00, d1: 7.16, epsIn: 0, alphaDeg: 8, mu: 0.05, K: 450, n: 0.35, v0: 4.0 };
+
+// Hazır senaryolar — d0, hedef çap ve proses parametreleri.
+const SENARYOLAR = [
+  { id: 'otomotiv', tr: 'Otomotiv ince', en: 'Automotive fine', d0: 8.00, dTarget: 1.38, alphaDeg: 8, mu: 0.05, K: 450, n: 0.35, v0: 2.0, beklenenN: 16, beklenenNes: 11 },
+  { id: 'genel',    tr: 'Genel amaçlı',  en: 'General purpose', d0: 8.00, dTarget: 2.50, alphaDeg: 8, mu: 0.06, K: 450, n: 0.35, v0: 3.0, beklenenN: 11, beklenenNes:  8 },
+  { id: 'ultra',    tr: 'Çok ince',      en: 'Ultra fine',      d0: 8.00, dTarget: 0.50, alphaDeg: 6, mu: 0.04, K: 450, n: 0.35, v0: 1.0, beklenenN: 25, beklenenNes: 17 }
+];
+
+function runValidation() {
+  const sonuc = [];
+
+  // T1 — Sıfır limiti: sürtünme ve açı sıfıra giderken sigmaD ideal işe yaklaşır.
+  // Referans kodun kendi sigmaBar'ından değil, kapalı formdan gelir (epsIn = 0 için
+  // ideal iş = K * eps^(n+1) / (n+1)); böylece sigmaBar integrali de sınanmış olur.
+  const t1 = calcPass(Object.assign({}, REFERANS_GIRDI, { mu: 0, alphaDeg: 0.001 }));
+  const t1Ideal = REFERANS_GIRDI.K * t1.epsPas ** (REFERANS_GIRDI.n + 1) / (REFERANS_GIRDI.n + 1);
+  sonuc.push({
+    id: 'T1', ad: 'Sıfır limiti',
+    aciklama: 'Sürtünme sıfır, kalıp açısı sıfıra yakınken çekme gerilmesi ideal şekil verme işine eşitlenmeli.',
+    beklenen: t1Ideal.toFixed(2) + ' MPa (±%1)',
+    bulunan: t1.sigmaD.toFixed(2) + ' MPa',
+    gecti: Math.abs(t1.sigmaD - t1Ideal) / t1Ideal < 0.01
+  });
+
+  // T2 — Alt sınır: gerçek pasta sürtünme ve fazlalık iş her zaman ekler.
+  const ref = calcPass(REFERANS_GIRDI);
+  const refIdeal = ref.sigmaBar * ref.epsPas;
+  sonuc.push({
+    id: 'T2', ad: 'Alt sınır',
+    aciklama: 'Gerçek pasta çekme gerilmesi, ideal şekil verme işinden her zaman büyük olmalı.',
+    beklenen: '> ' + refIdeal.toFixed(2) + ' MPa',
+    bulunan: ref.sigmaD.toFixed(2) + ' MPa',
+    gecti: ref.sigmaD > refIdeal
+  });
+
+  // T3 — Teorik maksimum: r = 0,70 olacak pas reddedilmeli.
+  const d1_70 = REFERANS_GIRDI.d0 * Math.sqrt(1 - 0.70);
+  let t3Gecti = false, t3Bulunan = '';
+  try {
+    calcPass(Object.assign({}, REFERANS_GIRDI, { d1: d1_70 }));
+    t3Bulunan = 'hesap yapıldı (hata yok)';
+  } catch (err) {
+    t3Gecti = err instanceof DrawingError && err.code === 'R_TEORIK_ASIM';
+    t3Bulunan = err.code + ': ' + err.message;
+  }
+  sonuc.push({
+    id: 'T3', ad: 'Teorik maksimum',
+    aciklama: 'Kesit azalması %63,2 sınırını aşan pas hesaplanmamalı, açık hata vermeli.',
+    beklenen: 'R_TEORIK_ASIM hatası (r = %70,0)',
+    bulunan: t3Bulunan, gecti: t3Gecti
+  });
+
+  // T4 — Kütle korunumu: hat boyunca bütün paslarda aynı kütle geçmeli.
+  // Kütle debisi formülden değil, çıktı listesindeki raporlanan çap ve hız
+  // değerlerinden hesaplanır; aksi hâlde test tanım gereği geçer ve zincirleme
+  // hatasını kaçırır.
+  const t4Prog = buildSchedule({ d0: SENARYOLAR[0].d0, dTarget: SENARYOLAR[0].dTarget,
+    method: 'equalStrain', alphaDeg: SENARYOLAR[0].alphaDeg, mu: SENARYOLAR[0].mu,
+    K: SENARYOLAR[0].K, n: SENARYOLAR[0].n, v0: SENARYOLAR[0].v0 });
+  const debiler = t4Prog.passes.map(massFlowOf)
+    .concat(t4Prog.passes.map(p => RHO * p.A1 * 1e-6 * p.v1));   // giriş ve çıkış tarafı
+  const enBuyuk = Math.max(...debiler), enKucuk = Math.min(...debiler);
+  const t4Sapma = (enBuyuk - enKucuk) / enKucuk;
+  sonuc.push({
+    id: 'T4', ad: 'Kütle korunumu',
+    aciklama: 'Sürekli hatta bütün kalıplardan aynı kütle geçer: raporlanan çap ve hızlardan hesaplanan kütle debisi her pasta aynı olmalı.',
+    beklenen: 'sapma < %0,01',
+    bulunan: '%' + (t4Sapma * 100).toFixed(4) + ' (' + (enKucuk * 1000).toFixed(1) + ' g/s)',
+    gecti: t4Sapma < 0.0001
+  });
+
+  // T5 — Otomatik pas sayısı (eşit gerinim): üç hazır senaryo.
+  const bulunanN = SENARYOLAR.map(s => autoPassCount(s.d0, s.dTarget));
+  const beklenenN = SENARYOLAR.map(s => s.beklenenN);
+  sonuc.push({
+    id: 'T5', ad: 'Otomatik pas sayısı — eşit gerinim',
+    aciklama: 'Üç hazır senaryonun otomatik pas sayısı eşit gerinim yönteminde 16, 11 ve 25 olmalı.',
+    beklenen: beklenenN.join(' · '),
+    bulunan: bulunanN.join(' · '),
+    gecti: bulunanN.every((N, i) => N === beklenenN[i])
+  });
+
+  // T6 — Otomatik pas sayısı (eşit emniyet): hedefi tutan en küçük N.
+  const bulunanNes = SENARYOLAR.map(s => autoPassCountEqualSafety(
+    2 * Math.log(s.d0 / s.dTarget),
+    { alphaRad: s.alphaDeg * Math.PI / 180, mu: s.mu, K: s.K, n: s.n }, []));
+  const beklenenNes = SENARYOLAR.map(s => s.beklenenNes);
+  sonuc.push({
+    id: 'T6', ad: 'Otomatik pas sayısı — eşit emniyet',
+    aciklama: 'Eşit emniyet yöntemi, emniyet oranını 0,50 altında tutan en küçük pas sayısını bulmalı.',
+    beklenen: beklenenNes.join(' · '),
+    bulunan: bulunanNes.join(' · '),
+    gecti: bulunanNes.every((N, i) => N === beklenenNes[i])
+  });
+
+  // T7 — Toplam iş / ideal iş oranı. Zinciri ilk ilkelerden sınayan tek test:
+  // ideal özgül iş K·eps^(n+1)/((n+1)·RHO), gerçek özgül iş toplam güç / kütle debisi.
+  const t7 = SENARYOLAR[0];
+  const t7Prog = buildSchedule({ d0: t7.d0, dTarget: t7.dTarget, method: 'equalStrain',
+    alphaDeg: t7.alphaDeg, mu: t7.mu, K: t7.K, n: t7.n, v0: t7.v0 });
+  const idealOzgulIs  = t7.K * 1e6 * t7Prog.epsTotal ** (t7.n + 1) / ((t7.n + 1) * RHO); // J/kg
+  const gercekOzgulIs = t7Prog.totalPower / t7Prog.massFlow;                              // J/kg
+  const oran = gercekOzgulIs / idealOzgulIs;
+  sonuc.push({
+    id: 'T7', ad: 'Toplam iş / ideal iş oranı',
+    aciklama: 'Hattın özgül enerjisi, ideal şekil verme işinin makul bir katı olmalı; sürtünme ve fazlalık iş bu farkı açıklar.',
+    beklenen: '1,30 – 2,50',
+    bulunan: oran.toFixed(2) + ' (' + (idealOzgulIs / 3600).toFixed(1) + ' → ' +
+             (gercekOzgulIs / 3600).toFixed(1) + ' kWh/ton)',
+    gecti: oran >= 1.3 && oran <= 2.5
+  });
+
+  // T8 — K değişmezliği. Emniyet oranı pekleşme katsayısından bağımsızdır:
+  // sigmaD ve sigmaFOut'un ikisi de K ile doğrusaldır, oran sadeleşir.
+  // Bu ucuz test, passStress içindeki cebirsel bir hatayı anında yakalar.
+  const t8Alt = calcPass(Object.assign({}, REFERANS_GIRDI, { K: 315 }));
+  const t8Ust = calcPass(Object.assign({}, REFERANS_GIRDI, { K: 530 }));
+  const t8Fark = Math.abs(t8Alt.safety - t8Ust.safety);
+  sonuc.push({
+    id: 'T8', ad: 'K değişmezliği',
+    aciklama: 'Pekleşme katsayısı K = 315 ile K = 530 arasında değişirken emniyet oranı aynı kalmalı; K oranda sadeleşir.',
+    beklenen: 'fark < 1e-6',
+    bulunan: t8Alt.safety.toFixed(8) + ' / ' + t8Ust.safety.toFixed(8),
+    gecti: t8Fark < 1e-6
+  });
+
+  return sonuc;
+}
+
+/* ==== METİN SÖZLÜĞÜ ====
+   Arayüzdeki bütün metinler burada. HTML içinde gömülü sabit metin yok. */
+
+const METIN = {
+  tr: {
+    baslik: 'Tel Çekme Pas Programı Hesaplayıcısı',
+    altBaslik: 'Bakır filmaşinden ince tele inen çekme hattı için pas programı kurar ve kopma riskini hesaplar.',
+    senaryolar: 'Hazır senaryolar',
+    girdiler: 'Girdiler',
+    gizle: 'Gizle',
+    goster: 'Göster',
+    pasTablosu: 'Pas programı',
+    manuelBaslik: 'Manuel pas programı',
+    manuelAciklama: 'Kendi çap dizinizi yapıştırın. Ayırıcı: boşluk, satır sonu veya noktalı virgül. Örnek: 8,00 7,16 6,40',
+    manuelHesapla: 'Bu programı hesapla',
+    manuelTemizle: 'Manuel programı temizle',
+    manuelAktif: 'Manuel program hesaplanıyor: {n} pas. Dağıtım yöntemi ve pas sayısı devre dışı.',
+    otomatigeDon: "Otomatik'e dön",
+    duzenle: 'Düzenle',
+    ozetYontem: { equalStrain: 'eşit gerinim', tapered: 'kademeli azalan', equalSafety: 'eşit emniyet' },
+    ozetPas: '{n} pas',
+    ozetManuel: 'manuel program',
+    otomatikIpucu: 'Otomatik: {n} pas',
+    otomatikYer: 'Otomatik',
+    tavlamaEtiketi: 'tavlama',
+    ozetBaslik: 'Özet',
+    ozetAlan: {
+      pas: 'Pas sayısı', enRiskli: 'En yüksek emniyet', guc: 'Toplam mekanik güç',
+      enerji: 'Enerji', uzama: 'Toplam uzama', cikisHizi: 'Çıkış hızı'
+    },
+    ozetPasNotu: 'pas {n}',
+    durum: { crit: 'Kopma riski', warn: 'Sınıra yakın', ok: 'Güvenli',
+             deltaDusuk: 'Aşırı sürtünme, kalıp aşınması', deltaYuksek: 'Merkezi çatlak riski',
+             isiYuksek: 'Yağ bozunma riski' },
+    oneriBaslik: 'Öneri',
+    oneriRiskli: 'En riskli pas {pas} (emniyet {emniyet}). Bu pasta kesit azalmayı %{r0}\'ten %{r1}\'e düşürürsen emniyet 0,50\'ye iner.',
+    oneriGuvenli: 'En yüksek emniyet oranı {emniyet} ({pas}. pas) — 0,50 sınırının altında, kopma riski görünmüyor.',
+    oneriGuvenliDar: 'En yüksek emniyet oranı {emniyet} ({pas}. pas) — 0,50 sınırının hemen altında, pay çok dar.',
+    oneriEsitBolge: 'Paslar {ilk}–{son} aynı emniyet seviyesinde ({emniyet}); tek bir riskli pas yok.',
+    oneriGuvenliBolge: 'Bu seviye 0,50 sınırının altında, kopma riski görünmüyor.',
+    oneriDeltaDusuk: '{pas}. pasta delta {delta} (alt sınır 1,5) — aşırı sürtünme ve kalıp aşınması. Kalıp yarı açısını {alpha}°\'ye çıkarmak bu pası sınıra döndürür.',
+    oneriDeltaYuksek: '{pas}. pasta delta {delta} (üst sınır 3,0) — merkezi çatlak (chevron) riski. Kalıp yarı açısını {alpha}°\'ye düşürmek bu pası sınıra döndürür.',
+    oneriIsi: '{pas}. pasta adyabatik ΔT {dT} °C (eşik 100). Bu bir üst sınırdır; gerçek artış daha düşüktür, ama yağ rejimini kontrol edin.',
+    gorsellerBaslik: 'Görseller',
+    gorselAnaBaslik: 'Dayanım ve çekme gerilmesi',
+    gorselEmniyetBaslik: 'Emniyet oranı',
+    gorselProfilBaslik: 'Çap profili',
+    gorselKalipBaslik: 'Kalıp kesiti',
+    kalipAlphaEtiket: 'Kalıp yarı açısı',
+    kalipREtiket: 'Kesit azalma',
+    kalipSematikNot: 'Şematik — çap değişimi görünürlük için abartılmıştır; kalıp yarı açısı gerçek değerdir.',
+    kalipKaydiriciNot: 'Kaydırıcılar yalnızca bu çizimi değiştirir; pas programı olduğu gibi kalır. Tablodan bir pasa dokunarak o pası gösterebilirsiniz.',
+    gorsel: {
+      eksenPas: 'PAS',
+      dayanim: 'Malzeme dayanımı (çıkış)',
+      gerilme: 'Çekme gerilmesi',
+      pay: 'Emniyet payı',
+      kalipPas: 'Gösterilen pas: {pas}',
+      kalipNot: 'yükü bu ince tel taşıyor',
+      kalipOzet: '{pas}. pas · kesit azalma %{r} · emniyet {emniyet} · delta {delta}',
+      anaAria: 'Dayanım ve çekme gerilmesi grafiği. {n} pas boyunca çekme gerilmesi {sd0} MPa\'dan {sd1} MPa\'a, malzeme dayanımı {sf0} MPa\'dan {sf1} MPa\'a çıkıyor; aradaki alan emniyet payıdır.',
+      emniyetAria: 'Emniyet oranı bar grafiği. {n} pas, en yüksek emniyet oranı {en} ({pas}. pas). Eşik çizgileri 0,50 ve 0,60.',
+      profilAria: 'Çap profili: tel {n} pasta {d0} milimetreden {d1} milimetreye iniyor.',
+      kalipAria: '{pas}. pasın kalıp kesiti: {d0} milimetre giren tel, {alpha} derece yarı açılı konik kalıptan geçerek {d1} milimetre çıkıyor.'
+    },
+    bantBaslik: 'Belirsizlik bandı',
+    bantAc: 'Belirsizlik bandını göster',
+    bantYontem: 'K, n ve μ için tek değer yerine alt ve üst sınır girilir. Bandı köşe taraması üretir: üç parametrenin uçlarının sekiz kombinasyonu hesaplanır ve her büyüklük için en küçük ile en büyük alınır — Monte Carlo kullanılmaz. Tarama boyunca çap dizisi sabit tutulur; yalnızca K, n ve μ değişir, yani bant malzeme belirsizliğini gösterir, program değişimini değil. Eşik kontrolü bandın üst ucuna göre yapılır.',
+    bantAlan: { K: 'Pekleşme katsayısı K', n: 'Pekleşme üsteli n', mu: 'Sürtünme katsayısı μ' },
+    bantAlt: 'alt', bantUst: 'üst',
+    bantAltUc: 'Alt uç', bantUstUc: 'Üst uç',
+    bantKoseSutun: ['K', 'n', 'μ', 'kWh/ton', 'kW', 'En yüksek emniyet', ''],
+    duyarlilikBaslik: 'Duyarlılık',
+    duyarlilikAciklama: 'İki ayrı grafik, çünkü profilleri zıt: emniyet oranı pekleşme katsayısından bağımsızdır (K oranda sadeleşir), enerji ise K ile doğrusaldır. Belirsizlik bilmediğimiz malzeme değerleri, duyarlılık ise değiştirebileceğimiz kaldıraçlardır.',
+    duyarlilikEnerjiBaslik: 'Özgül enerjiye etki (kWh/ton)',
+    duyarlilikEmniyetNot: 'K çubuğunun sıfır çıkması beklenir; bu, grafiğin kendi doğrulamasıdır.',
+    duyarlilikEnerjiNot: 'Pas sayısı fazlalık iş üzerinden etkiler: pas azaldıkça toplam fazlalık iş düşer.',
+    duyarlilik: {
+      emniyetBaslik: 'Emniyet oranına etki ({pas}. pas)',
+      emniyetAria: '{pas}. pas için emniyet oranı duyarlılık grafiği: girdiler etkilerine göre sıralı.',
+      enerjiAria: 'Özgül enerji duyarlılık grafiği: girdiler etkilerine göre sıralı.'
+    },
+    duyarlilikAd: { n: 'Pekleşme üsteli n', mu: 'Sürtünme μ', alphaDeg: 'Kalıp yarı açısı α',
+                    r: 'Kesit azalma r', K: 'Pekleşme katsayısı K', passes: 'Pas sayısı' },
+    duyarlilikSifir: 'etkisiz',
+    guvenBaslik: 'Doğrulama, formüller ve kabuller',
+    unvan: 'Makine Mühendisi',
+    tema: 'Koyu tema', temaAcik: 'Açık tema',
+    baglantiKopyala: 'Bağlantıyı kopyala',
+    baglantiKopyalandi: 'Bağlantı panoya kopyalandı — bütün girdiler ve belirsizlik bandı ayarları adreste.',
+    baglantiHatasi: 'Bağlantı kopyalanamadı; adres çubuğundaki bağlantıyı elle kopyalayabilirsiniz.',
+    csvIndir: 'CSV indir',
+    csvIndi: 'CSV indirildi.',
+    csvMerkez: 'merkez değerler (belirsizlik bandı kapalı)',
+    csvBant: 'belirsizlik bandı açık: alt – üst',
+    yazdir: 'Yazdır',
+    muafiyet: 'Bu araç bağımsız bir mühendislik çalışmasıdır ve herhangi bir şirketle resmî ilişkisi yoktur. Ön tasarım amaçlıdır; üretim reçetesi olarak kullanılamaz.',
+    altNot: 'Bu model bir ön tasarım aracıdır, üretim reçetesi değildir: kalıp esnemesi, yağlama rejimi, geri gerilim, şekil değiştirme hızı ve kalıp aşınması hesaba katılmaz.',
+    kabullereGit: 'Kabuller ve sınırlar',
+    sekmeDogrulama: 'Doğrulama', sekmeFormuller: 'Formüller', sekmeKabuller: 'Kabuller',
+    dogrulama: { gecti: 'GEÇTİ', kaldi: 'KALDI', ozet: '{gecen}/{toplam} test geçiyor. Testler sayfa her açıldığında canlı çalışır.' },
+    testSutun: ['#', 'Test', 'Ne yapar', 'Beklenen', 'Bulunan', 'Durum'],
+    referansBaslik: 'Referans pas — beklenen ve hesaplanan',
+    referansSutun: ['Büyüklük', 'Beklenen', 'Hesaplanan', 'Sapma'],
+    test: {
+      T1: { ad: 'Sıfır limiti', aciklama: 'μ = 0 ve α = 0,001° ile referans pası hesaplar; çekme gerilmesi ideal şekil verme işine eşitlenmeli.' },
+      T2: { ad: 'Alt sınır', aciklama: 'Gerçek pasta sürtünme ve fazlalık iş her zaman ekler; çekme gerilmesi ideal işten büyük olmalı.' },
+      T3: { ad: 'Teorik maksimum', aciklama: 'Kesit azalması %63,2 sınırını aşan pas hesaplanmamalı, açık hata vermeli.' },
+      T4: { ad: 'Kütle korunumu', aciklama: 'Raporlanan çap ve hızlardan hesaplanan kütle debisi bütün paslarda aynı olmalı.' },
+      T5: { ad: 'Otomatik pas sayısı — eşit gerinim', aciklama: 'Üç hazır senaryonun otomatik pas sayısı 16, 11 ve 25 olmalı.' },
+      T6: { ad: 'Otomatik pas sayısı — eşit emniyet', aciklama: 'Emniyeti 0,50 altında tutan en küçük pas sayısı 11, 8 ve 17 olmalı.' },
+      T7: { ad: 'Toplam iş / ideal iş', aciklama: 'Hattın özgül enerjisi ideal şekil verme işinin makul bir katı olmalı.' },
+      T8: { ad: 'K değişmezliği', aciklama: 'K = 315 ile K = 530 arasında emniyet oranı değişmemeli; K oranda sadeleşir.' }
+    },
+    formulAralik: 'Geçerlilik', formulKaynak: 'Kaynak',
+    formuller: [
+      { ad: 'Kesit azalma', formul: 'r = 1 − (d₁/d₀)²',
+        aciklama: 'Pasta kesit alanının ne kadarının kaybolduğu.',
+        aralik: '0 < r ≤ 0,632 (tek pasta teorik sınır 1 − 1/e)', kaynak: 'Dieter, Mechanical Metallurgy' },
+      { ad: 'Gerçek gerinim', formul: 'ε = 2·ln(d₀/d₁)',
+        aciklama: 'Pasın gerçek (logaritmik) gerinimi; hacim korunumundan gelir.',
+        aralik: 'Bütün pas geometrileri', kaynak: 'Dieter, Mechanical Metallurgy' },
+      { ad: 'Pekleşme (Hollomon)', formul: 'σ_f = max(K·εⁿ, 70 MPa)',
+        aciklama: 'Birikmiş gerinime bağlı akma gerilmesi; ε→0\'da sıfır vermemesi için tavlanmış ETP bakır tabanı uygulanır.',
+        aralik: 'ETP bakır: K = 315–530 MPa, n = 0,35–0,54', kaynak: 'Dieter, pekleşme katsayıları tablosu' },
+      { ad: 'Ortalama akma gerilmesi', formul: 'σ̄ = K·(ε_out^(n+1) − ε_in^(n+1)) / ((n+1)·ε_pas)',
+        aciklama: 'Hollomon bağıntısının pas boyunca integrali; tabana tabi değildir.',
+        aralik: 'ε_pas > 0', kaynak: 'Dieter, şekil verme bölümü' },
+      { ad: 'Çekme gerilmesi (Siebel)', formul: 'σ_d = σ̄ · [ (1 + μ/α) · ε_pas + (2/3)·α ]',
+        aciklama: 'Üç iş toplanır: şekil verme, sürtünme ve fazlalık (redundant) iş. α radyan cinsindendir.',
+        aralik: 'Küçük yarı açı (α ≲ 15°), sabit sürtünme', kaynak: 'Siebel yaklaşımı; Dieter · Kalpakjian & Schmid' },
+      { ad: 'Emniyet oranı', formul: 'emniyet = σ_d / σ_f,çıkış',
+        aciklama: 'Çekme gerilmesinin çıkan telin dayanımına oranı; 0,60 üstü kopma riski. K bu oranda sadeleşir.',
+        aralik: '0 < emniyet < 1 (teorik kopma sınırı 1)', kaynak: 'Dieter; Wistreich (1958)' },
+      { ad: 'Delta faktörü', formul: 'Δ = α·(1 + √(1−r))² / r',
+        aciklama: 'Şekil değiştirme bölgesinin biçim oranı: küçükse aşırı sürtünme, büyükse merkezi çatlak riski.',
+        aralik: 'Uygun bölge 1,5 ≤ Δ ≤ 3,0', kaynak: 'Avitzur, Metal Forming; Wistreich (1958)' },
+      { ad: 'Adyabatik sıcaklık artışı', formul: 'ΔT = σ_d / (ρ·c_p)',
+        aciklama: 'Bütün şekil verme işinin ısıya döndüğü ve hiç kayıp olmadığı varsayımı; bir üst sınırdır.',
+        aralik: 'Uyarı eşiği 100 °C', kaynak: 'Kalpakjian & Schmid, çekme bölümü' }
+    ],
+    kabuller: {
+      giris: 'Bu model bir ön tasarım aracıdır, üretim reçetesi değildir. Hesaba katmadıkları:',
+      maddeler: [
+        'Kalıp esnemesi ve elastik geri yaylanma',
+        'Yağ filmi kalınlığı ve hidrodinamik yağlama rejimi (sürtünme sabit alınır)',
+        'Geri gerilim (back tension)',
+        'Şekil değiştirme hızının akma gerilmesine etkisi',
+        'Sıcaklığa bağlı akma gerilmesi değişimi (sıcaklık artışı hesaplanır ama akmaya geri beslenmez)',
+        'Kalıp aşınmasının pas boyunca geometriyi değiştirmesi',
+        'Tel içindeki artık gerilmeler ve merkez–yüzey gerinim farkı'
+      ],
+      notlar: [
+        'Ayrıca σ = K·εⁿ bağıntısı ε→0\'da sıfır verdiği için, görüntülenen akma gerilmelerine tavlanmış ETP bakır için 70 MPa\'lık bir taban uygulanmıştır. Bu bir modelleme tercihidir.',
+        'Emniyet oranı pekleşme katsayısı K\'dan bağımsızdır: çekme gerilmesi de akma gerilmesi de K ile doğrusal olduğu için oran sadeleşir (tabanın devrede olmadığı ε > 0,02 bölgesinde). Bu yüzden K\'nın literatürdeki geniş aralığı (315–530 MPa) kopma riskini etkilemez; buna karşılık kuvvet, güç ve sıcaklık artışını doğrudan oranlı biçimde etkiler.',
+        'Hız hat boyunca zincirlenir: bir pasın giriş hızı bir önceki pasın çıkış hızıdır, kütle debisi sabittir. Tablodaki güç kalıplarda harcanan mekanik güçtür; şebekeden çekilen güç, aktarma ve motor kayıpları nedeniyle yaklaşık %15–25 daha yüksektir ve yardımcı tüketimler hiç hesaba katılmaz.',
+        'İlk pasta birikmiş gerinim sıfır alınır: gelen 8 mm filmaşin sıcak haddelenmiş / tavlanmış kabul edilir. Ara tavlama işaretlenen pastan sonra gerinimi tam olarak sıfırlar; kısmi tavlama modellenmez.'
+      ]
+    },
+    karsilastirSabitle: 'Bu programı A olarak sabitle',
+    karsilastirKapat: 'Karşılaştırmayı kapat',
+    karsilastirA: 'A', karsilastirB: 'B', karsilastirFark: 'Fark',
+    karsilastirSatir: {
+      pas: 'Pas sayısı', enYuksekEmniyet: 'En yüksek emniyet',
+      guc: 'Toplam mekanik güç (kW)', enerji: 'Enerji (kWh/ton)', uyarilar: 'Uyarılar'
+    },
+    uyariTur: { kopma: 'kopma', delta: 'delta', isi: 'ΔT' },
+    uyariYok: 'yok',
+    uyariPasSayisi: '{tur}: {n} pas',
+    degisenBaslik: 'Değişen girdiler:',
+    degisenYok: 'Yalnızca yöntem değişti — karşılaştırma geçerli.',
+    degisenHicbiri: 'A ve B aynı girdilerle üretildi — fark yok.',
+    degisenOtomatik: 'otomatik',
+    yontemGerekcesi: {
+      equalStrain: 'Eşit gerinim: her pasta aynı oransal kesit azalması. Kitap standardı, karşılaştırma tabanı.',
+      tapered: 'Kademeli azalan: bakır pastan pasa sertleşir ve tel incelir; ikisi de kopma riskini artırır, bu yüzden gerçek hatlarda azaltma sona doğru hafifletilir.',
+      equalSafety: 'Eşit emniyet: her pasın emniyet oranı hedefe (0,50) eşitlenir. Otomatik modda bu hedefi tutan en az pas sayısı seçilir.'
+    },
+    pasSayisiGerekcesi: 'Gerçek çekme makinelerinde kalıp sayısı sabittir: "13 kalıbım var, 8,00\'dan 1,38\'e inebilir miyim?" sorusunu cevaplayabilmek için pas sayısı elle sabitlenebilir.',
+    tavlamaNotu: 'Toplam gerinim {eps}. Bu seviyede gerçek hatlarda ara tavlama uygulanır; tablodan bir pası işaretleyerek deneyebilirsiniz.',
+    alan: {
+      d0: 'Başlangıç çapı', dTarget: 'Hedef çap', alphaDeg: 'Kalıp yarı açısı',
+      mu: 'Sürtünme katsayısı', K: 'Pekleşme katsayısı', n: 'Pekleşme üsteli',
+      v0: 'Hat giriş hızı', method: 'Pas dağıtım yöntemi', passes: 'Pas sayısı'
+    },
+    yontem: { equalStrain: 'Eşit gerinim', tapered: 'Kademeli azalan', equalSafety: 'Eşit emniyet' },
+    sutun: {
+      no: 'Pas', d0: 'Giriş çapı', d1: 'Çıkış çapı', rPct: 'Kesit azalma',
+      epsOut: 'Birikmiş gerinim', sigmaBar: 'Ortalama akma', sigmaFOut: 'Çıkış dayanımı',
+      sigmaD: 'Çekme gerilmesi', safety: 'Emniyet oranı', delta: 'Delta',
+      dT: 'Adyabatik ΔT', v1: 'Çıkış hızı', PkW: 'Mekanik güç', anneal: 'Tavlama'
+    },
+    hata: {
+      baslik: 'Hesap yapılamadı.',
+      R_TEORIK_ASIM: 'Bu pas sayısıyla {pas}. pasta %{r} kesit azalma gerekiyor; teorik sınır %{sinir}. Pas sayısını artırın.',
+      R_TEORIK_ASIM_TEK: 'Bu pasta %{r} kesit azalma gerekiyor; teorik sınır %{sinir}.',
+      GECERSIZ_CAP: 'Çaplar sıfırdan büyük olmalı.',
+      CIKIS_CAPI_BUYUK: 'Çıkış çapı giriş çapından küçük olmalı.',
+      GECERSIZ_ACI: 'Kalıp yarı açısı sıfırdan büyük olmalı.',
+      HEDEF_CAP_BUYUK: 'Hedef çap başlangıç çapından küçük olmalı.',
+      GECERSIZ_PAS_SAYISI: 'Pas sayısı 1 veya daha büyük bir tam sayı olmalı.',
+      BILINMEYEN_YONTEM: 'Bilinmeyen pas dağıtım yöntemi.',
+      YAKINSAMADI: 'Pas dağıtımı hedef gerinime yakınsamadı.',
+      PAS_SAYISI_YAKINSAMADI: 'Hedef emniyet oranına {maks} pasa kadar ulaşılamadı.',
+      MANUEL_BOS: 'Çap listesi boş.',
+      MANUEL_DIZI_YOK: 'Manuel pas programı için çap dizisi gerekli.',
+      MANUEL_GECERSIZ: 'Çap listesi okunamadı. En az iki çap girin; ayırıcı olarak boşluk, satır sonu veya noktalı virgül kullanın.',
+      MANUEL_ARALIK_DISI: 'Çaplar {min} – {maks} mm aralığında olmalı.',
+      MANUEL_SIRA: 'Çaplar azalan sırada olmalı: {sira}. değer ({deger}) kendinden öncekinden küçük değil.',
+      MANUEL_BELIRSIZ: 'Virgül hem ondalık hem ayırıcı olarak kullanılmış, liste okunamadı. Ayırıcı olarak boşluk veya noktalı virgül kullanın: 8,00 7,16 6,40',
+      GECERSIZ_SAYI: '{alan} alanına geçerli bir sayı girin.'
+    }
+  },
+  en: {
+    baslik: 'Wire Drawing Pass Schedule Calculator',
+    altBaslik: 'Builds a pass schedule for a copper rod-to-fine-wire drawing line and computes the risk of breakage.',
+    senaryolar: 'Presets',
+    girdiler: 'Inputs',
+    gizle: 'Hide',
+    goster: 'Show',
+    pasTablosu: 'Pass schedule',
+    manuelBaslik: 'Manual pass schedule',
+    manuelAciklama: 'Paste your own diameter list. Separator: space, line break or semicolon. Example: 8.00 7.16 6.40',
+    manuelHesapla: 'Calculate this schedule',
+    manuelTemizle: 'Clear manual schedule',
+    manuelAktif: 'Calculating a manual schedule: {n} passes. Distribution method and pass count are disabled.',
+    otomatigeDon: 'Back to automatic',
+    duzenle: 'Edit',
+    ozetYontem: { equalStrain: 'equal strain', tapered: 'tapered', equalSafety: 'equal safety' },
+    ozetPas: '{n} passes',
+    ozetManuel: 'manual schedule',
+    otomatikIpucu: 'Automatic: {n} passes',
+    otomatikYer: 'Automatic',
+    tavlamaEtiketi: 'anneal',
+    ozetBaslik: 'Summary',
+    ozetAlan: {
+      pas: 'Passes', enRiskli: 'Highest safety ratio', guc: 'Total mechanical power',
+      enerji: 'Energy', uzama: 'Total elongation', cikisHizi: 'Exit speed'
+    },
+    ozetPasNotu: 'pass {n}',
+    durum: { crit: 'Risk of breakage', warn: 'Close to the limit', ok: 'Safe',
+             deltaDusuk: 'Excessive friction, die wear', deltaYuksek: 'Centre-burst risk',
+             isiYuksek: 'Lubricant breakdown risk' },
+    oneriBaslik: 'Suggestion',
+    oneriRiskli: 'The riskiest pass is {pas} (safety {emniyet}). Lowering its area reduction from {r0}% to {r1}% brings the safety ratio down to 0.50.',
+    oneriGuvenli: 'The highest safety ratio is {emniyet} at pass {pas} — below the 0.50 limit, no risk of breakage.',
+    oneriGuvenliDar: 'The highest safety ratio is {emniyet} at pass {pas} — just below the 0.50 limit, the margin is very thin.',
+    oneriEsitBolge: 'Passes {ilk}–{son} sit at the same safety level ({emniyet}); there is no single riskiest pass.',
+    oneriGuvenliBolge: 'That level is below the 0.50 limit, so there is no risk of breakage.',
+    oneriDeltaDusuk: 'Pass {pas} has delta {delta} (lower limit 1.5) — excessive friction and die wear. Raising the die semi-angle to {alpha}° brings this pass back to the limit.',
+    oneriDeltaYuksek: 'Pass {pas} has delta {delta} (upper limit 3.0) — risk of centre burst (chevron). Lowering the die semi-angle to {alpha}° brings this pass back to the limit.',
+    oneriIsi: 'Pass {pas} reaches an adiabatic ΔT of {dT} °C (threshold 100). This is an upper bound and the real rise is lower, but check the lubricant regime.',
+    gorsellerBaslik: 'Charts',
+    gorselAnaBaslik: 'Strength and drawing stress',
+    gorselEmniyetBaslik: 'Safety ratio',
+    gorselProfilBaslik: 'Diameter profile',
+    gorselKalipBaslik: 'Die cross-section',
+    kalipAlphaEtiket: 'Die semi-angle',
+    kalipREtiket: 'Area reduction',
+    kalipSematikNot: 'Schematic — the diameter change is exaggerated for legibility; the die semi-angle is the real value.',
+    kalipKaydiriciNot: 'The sliders change this drawing only; the pass schedule stays as it is. Tap a row in the table to show that pass.',
+    gorsel: {
+      eksenPas: 'PASS',
+      dayanim: 'Material strength (exit)',
+      gerilme: 'Drawing stress',
+      pay: 'Safety margin',
+      kalipPas: 'Showing pass {pas}',
+      kalipNot: 'this thin wire carries the load',
+      kalipOzet: 'pass {pas} · area reduction {r}% · safety {emniyet} · delta {delta}',
+      anaAria: 'Strength and drawing stress chart. Over {n} passes the drawing stress rises from {sd0} to {sd1} MPa and the material strength from {sf0} to {sf1} MPa; the area between them is the safety margin.',
+      emniyetAria: 'Safety ratio bar chart. {n} passes, highest safety ratio {en} at pass {pas}. Threshold lines at 0.50 and 0.60.',
+      profilAria: 'Diameter profile: the wire goes from {d0} to {d1} millimetres over {n} passes.',
+      kalipAria: 'Die cross-section for pass {pas}: a {d0} millimetre wire enters, passes through a die with a {alpha} degree semi-angle and exits at {d1} millimetres.'
+    },
+    bantBaslik: 'Uncertainty band',
+    bantAc: 'Show the uncertainty band',
+    bantYontem: 'K, n and μ are given as a lower and an upper bound instead of a single value. The band comes from a corner scan: the eight combinations of the three parameters\' bounds are evaluated and the minimum and maximum of each quantity is taken — no Monte Carlo. The diameter schedule is held fixed through the scan and only K, n and μ change, so the band shows material uncertainty rather than a change of schedule. Threshold checks use the upper end of the band.',
+    bantAlan: { K: 'Strength coefficient K', n: 'Hardening exponent n', mu: 'Friction coefficient μ' },
+    bantAlt: 'low', bantUst: 'high',
+    bantAltUc: 'Lower end', bantUstUc: 'Upper end',
+    bantKoseSutun: ['K', 'n', 'μ', 'kWh/ton', 'kW', 'Highest safety ratio', ''],
+    duyarlilikBaslik: 'Sensitivity',
+    duyarlilikAciklama: 'Two charts, because their profiles are opposite: the safety ratio is independent of the strength coefficient (K cancels in the ratio) while energy is linear in K. Uncertainty is what we do not know; sensitivity is the levers we can actually pull.',
+    duyarlilikEnerjiBaslik: 'Effect on specific energy (kWh/ton)',
+    duyarlilikEmniyetNot: 'The K bar is expected to be zero; that is this chart validating itself.',
+    duyarlilikEnerjiNot: 'Pass count acts through redundant work: fewer passes mean less total redundant work.',
+    duyarlilik: {
+      emniyetBaslik: 'Effect on the safety ratio (pass {pas})',
+      emniyetAria: 'Sensitivity chart of the safety ratio for pass {pas}: inputs ordered by effect.',
+      enerjiAria: 'Sensitivity chart of specific energy: inputs ordered by effect.'
+    },
+    duyarlilikAd: { n: 'Hardening exponent n', mu: 'Friction μ', alphaDeg: 'Die semi-angle α',
+                    r: 'Area reduction r', K: 'Strength coefficient K', passes: 'Pass count' },
+    duyarlilikSifir: 'no effect',
+    guvenBaslik: 'Validation, formulas and assumptions',
+    unvan: 'Mechanical Engineer',
+    tema: 'Dark theme', temaAcik: 'Light theme',
+    baglantiKopyala: 'Copy link',
+    baglantiKopyalandi: 'Link copied — every input and the uncertainty band settings are in the address.',
+    baglantiHatasi: 'The link could not be copied; you can copy it from the address bar.',
+    csvIndir: 'Download CSV',
+    csvIndi: 'CSV downloaded.',
+    csvMerkez: 'central values (uncertainty band off)',
+    csvBant: 'uncertainty band on: low – high',
+    yazdir: 'Print',
+    muafiyet: 'This tool is an independent engineering study with no formal relationship to any company. It is intended for preliminary design and cannot be used as a production recipe.',
+    altNot: 'This model is a preliminary design tool, not a production recipe: die deflection, the lubrication regime, back tension, strain rate and die wear are not accounted for.',
+    kabullereGit: 'Assumptions and limits',
+    sekmeDogrulama: 'Validation', sekmeFormuller: 'Formulas', sekmeKabuller: 'Assumptions',
+    dogrulama: { gecti: 'PASS', kaldi: 'FAIL', ozet: '{gecen}/{toplam} tests pass. They run live every time the page opens.' },
+    testSutun: ['#', 'Test', 'What it does', 'Expected', 'Found', 'Result'],
+    referansBaslik: 'Reference pass — expected vs computed',
+    referansSutun: ['Quantity', 'Expected', 'Computed', 'Deviation'],
+    test: {
+      T1: { ad: 'Zero limit', aciklama: 'Computes the reference pass with μ = 0 and α = 0.001°; the drawing stress must equal the ideal deformation work.' },
+      T2: { ad: 'Lower bound', aciklama: 'In a real pass friction and redundant work always add; the drawing stress must exceed the ideal work.' },
+      T3: { ad: 'Theoretical maximum', aciklama: 'A pass demanding more than 63.2% area reduction must be rejected with a clear error.' },
+      T4: { ad: 'Mass conservation', aciklama: 'Mass flow computed from the reported diameters and speeds must be the same in every pass.' },
+      T5: { ad: 'Automatic pass count — equal strain', aciklama: 'The three presets must give 16, 11 and 25 passes.' },
+      T6: { ad: 'Automatic pass count — equal safety', aciklama: 'The smallest pass count keeping safety below 0.50 must be 11, 8 and 17.' },
+      T7: { ad: 'Total work / ideal work', aciklama: 'The specific energy of the line must be a plausible multiple of the ideal deformation work.' },
+      T8: { ad: 'K invariance', aciklama: 'The safety ratio must not change between K = 315 and K = 530; K cancels in the ratio.' }
+    },
+    formulAralik: 'Validity', formulKaynak: 'Source',
+    formuller: [
+      { ad: 'Area reduction', formul: 'r = 1 − (d₁/d₀)²',
+        aciklama: 'The fraction of the cross-section removed in the pass.',
+        aralik: '0 < r ≤ 0.632 (single-pass theoretical limit 1 − 1/e)', kaynak: 'Dieter, Mechanical Metallurgy' },
+      { ad: 'True strain', formul: 'ε = 2·ln(d₀/d₁)',
+        aciklama: 'The true (logarithmic) strain of the pass, from volume conservation.',
+        aralik: 'All pass geometries', kaynak: 'Dieter, Mechanical Metallurgy' },
+      { ad: 'Work hardening (Hollomon)', formul: 'σ_f = max(K·εⁿ, 70 MPa)',
+        aciklama: 'Flow stress from accumulated strain; a floor for annealed ETP copper avoids the zero at ε→0.',
+        aralik: 'ETP copper: K = 315–530 MPa, n = 0.35–0.54', kaynak: 'Dieter, table of hardening coefficients' },
+      { ad: 'Mean flow stress', formul: 'σ̄ = K·(ε_out^(n+1) − ε_in^(n+1)) / ((n+1)·ε_pass)',
+        aciklama: 'The integral of the Hollomon relation across the pass; the floor does not apply to it.',
+        aralik: 'ε_pass > 0', kaynak: 'Dieter, deformation processing' },
+      { ad: 'Drawing stress (Siebel)', formul: 'σ_d = σ̄ · [ (1 + μ/α) · ε_pass + (2/3)·α ]',
+        aciklama: 'Three terms added: deformation, friction and redundant work. α is in radians.',
+        aralik: 'Small semi-angle (α ≲ 15°), constant friction', kaynak: 'Siebel approximation; Dieter · Kalpakjian & Schmid' },
+      { ad: 'Safety ratio', formul: 'safety = σ_d / σ_f,exit',
+        aciklama: 'Drawing stress over the strength of the exiting wire; above 0.60 there is a risk of breakage. K cancels here.',
+        aralik: '0 < safety < 1 (theoretical break limit 1)', kaynak: 'Dieter; Wistreich (1958)' },
+      { ad: 'Delta factor', formul: 'Δ = α·(1 + √(1−r))² / r',
+        aciklama: 'Shape ratio of the deformation zone: low means excessive friction, high means centre-burst risk.',
+        aralik: 'Sound region 1.5 ≤ Δ ≤ 3.0', kaynak: 'Avitzur, Metal Forming; Wistreich (1958)' },
+      { ad: 'Adiabatic temperature rise', formul: 'ΔT = σ_d / (ρ·c_p)',
+        aciklama: 'Assumes all deformation work turns into heat with no losses; it is an upper bound.',
+        aralik: 'Warning threshold 100 °C', kaynak: 'Kalpakjian & Schmid, drawing chapter' }
+    ],
+    kabuller: {
+      giris: 'This model is a preliminary design tool, not a production recipe. What it leaves out:',
+      maddeler: [
+        'Die deflection and elastic springback',
+        'Lubricant film thickness and the hydrodynamic regime (friction is constant)',
+        'Back tension',
+        'The effect of strain rate on flow stress',
+        'Temperature dependence of flow stress (the rise is computed but not fed back)',
+        'Die wear changing the geometry along the schedule',
+        'Residual stresses and the centre-to-surface strain difference'
+      ],
+      notlar: [
+        'Because σ = K·εⁿ gives zero at ε→0, the displayed flow stresses carry a 70 MPa floor for annealed ETP copper. This is a modelling choice.',
+        'The safety ratio is independent of the strength coefficient K: drawing stress and flow stress are both linear in K, so the ratio cancels (in the ε > 0.02 region where the floor is inactive). The wide literature range for K (315–530 MPa) therefore does not affect the risk of breakage, while it scales force, power and temperature rise proportionally.',
+        'Speed is chained along the line: each pass enters at the exit speed of the previous one and the mass flow is constant. The power in the table is the mechanical power at the dies; grid power is roughly 15–25% higher because of transmission and motor losses, and auxiliary consumption is not counted at all.',
+        'Accumulated strain starts at zero in the first pass: the incoming 8 mm rod is assumed hot-rolled or annealed. An intermediate anneal resets the strain completely; partial annealing is not modelled.'
+      ]
+    },
+    karsilastirSabitle: 'Pin this schedule as A',
+    karsilastirKapat: 'Close comparison',
+    karsilastirA: 'A', karsilastirB: 'B', karsilastirFark: 'Difference',
+    karsilastirSatir: {
+      pas: 'Passes', enYuksekEmniyet: 'Highest safety ratio',
+      guc: 'Total mechanical power (kW)', enerji: 'Energy (kWh/ton)', uyarilar: 'Warnings'
+    },
+    uyariTur: { kopma: 'breakage', delta: 'delta', isi: 'ΔT' },
+    uyariYok: 'none',
+    uyariPasSayisi: '{tur}: {n} passes',
+    degisenBaslik: 'Inputs that changed:',
+    degisenYok: 'Only the method changed — the comparison is valid.',
+    degisenHicbiri: 'A and B were produced from identical inputs — no difference.',
+    degisenOtomatik: 'automatic',
+    yontemGerekcesi: {
+      equalStrain: 'Equal strain: the same proportional area reduction in every pass. Textbook baseline.',
+      tapered: 'Tapered: copper work-hardens pass by pass while the wire gets thinner; both raise the risk of breakage, so real lines ease off the reduction towards the end.',
+      equalSafety: 'Equal safety: every pass is driven to the same safety ratio (0.50). In automatic mode the smallest pass count meeting that target is chosen.'
+    },
+    pasSayisiGerekcesi: 'On a real drawing machine the number of dies is fixed: to answer "I have 13 dies, can I get from 8.00 to 1.38?" the pass count can be pinned by hand.',
+    tavlamaNotu: 'Total strain {eps}. At this level real lines apply intermediate annealing; tick a pass in the table to try it.',
+    alan: {
+      d0: 'Starting diameter', dTarget: 'Target diameter', alphaDeg: 'Die semi-angle',
+      mu: 'Friction coefficient', K: 'Strength coefficient', n: 'Strain-hardening exponent',
+      v0: 'Line entry speed', method: 'Pass distribution method', passes: 'Number of passes'
+    },
+    yontem: { equalStrain: 'Equal strain', tapered: 'Tapered', equalSafety: 'Equal safety' },
+    sutun: {
+      no: 'Pass', d0: 'Entry dia.', d1: 'Exit dia.', rPct: 'Area reduction',
+      epsOut: 'Accumulated strain', sigmaBar: 'Mean flow stress', sigmaFOut: 'Exit strength',
+      sigmaD: 'Drawing stress', safety: 'Safety ratio', delta: 'Delta',
+      dT: 'Adiabatic ΔT', v1: 'Exit speed', PkW: 'Mechanical power', anneal: 'Anneal'
+    },
+    hata: {
+      baslik: 'Calculation failed.',
+      R_TEORIK_ASIM: 'With this pass count, pass {pas} needs {r}% area reduction; the theoretical limit is {sinir}%. Increase the pass count.',
+      R_TEORIK_ASIM_TEK: 'This pass needs {r}% area reduction; the theoretical limit is {sinir}%.',
+      GECERSIZ_CAP: 'Diameters must be greater than zero.',
+      CIKIS_CAPI_BUYUK: 'The exit diameter must be smaller than the entry diameter.',
+      GECERSIZ_ACI: 'The die semi-angle must be greater than zero.',
+      HEDEF_CAP_BUYUK: 'The target diameter must be smaller than the starting diameter.',
+      GECERSIZ_PAS_SAYISI: 'The pass count must be a whole number of 1 or more.',
+      BILINMEYEN_YONTEM: 'Unknown pass distribution method.',
+      YAKINSAMADI: 'The pass distribution did not converge to the target strain.',
+      PAS_SAYISI_YAKINSAMADI: 'The target safety ratio could not be reached within {maks} passes.',
+      MANUEL_BOS: 'The diameter list is empty.',
+      MANUEL_DIZI_YOK: 'A diameter list is required for a manual schedule.',
+      MANUEL_GECERSIZ: 'The diameter list could not be read. Enter at least two diameters, separated by space, line break or semicolon.',
+      MANUEL_ARALIK_DISI: 'Diameters must be between {min} and {maks} mm.',
+      MANUEL_SIRA: 'Diameters must decrease: value {sira} ({deger}) is not smaller than the one before it.',
+      MANUEL_BELIRSIZ: 'The comma is used both as a decimal mark and as a separator, so the list could not be read. Use a space or semicolon as separator: 8.00 7.16 6.40',
+      GECERSIZ_SAYI: 'Enter a valid number in the {alan} field.'
+    }
+  }
+};
+
+/* ==== DURUM ==== */
+
+const durum = {
+  dil: 'tr',
+  d0: 8.00, dTarget: 1.38, alphaDeg: 8, mu: 0.05, K: 450, n: 0.35, v0: 2.0,
+  method: 'equalStrain',
+  passes: null,            // null = Otomatik
+  anneals: [],             // 1-indeksli pas numaraları
+  manuelCaplar: null,      // manuel mod: çap dizisi
+  // Dar ekranda panel kapalı açılır; yerinde tek satır özet durur.
+  panelAcik: window.innerWidth >= 720,
+  karsilastirmaA: null,     // "A olarak sabitle" ile alınan program özeti
+  secilenPas: null,         // kalıp kesitinde gösterilen pas (varsayılan en riskli)
+  kalipAlpha: null,         // kalıp kesiti kaydırıcıları — null: pastan gelen değer
+  kalipR: null,
+  tema: 'sistem',           // 'sistem' | 'light' | 'dark'
+  sekme: 'dogrulama',       // güven katmanı sekmesi
+  bant: { acik: false, K: BANT_VARSAYILAN.K.slice(), n: BANT_VARSAYILAN.n.slice(),
+          mu: BANT_VARSAYILAN.mu.slice() }
+};
+
+// Girdi alanları: anahtar, birim ve giriş adımı. Sıra panelde göründüğü sıradır.
+const ALANLAR = [
+  { k: 'd0',       birim: 'mm' },
+  { k: 'dTarget',  birim: 'mm' },
+  { k: 'alphaDeg', birim: '°' },
+  { k: 'mu',       birim: '' },
+  { k: 'K',        birim: 'MPa' },
+  { k: 'n',        birim: '' },
+  { k: 'v0',       birim: 'm/s' }
+];
+
+// Tablo sütunları: anahtar, ondalık basamak ve birim. Aynı sütundaki bütün sayılar
+// aynı basamak sayısıyla yazılır.
+const SUTUNLAR = [
+  { k: 'no',        bas: 0, birim: '' },
+  { k: 'd0',        bas: 3, birim: 'mm' },
+  { k: 'd1',        bas: 3, birim: 'mm' },
+  { k: 'rPct',      bas: 2, birim: '%' },
+  { k: 'epsOut',    bas: 3, birim: '' },
+  { k: 'sigmaBar',  bas: 1, birim: 'MPa' },
+  { k: 'sigmaFOut', bas: 1, birim: 'MPa' },
+  { k: 'sigmaD',    bas: 1, birim: 'MPa' },
+  { k: 'safety',    bas: 3, birim: '' },
+  { k: 'delta',     bas: 2, birim: '' },
+  { k: 'dT',        bas: 1, birim: '°C' },
+  { k: 'v1',        bas: 2, birim: 'm/s' },
+  { k: 'PkW',       bas: 2, birim: 'kW' }
+];
+
+// Toplam gerinim bu seviyeyi aşınca ara tavlama bilgi notu gösterilir.
+const TAVLAMA_NOTU_ESIGI = 5.0;
+
+/* ==== BİÇİMLENDİRME ==== */
+
+const S = () => METIN[durum.dil];
+
+/* Sayıyı dile göre biçimlendirir: Türkçede ondalık virgül, İngilizcede nokta.
+   Binlik ayırıcı kullanılmaz. */
+function fmt(sayi, basamak) {
+  if (!Number.isFinite(sayi)) return '—';
+  const s = sayi.toFixed(basamak);
+  return durum.dil === 'tr' ? s.replace('.', ',') : s;
+}
+
+/* Kullanıcının yazdığı sayıyı okur: hem virgül hem nokta ondalık kabul edilir. */
+function sayiOku(metin) {
+  const t = String(metin).trim().replace(',', '.');
+  if (t === '' || !/^-?\d*\.?\d+$/.test(t)) return NaN;
+  return parseFloat(t);
+}
+
+/* Şablondaki {anahtar} yerlerini doldurur. */
+function doldur(sablon, degerler) {
+  return String(sablon).replace(/\{(\w+)\}/g, (_, k) => (k in degerler ? degerler[k] : '{' + k + '}'));
+}
+
+/* Hesap hatasını seçili dile çevirir. Çekirdek kodları döndürür, metin buradan gelir. */
+function hataMetni(err) {
+  const H = S().hata;
+  if (!(err instanceof DrawingError)) return err.message;
+  const i = err.info || {};
+  switch (err.code) {
+    case 'R_TEORIK_ASIM':
+      return doldur(i.pas ? H.R_TEORIK_ASIM : H.R_TEORIK_ASIM_TEK,
+        { pas: i.pas, r: fmt(i.r * 100, 1), sinir: fmt(R_THEORETICAL_MAX * 100, 1) });
+    case 'PAS_SAYISI_YAKINSAMADI': return doldur(H.PAS_SAYISI_YAKINSAMADI, { maks: MAX_PASSES });
+    case 'MANUEL_ARALIK_DISI': return doldur(H.MANUEL_ARALIK_DISI,
+      { min: fmt(MANUAL_D_MIN, 2), maks: fmt(MANUAL_D_MAX, 0) });
+    case 'MANUEL_SIRA': return doldur(H.MANUEL_SIRA,
+      { sira: i.index + 1, deger: fmt(i.aday[i.index], 2) });
+    default: return H[err.code] || err.message;
+  }
+}
+
+/* ==== EŞİK DEĞERLENDİRMESİ ====
+   Eşikler BÖLÜM 1'deki tablodan; sabitler hesap çekirdeğinde tanımlı. */
+
+function safetyDurumu(v) { return v > SAFETY_CRITICAL ? 'crit' : v > SAFETY_WARNING ? 'warn' : 'ok'; }
+function deltaDurumu(v)  { return (v < DELTA_MIN || v > DELTA_MAX) ? 'warn' : null; }
+function dTDurumu(v)     { return v > DT_WARNING ? 'warn' : null; }
+
+/* Hücrenin durum metni — renk körlüğü için renge ek olarak okunur bilgi. */
+function durumMetni(sutun, deger) {
+  const D = S().durum;
+  if (sutun === 'safety') return D[safetyDurumu(deger)];
+  if (sutun === 'delta')  return deger < DELTA_MIN ? D.deltaDusuk : deger > DELTA_MAX ? D.deltaYuksek : '';
+  if (sutun === 'dT')     return deger > DT_WARNING ? D.isiYuksek : '';
+  return '';
+}
+
+/* ==== ÖNERİ ====
+   Genel geçer cümle yok: her cümle gerçek sayı taşır. */
+
+/* Emniyet oranında belirgin bir tepe var mı? En yüksek pas, ikinciden en az
+   %2 yüksekse "en riskli pas" demek anlamlıdır; değilse paslar aynı seviyededir. */
+const TEPE_ESIGI = 0.02;
+
+function belirginTepe(paslar) {
+  if (paslar.length < 2) return true;
+  const sirali = paslar.map(x => x.safety).sort((a, b) => b - a);
+  return (sirali[0] - sirali[1]) / sirali[0] >= TEPE_ESIGI;
+}
+
+/* Tepe belirgin değilse aynı seviyedeki pasların aralığını verir. */
+function esitBolge(paslar) {
+  const enBuyuk = Math.max(...paslar.map(x => x.safety));
+  const bolge = paslar.filter(x => x.safety >= enBuyuk * (1 - TEPE_ESIGI));
+  return { ilk: bolge[0].no, son: bolge[bolge.length - 1].no, adet: bolge.length, emniyet: enBuyuk };
+}
+
+/* En riskli pasta emniyeti hedefe indirecek kesit azalmasını çözer. */
+function guvenliAzalma(pas, params) {
+  const eps = strainForSafety(TARGET_SAFETY, pas.epsIn, params);
+  return 1 - Math.exp(-eps);
+}
+
+/* Delta'yı sınıra döndüren kalıp yarı açısı. Delta alfa ile doğrusaldır. */
+function gerekliAci(pas, sinir) {
+  return pas.alphaDeg * sinir / pas.delta;
+}
+
+function oneriCumleleri(prog) {
+  const M = S();
+  const cumleler = [];
+  const params = { alphaRad: durum.alphaDeg * Math.PI / 180, mu: durum.mu, K: durum.K, n: durum.n };
+
+  const riskli = prog.passes.reduce((a, b) => (b.safety > a.safety ? b : a));
+
+  // Tek bir tepe yoksa bunu söyle: "en riskli pas" demek yanıltıcı olur (V3).
+  const tepeBelirgin = belirginTepe(prog.passes) || prog.passes.length === 1;
+  if (!tepeBelirgin) {
+    const b = esitBolge(prog.passes);
+    cumleler.push(doldur(M.oneriEsitBolge,
+      { ilk: b.ilk, son: b.son, emniyet: fmt(b.emniyet, 3) }));
+  }
+
+  if (riskli.safety > SAFETY_WARNING) {
+    const rYeni = guvenliAzalma(riskli, params);
+    cumleler.push(doldur(M.oneriRiskli, {
+      pas: riskli.no, emniyet: fmt(riskli.safety, 3),
+      r0: fmt(riskli.r * 100, 1), r1: fmt(rYeni * 100, 1)
+    }));
+  } else {
+    // Sınırın hemen altındaysa cümlenin tonu da bunu söylesin (C3).
+    // Tepe belirgin değilse pas numarası tekrar edilmez, seviye zaten yukarıda yazıyor.
+    const dar = riskli.safety >= SAFETY_WARNING * DAR_PAY_ORANI;
+    cumleler.push(!tepeBelirgin && !dar
+      ? M.oneriGuvenliBolge
+      : doldur(dar ? M.oneriGuvenliDar : M.oneriGuvenli,
+          { pas: riskli.no, emniyet: fmt(riskli.safety, 3) }));
+  }
+
+  const dusukDelta = prog.passes.filter(p => p.delta < DELTA_MIN)
+    .reduce((a, b) => (a === null || b.delta < a.delta ? b : a), null);
+  if (dusukDelta) {
+    cumleler.push(doldur(M.oneriDeltaDusuk, {
+      pas: dusukDelta.no, delta: fmt(dusukDelta.delta, 2),
+      alpha: fmt(gerekliAci(dusukDelta, DELTA_MIN), 1)
+    }));
+  }
+
+  const yuksekDelta = prog.passes.filter(p => p.delta > DELTA_MAX)
+    .reduce((a, b) => (a === null || b.delta > a.delta ? b : a), null);
+  if (yuksekDelta) {
+    cumleler.push(doldur(M.oneriDeltaYuksek, {
+      pas: yuksekDelta.no, delta: fmt(yuksekDelta.delta, 2),
+      alpha: fmt(gerekliAci(yuksekDelta, DELTA_MAX), 1)
+    }));
+  }
+
+  const sicak = prog.passes.reduce((a, b) => (b.dT > a.dT ? b : a));
+  if (sicak.dT > DT_WARNING) {
+    cumleler.push(doldur(M.oneriIsi, { pas: sicak.no, dT: fmt(sicak.dT, 1) }));
+  }
+
+  return cumleler;
+}
+
+/* Programdaki aktif uyarılar: tür ve kaç pası etkilediği.
+   Karşılaştırmada bu satır bir ödünleşim satırıdır, üstünlük satırı değil. */
+function uyariSayimi(prog) {
+  const say = {
+    kopma: prog.passes.filter(p => p.safety > SAFETY_CRITICAL).length,
+    delta: prog.passes.filter(p => p.delta < DELTA_MIN || p.delta > DELTA_MAX).length,
+    isi:   prog.passes.filter(p => p.dT > DT_WARNING).length
+  };
+  const turler = Object.keys(say).filter(t => say[t] > 0);
+  return { say, turler };
+}
+
+/* Girdilerin anlık görüntüsü — A sabitlenirken alınır, C2 için karşılaştırılır. */
+function girdiGoruntusu(prog) {
+  return {
+    d0: durum.d0, dTarget: durum.dTarget, alphaDeg: durum.alphaDeg, mu: durum.mu,
+    K: durum.K, n: durum.n, v0: durum.v0,
+    method: durum.manuelCaplar ? 'manual' : durum.method,
+    passes: durum.passes,                  // null = otomatik
+    passCount: prog.passCount,
+    anneals: durum.anneals.join(',')
+  };
+}
+
+/* Programın karşılaştırma için özeti. */
+function programOzeti(prog) {
+  const riskli = prog.passes.reduce((a, b) => (b.safety > a.safety ? b : a));
+  return {
+    uyari: uyariSayimi(prog),
+    girdi: girdiGoruntusu(prog),
+    pas: prog.passCount,
+    enYuksekEmniyet: riskli.safety,
+    enRiskliPas: riskli.no,
+    guc: prog.totalPower / 1000,
+    enerji: prog.totalPower / prog.massFlow / 3600,
+    uzama: (prog.passes[0].d0 / prog.passes[prog.passes.length - 1].d1) ** 2,
+    cikisHizi: prog.v1Line
+  };
+}
+
+/* ==== ARAYÜZ KURULUMU ==== */
+
+const $ = (id) => document.getElementById(id);
+const alanGirdileri = {};   // anahtar -> input elemanı
+let yontemSecimi, pasSayisiGirdisi, pasSayisiIpucu;
+
+/* Küçük inline SVG ikonlar — emoji yok, 1,5 px kontur, currentColor. */
+function ikon(tip) {
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('width', '16'); svg.setAttribute('height', '16');
+  svg.setAttribute('viewBox', '0 0 16 16'); svg.setAttribute('fill', 'none');
+  svg.setAttribute('aria-hidden', 'true');
+  const yol = document.createElementNS(ns, 'path');
+  const yollar = {
+    ok: 'M4 6.5 L8 10.5 L12 6.5',                      // açılır liste oku
+    onay: 'M3.5 8.5 L6.5 11.5 L12.5 5',                // onay işareti
+    uyari: 'M8 2.5 L14.5 13.5 L1.5 13.5 Z M8 6.5 v3',  // uyarı üçgeni
+    kritik: 'M8 2.5 L14.5 13.5 L1.5 13.5 Z M8 6 v3.5'  // tehlike üçgeni
+  };
+  yol.setAttribute('d', yollar[tip] || yollar.ok);
+  yol.setAttribute('stroke', 'currentColor');
+  yol.setAttribute('stroke-width', '1.5');
+  yol.setAttribute('stroke-linecap', 'round');
+  yol.setAttribute('stroke-linejoin', 'round');
+  svg.appendChild(yol);
+  return svg;
+}
+
+function kurSenaryoDugmeleri() {
+  const kap = $('senaryoDugmeleri');
+  kap.textContent = '';
+  for (const s of SENARYOLAR) {
+    const d = document.createElement('button');
+    d.type = 'button';
+    d.className = 'dugme';
+    d.dataset.senaryo = s.id;
+    d.addEventListener('click', () => senaryoYukle(s));
+    kap.appendChild(d);
+  }
+}
+
+function kurPanel() {
+  const panel = $('girdiPaneli');
+  panel.textContent = '';
+
+  for (const a of ALANLAR) {
+    const sar = document.createElement('div');
+    sar.className = 'alan';
+    const lab = document.createElement('label');
+    lab.htmlFor = 'girdi-' + a.k;
+    lab.dataset.alan = a.k;
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.inputMode = 'decimal';
+    inp.id = 'girdi-' + a.k;
+    inp.autocomplete = 'off';
+    inp.addEventListener('input', () => {
+      const v = sayiOku(inp.value);
+      if (Number.isFinite(v)) {
+        durum[a.k] = v;
+        // K-01: başlangıç veya hedef çap elle değişince pas sayısı otomatiğe döner.
+        if (a.k === 'd0' || a.k === 'dTarget') durum.passes = null;
+        durum.anneals = [];
+      }
+      ciz();
+    });
+    alanGirdileri[a.k] = inp;
+    sar.append(lab, inp);
+    panel.appendChild(sar);
+  }
+
+  // Pas dağıtım yöntemi — özel stillenmiş select
+  const sarY = document.createElement('div');
+  sarY.className = 'alan genis';
+  const labY = document.createElement('label');
+  labY.htmlFor = 'girdi-method';
+  labY.dataset.alan = 'method';
+  const secimKabi = document.createElement('div');
+  secimKabi.className = 'secim';
+  yontemSecimi = document.createElement('select');
+  yontemSecimi.id = 'girdi-method';
+  for (const y of ['equalStrain', 'tapered', 'equalSafety']) {
+    const o = document.createElement('option');
+    o.value = y;
+    yontemSecimi.appendChild(o);
+  }
+  yontemSecimi.addEventListener('change', () => {
+    // K-01: yöntem değişiminde pas sayısı KORUNUR.
+    durum.method = yontemSecimi.value;
+    ciz();
+  });
+  secimKabi.append(yontemSecimi, ikon('ok'));
+  sarY.append(labY, secimKabi);
+  panel.appendChild(sarY);
+
+  // Pas sayısı — boş = Otomatik
+  const sarP = document.createElement('div');
+  sarP.className = 'alan genis';
+  const labP = document.createElement('label');
+  labP.htmlFor = 'girdi-passes';
+  labP.dataset.alan = 'passes';
+  const satir = document.createElement('div');
+  satir.className = 'pas-sayisi-satiri';
+  pasSayisiGirdisi = document.createElement('input');
+  pasSayisiGirdisi.type = 'text';
+  pasSayisiGirdisi.inputMode = 'numeric';
+  pasSayisiGirdisi.id = 'girdi-passes';
+  pasSayisiGirdisi.autocomplete = 'off';
+  pasSayisiGirdisi.addEventListener('input', () => {
+    const t = pasSayisiGirdisi.value.trim();
+    durum.passes = t === '' ? null : sayiOku(t);
+    durum.anneals = [];
+    ciz();
+  });
+  const otoDugme = document.createElement('button');
+  otoDugme.type = 'button';
+  otoDugme.className = 'dugme sessiz';
+  otoDugme.id = 'otomatigeDon';
+  otoDugme.addEventListener('click', () => {
+    durum.passes = null;
+    durum.anneals = [];
+    pasSayisiGirdisi.value = '';
+    ciz();
+  });
+  satir.append(pasSayisiGirdisi, otoDugme);
+  pasSayisiIpucu = document.createElement('p');
+  pasSayisiIpucu.className = 'ipucu';
+  pasSayisiIpucu.id = 'pasSayisiIpucu';
+  sarP.append(labP, satir, pasSayisiIpucu);
+  panel.appendChild(sarP);
+}
+
+function kurTabloBasligi() {
+  const satir = $('tabloBaslik');
+  satir.textContent = '';
+  for (const s of SUTUNLAR) {
+    const th = document.createElement('th');
+    th.scope = 'col';
+    th.dataset.sutun = s.k;
+    satir.appendChild(th);
+  }
+  const th = document.createElement('th');
+  th.scope = 'col';
+  th.dataset.sutun = 'anneal';
+  satir.appendChild(th);
+}
+
+/* ==== OLAYLAR ==== */
+
+function senaryoYukle(s) {
+  durum.d0 = s.d0; durum.dTarget = s.dTarget; durum.alphaDeg = s.alphaDeg;
+  durum.mu = s.mu; durum.K = s.K; durum.n = s.n; durum.v0 = s.v0;
+  durum.passes = null;          // K-01: senaryo düğmesi pas sayısını otomatiğe döndürür
+  durum.anneals = [];
+  durum.manuelCaplar = null;
+  $('manuelMetin').value = '';
+  alanlariYaz();
+  ciz();
+}
+
+function manuelHesapla() {
+  try {
+    durum.manuelCaplar = parseManualSchedule($('manuelMetin').value);
+    durum.anneals = [];
+    durum.d0 = durum.manuelCaplar[0];
+    durum.dTarget = durum.manuelCaplar[durum.manuelCaplar.length - 1];
+    alanlariYaz();
+    ciz();
+  } catch (err) {
+    durum.manuelCaplar = null;
+    hataGoster(hataMetni(err));
+  }
+}
+
+function manuelTemizle() {
+  durum.manuelCaplar = null;
+  durum.anneals = [];
+  $('manuelMetin').value = '';
+  ciz();
+}
+
+function dilDegistir(dil) {
+  durum.dil = dil;
+  document.documentElement.lang = dil;
+  $('dilTR').setAttribute('aria-pressed', String(dil === 'tr'));
+  $('dilEN').setAttribute('aria-pressed', String(dil === 'en'));
+  tercihYaz('dil', dil);
+  metinleriYaz();
+  kurBantAlanlari();
+  alanlariYaz();
+  temaUygula();
+  ciz();
+}
+
+function panelKatlaDegistir() {
+  durum.panelAcik = !durum.panelAcik;
+  paneliUygula();
+  metinleriYaz();
+}
+
+/* Panel açık/kapalı görünümü. Kapalıyken yerinde tek satır özet durur. */
+function paneliUygula() {
+  $('girdiPaneli').hidden = !durum.panelAcik;
+  $('panelOzet').hidden = durum.panelAcik;
+  $('yontemGerekcesi').hidden = !durum.panelAcik;
+  $('panelKatla').setAttribute('aria-expanded', String(durum.panelAcik));
+}
+
+/* Kapalı paneldeki özet: 8,00 -> 1,38 mm · eşit gerinim · 16 pas */
+function ozetiYaz(prog) {
+  const M = S();
+  const kap = $('panelOzet');
+  kap.textContent = '';
+  const parca = (metin, sinif) => {
+    const el = document.createElement('span');
+    if (sinif) el.className = sinif;
+    el.textContent = metin;
+    return el;
+  };
+  const ayrac = () => parca('·', 'ayrac');
+  kap.append(parca(fmt(durum.d0, 2) + ' → ' + fmt(durum.dTarget, 2) + ' mm'), ayrac());
+  kap.append(parca(durum.manuelCaplar ? M.ozetManuel : M.ozetYontem[durum.method], 'sozcuk'));
+  if (prog) {
+    kap.append(ayrac(), parca(doldur(M.ozetPas, { n: prog.passCount })));
+  }
+}
+
+/* ==== ÇİZİM ==== */
+
+function metinleriYaz() {
+  const M = S();
+  document.title = M.baslik;
+  for (const el of document.querySelectorAll('[data-t]')) {
+    const anahtar = el.dataset.t;
+    if (anahtar === 'gizle') { el.textContent = durum.panelAcik ? M.gizle : M.duzenle; continue; }
+    if (M[anahtar] !== undefined) el.textContent = M[anahtar];
+  }
+  for (const el of document.querySelectorAll('[data-alan]')) {
+    const a = ALANLAR.find(x => x.k === el.dataset.alan);
+    el.textContent = M.alan[el.dataset.alan];
+    if (a && a.birim) {
+      const b = document.createElement('span');
+      b.className = 'birim';
+      b.textContent = ' ' + a.birim;
+      el.appendChild(b);
+    }
+  }
+  for (const el of document.querySelectorAll('[data-sutun]')) {
+    const s = SUTUNLAR.find(x => x.k === el.dataset.sutun);
+    el.textContent = M.sutun[el.dataset.sutun];
+    if (s && s.birim) {
+      const b = document.createElement('span');
+      b.className = 'birim';
+      b.textContent = s.birim;
+      el.appendChild(b);
+    }
+  }
+  for (const d of document.querySelectorAll('[data-senaryo]')) {
+    const s = SENARYOLAR.find(x => x.id === d.dataset.senaryo);
+    d.textContent = durum.dil === 'tr' ? s.tr : s.en;
+  }
+  for (const o of yontemSecimi.options) o.textContent = M.yontem[o.value];
+  $('otomatigeDon').textContent = M.otomatigeDon;
+  pasSayisiGirdisi.placeholder = M.otomatikYer;
+  $('manuelMetin').placeholder = durum.dil === 'tr' ? '8,00 7,16 6,40' : '8.00 7.16 6.40';
+}
+
+/* Girdi kutularına durumu yazar; kullanıcının yazmakta olduğu kutuya dokunmaz. */
+function alanlariYaz() {
+  const basamak = { d0: 2, dTarget: 2, alphaDeg: 1, mu: 3, K: 0, n: 2, v0: 1 };
+  for (const a of ALANLAR) {
+    const inp = alanGirdileri[a.k];
+    if (document.activeElement === inp) continue;
+    inp.value = fmt(durum[a.k], basamak[a.k]);
+  }
+  yontemSecimi.value = durum.method;
+  if (document.activeElement !== pasSayisiGirdisi) {
+    pasSayisiGirdisi.value = durum.passes === null ? '' : String(durum.passes);
+  }
+}
+
+function hataGoster(mesaj) {
+  const k = $('hataKutusu');
+  k.textContent = S().hata.baslik + ' ' + mesaj;
+  k.hidden = false;
+}
+
+function bilgiGoster(mesaj) {
+  const k = $('bilgiKutusu');
+  if (!mesaj) { k.hidden = true; return; }
+  k.textContent = mesaj;
+  k.hidden = false;
+}
+
+/* Pas satırının görüntülenecek değerleri — sütun anahtarlarıyla eşleşir. */
+function satirDegerleri(p) {
+  return { no: p.no, d0: p.d0, d1: p.d1, rPct: p.r * 100, epsOut: p.epsOut,
+           sigmaBar: p.sigmaBar, sigmaFOut: p.sigmaFOut, sigmaD: p.sigmaD,
+           safety: p.safety, delta: p.delta, dT: p.dT, v1: p.v1, PkW: p.P / 1000 };
+}
+
+/* Özet şeridi: beş büyüklük + hattın çıkış hızı. */
+function ozetSeridiniCiz(prog) {
+  const M = S();
+  const kap = $('ozetSeridi');
+  kap.textContent = '';
+  if (!prog) return;
+  const o = programOzeti(prog);
+
+  const hucre = (anahtar, deger, birim, not, sinif) => {
+    const el = document.createElement('div');
+    el.className = 'hucre' + (sinif ? ' ' + sinif : '');
+    const et = document.createElement('span');
+    et.className = 'etiket';
+    et.textContent = M.ozetAlan[anahtar];
+    const dg = document.createElement('span');
+    dg.className = 'deger';
+    const sayi = document.createElement('span');
+    sayi.textContent = deger;
+    dg.appendChild(sayi);
+    if (birim) {
+      const b = document.createElement('span');
+      b.className = 'birim';
+      b.textContent = birim;
+      dg.appendChild(b);
+    }
+    el.append(et, dg);
+    if (not) {
+      const n = document.createElement('span');
+      n.className = 'not';
+      n.textContent = not;
+      el.appendChild(n);
+    }
+    kap.appendChild(el);
+  };
+
+  // Bant açıkken emniyet, güç ve enerji tek sayı değil aralık gösterir; eşik
+  // rengi bandın üst ucuna göre seçilir.
+  const emniyetDeger = sonBant ? sonBant.enYuksekEmniyet[1] : o.enYuksekEmniyet;
+  const emniyetSinif = safetyDurumu(emniyetDeger);
+  const aralik = (b, bas) => fmt(b[0], bas) + ' – ' + fmt(b[1], bas);
+  hucre('pas', fmt(o.pas, 0), '', '');
+  hucre('enRiskli', sonBant ? aralik(sonBant.enYuksekEmniyet, 3) : fmt(o.enYuksekEmniyet, 3), '',
+        doldur(M.ozetPasNotu, { n: o.enRiskliPas }) + ' · ' + M.durum[emniyetSinif], emniyetSinif);
+  hucre('guc', sonBant ? aralik(sonBant.guc, 1) : fmt(o.guc, 1), 'kW', '');
+  hucre('enerji', sonBant ? aralik(sonBant.enerji, 1) : fmt(o.enerji, 1), 'kWh/t', '');
+  hucre('uzama', fmt(o.uzama, 1), '×', '');
+  hucre('cikisHizi', fmt(o.cikisHizi, 1), 'm/s', '');
+}
+
+/* Öneri: gerçek sayı taşıyan cümleler. */
+function oneriyiCiz(prog) {
+  const kap = $('oneriKutusu');
+  kap.textContent = '';
+  kap.hidden = !prog;
+  if (!prog) return;
+  for (const c of oneriCumleleri(prog)) {
+    const satir = document.createElement('span');
+    satir.textContent = c;
+    kap.appendChild(satir);
+  }
+}
+
+/* Karşılaştırma: A sabitlenmişse B ile yan yana ve fark satırı. */
+function karsilastirmayiCiz(prog) {
+  const M = S();
+  const A = durum.karsilastirmaA;
+  $('karsilastirSabitle').textContent = M.karsilastirSabitle;
+  $('karsilastirSabitle').disabled = !prog;
+  $('karsilastirKapat').hidden = !A;
+  $('karsilastirmaKabi').hidden = !(A && prog);
+  $('degisenGirdiler').hidden = !(A && prog);
+  if (!A || !prog) return;
+
+  const B = programOzeti(prog);
+  const basSatir = $('karsilastirmaBaslik');
+  basSatir.textContent = '';
+  for (const b of ['', M.karsilastirA, M.karsilastirB, M.karsilastirFark]) {
+    const th = document.createElement('th');
+    th.scope = 'col';
+    th.textContent = b;
+    basSatir.appendChild(th);
+  }
+
+  degisenGirdileriYaz(A.girdi, B.girdi);
+
+  const govde = $('karsilastirmaGovde');
+  govde.textContent = '';
+  const satirlar = [
+    { k: 'pas', bas: 0, a: A.pas, b: B.pas, azIyi: true },
+    { k: 'enYuksekEmniyet', bas: 3, a: A.enYuksekEmniyet, b: B.enYuksekEmniyet, azIyi: true },
+    { k: 'guc', bas: 1, a: A.guc, b: B.guc, azIyi: true },
+    { k: 'enerji', bas: 1, a: A.enerji, b: B.enerji, azIyi: true }
+  ];
+  for (const s of satirlar) {
+    const tr = document.createElement('tr');
+    const ad = document.createElement('td');
+    ad.textContent = M.karsilastirSatir[s.k];
+    const a = document.createElement('td');
+    a.textContent = fmt(s.a, s.bas);
+    const b = document.createElement('td');
+    b.textContent = fmt(s.b, s.bas);
+    const fark = document.createElement('td');
+    const d = s.b - s.a;
+    const yuzde = s.a === 0 ? 0 : d / s.a * 100;
+    // Pas ve emniyet mutlak farkla, güç ve enerji yüzdeyle okunur.
+    fark.textContent = (d > 0 ? '+' : d < 0 ? '−' : '') +
+      (s.k === 'pas' || s.k === 'enYuksekEmniyet'
+        ? fmt(Math.abs(d), s.bas)
+        : '%' + fmt(Math.abs(yuzde), 1));
+    if (Math.abs(d) > 1e-9) fark.className = (d < 0) === s.azIyi ? 'fark-iyi' : 'fark-kotu';
+    tr.append(ad, a, b, fark);
+    govde.appendChild(tr);
+  }
+
+  // Uyarı satırı (C1): ödünleşimi gösterir, bu yüzden kazanan tarafı boyanmaz.
+  const uyariHucresi = (u) => {
+    const td = document.createElement('td');
+    if (u.turler.length === 0) { td.textContent = M.uyariYok; return td; }
+    td.textContent = u.turler.length + ' (' +
+      u.turler.map(t => M.uyariTur[t]).join(' · ') + ')';
+    td.title = u.turler.map(t => doldur(M.uyariPasSayisi,
+      { tur: M.uyariTur[t], n: u.say[t] })).join(' · ');
+    return td;
+  };
+  const uyariSatiri = document.createElement('tr');
+  const uyariAd = document.createElement('td');
+  uyariAd.textContent = M.karsilastirSatir.uyarilar;
+  const bosFark = document.createElement('td');
+  bosFark.textContent = '—';
+  uyariSatiri.append(uyariAd, uyariHucresi(A.uyari), uyariHucresi(B.uyari), bosFark);
+  govde.appendChild(uyariSatiri);
+}
+
+/* C2 · A ile B arasında hangi girdilerin değiştiğini yazar.
+   Bu satır olmadan, farklı girdilerle üretilmiş iki program sessizce
+   karşılaştırılır ve yanlış bir sonuç savunulur. */
+function degisenGirdileriYaz(a, b) {
+  const M = S();
+  const kap = $('degisenGirdiler');
+  kap.textContent = '';
+
+  const basamak = { d0: 2, dTarget: 2, alphaDeg: 1, mu: 3, K: 0, n: 2, v0: 1 };
+  const degisenler = [];
+
+  for (const alan of ALANLAR) {
+    if (Math.abs(a[alan.k] - b[alan.k]) > 1e-12) {
+      degisenler.push(M.alan[alan.k] + ' ' + fmt(a[alan.k], basamak[alan.k]) +
+        ' → ' + fmt(b[alan.k], basamak[alan.k]));
+    }
+  }
+
+  const yontemAdi = (g) => g.method === 'manual' ? M.ozetManuel : M.ozetYontem[g.method];
+  const yontemDegisti = a.method !== b.method;
+  if (yontemDegisti) {
+    degisenler.push(M.alan.method + ' ' + yontemAdi(a) + ' → ' + yontemAdi(b));
+  }
+
+  const pasMetni = (g) => fmt(g.passCount, 0) + (g.passes === null ? ' (' + M.degisenOtomatik + ')' : '');
+  if (a.passCount !== b.passCount || (a.passes === null) !== (b.passes === null)) {
+    degisenler.push(M.alan.passes + ' ' + pasMetni(a) + ' → ' + pasMetni(b));
+  }
+
+  if (a.anneals !== b.anneals) {
+    degisenler.push(M.sutun.anneal + ': ' + (a.anneals || M.uyariYok) +
+      ' → ' + (b.anneals || M.uyariYok));
+  }
+
+  if (degisenler.length === 0) {
+    kap.textContent = M.degisenHicbiri;
+    kap.className = 'degisen temiz';
+    return;
+  }
+  // Yalnızca yöntem (ve onun getirdiği otomatik pas sayısı) değiştiyse karşılaştırma
+  // temiz sayılır; başka bir girdi değiştiyse bu vurgulanır.
+  const sadeceYontem = degisenler.every(m =>
+    m.startsWith(M.alan.method) || m.startsWith(M.alan.passes));
+  if (sadeceYontem && yontemDegisti) {
+    kap.textContent = M.degisenYok;
+    kap.className = 'degisen temiz';
+    return;
+  }
+  kap.className = 'degisen';
+  const bas = document.createElement('b');
+  bas.textContent = M.degisenBaslik + ' ';
+  kap.appendChild(bas);
+  kap.appendChild(document.createTextNode(degisenler.join(' · ')));
+}
+
+/* Ana çizim: hesabı yapar, tabloyu ve ipuçlarını yeniler. */
+function ciz() {
+  const M = S();
+  const manuel = durum.manuelCaplar !== null;
+
+  // Manuel modda dağıtım yöntemi ve pas sayısı devre dışı.
+  yontemSecimi.disabled = manuel;
+  pasSayisiGirdisi.disabled = manuel;
+  // Zaten otomatik moddayken "Otomatik'e dön" işlevsizdir — pasif olsun.
+  $('otomatigeDon').disabled = manuel || durum.passes === null;
+  alanGirdileri.d0.disabled = manuel;
+  alanGirdileri.dTarget.disabled = manuel;
+  $('yontemGerekcesi').textContent = manuel ? '' : M.yontemGerekcesi[durum.method];
+
+  // Program değişmişse kalıp kesitindeki kaydırıcılar pasın kendi değerlerine döner.
+  let prog = null, hata = null;
+  try {
+    prog = manuel
+      ? buildSchedule({ method: 'manual', diameters: durum.manuelCaplar,
+          alphaDeg: durum.alphaDeg, mu: durum.mu, K: durum.K, n: durum.n,
+          v0: durum.v0, anneals: durum.anneals })
+      : buildSchedule({ d0: durum.d0, dTarget: durum.dTarget, method: durum.method,
+          passes: durum.passes, alphaDeg: durum.alphaDeg, mu: durum.mu, K: durum.K,
+          n: durum.n, v0: durum.v0, anneals: durum.anneals });
+  } catch (err) {
+    hata = err;
+  }
+
+  $('hataKutusu').hidden = !hata;
+  if (hata) $('hataKutusu').textContent = M.hata.baslik + ' ' + hataMetni(hata);
+
+  // Pas sayısı ipucu: seçili yöntemin kendi otomatik değeri (K-07).
+  pasSayisiIpucu.textContent = prog
+    ? doldur(M.otomatikIpucu, { n: prog.autoPassCount })
+    : '';
+
+  // Bilgi notu: manuel mod veya yüksek toplam gerinimde ara tavlama hatırlatması.
+  if (manuel && prog) {
+    bilgiGoster(doldur(M.manuelAktif, { n: prog.passCount }));
+  } else if (prog && prog.epsTotal >= TAVLAMA_NOTU_ESIGI && durum.anneals.length === 0) {
+    bilgiGoster(doldur(M.tavlamaNotu, { eps: fmt(prog.epsTotal, 2) }));
+  } else {
+    bilgiGoster(null);
+  }
+
+  ozetiYaz(prog);
+  paneliUygula();
+  $('ozetSeridi').hidden = !prog;
+  // Belirsizlik bandı: açıksa köşe taraması burada bir kez yapılır.
+  sonBant = (prog && durum.bant.acik) ? bandHesapla(prog) : null;
+  $('bantAlanlari').hidden = !durum.bant.acik;
+
+  bantKoselerCiz();
+  ozetSeridiniCiz(prog);
+  oneriyiCiz(prog);
+  karsilastirmayiCiz(prog);
+  tabloyuCiz(prog);
+  gorselleriCiz(prog);
+  duyarlilikCiz(prog);
+  if (prog) adresYaz();
+  dogrulamaPaneliCiz();
+  formulPaneliCiz();
+  kabullerPaneliCiz();
+}
+
+/* Dar ekranda (< 720 px) pas tablosu karta dönüşür: 12 sütunlu yatay kaydırma
+   yerine her pas kendi kartında. Tabloyla kart aynı anda kurulmaz. */
+const DAR_EKRAN = window.matchMedia('(max-width: 719px)');
+
+function kartlariCiz(prog) {
+  const M = S();
+  const kap = $('pasKartlari');
+  kap.textContent = '';
+  if (!prog) return;
+
+  const ikincilAlanlar = ['rPct', 'epsOut', 'sigmaBar', 'sigmaFOut', 'sigmaD', 'delta', 'dT', 'v1', 'PkW'];
+  for (const p of prog.passes) {
+    const deger = satirDegerleri(p);
+    const bantSatiri = sonBant ? sonBant.paslar[p.no - 1] : null;
+    const kart = document.createElement('article');
+    kart.className = 'pas-karti' + (p.anneal ? ' tavlandi' : '') +
+      (p.no === durum.secilenPas ? ' secili' : '');
+
+    // Üst satır: pas numarası ve ara tavlama kutusu
+    const ust = document.createElement('div');
+    ust.className = 'kart-ust';
+    const no = document.createElement('span');
+    no.className = 'kart-no';
+    no.textContent = M.sutun.no + ' ' + fmt(p.no, 0);
+    const tavlamaEtiketi = document.createElement('label');
+    tavlamaEtiketi.className = 'kart-tavlama';
+    const kutu = document.createElement('span');
+    kutu.className = 'kutu';
+    const giris = document.createElement('input');
+    giris.type = 'checkbox';
+    giris.checked = p.anneal;
+    giris.setAttribute('aria-label', M.sutun.anneal + ' — ' + M.sutun.no + ' ' + p.no);
+    giris.addEventListener('change', () => {
+      durum.anneals = giris.checked
+        ? durum.anneals.concat(p.no).sort((a, b) => a - b)
+        : durum.anneals.filter(x => x !== p.no);
+      ciz();
+    });
+    const gorsel = document.createElement('span');
+    gorsel.className = 'gorsel';
+    gorsel.appendChild(ikon('onay'));
+    kutu.append(giris, gorsel);
+    const tavlamaMetni = document.createElement('span');
+    tavlamaMetni.textContent = M.sutun.anneal;
+    tavlamaEtiketi.append(kutu, tavlamaMetni);
+    ust.append(no, tavlamaEtiketi);
+
+    // Orta satır: büyük çap geçişi ve emniyet rozeti
+    const orta = document.createElement('div');
+    orta.className = 'kart-orta';
+    const cap = document.createElement('span');
+    cap.className = 'kart-cap';
+    cap.textContent = fmt(p.d0, 2) + ' → ' + fmt(p.d1, 2) + ' ';
+    const birim = document.createElement('span');
+    birim.className = 'birim';
+    birim.textContent = 'mm';
+    cap.appendChild(birim);
+
+    const emniyetDegeri = bantSatiri ? bantSatiri.safety[1] : p.safety;
+    const rozet = document.createElement('span');
+    rozet.className = 'rozet-emniyet ' + safetyDurumu(emniyetDegeri);
+    if (safetyDurumu(emniyetDegeri) !== 'ok') {
+      rozet.appendChild(ikon(safetyDurumu(emniyetDegeri) === 'crit' ? 'kritik' : 'uyari'));
+    }
+    const rozetSayi = document.createElement('span');
+    rozetSayi.textContent = bantSatiri
+      ? fmt(bantSatiri.safety[0], 3) + ' – ' + fmt(bantSatiri.safety[1], 3)
+      : fmt(p.safety, 3);
+    rozet.appendChild(rozetSayi);
+    const rozetDurum = document.createElement('span');
+    rozetDurum.className = 'gorsel-gizli';
+    rozetDurum.textContent = ' — ' + M.sutun.safety + ': ' + M.durum[safetyDurumu(emniyetDegeri)];
+    rozet.appendChild(rozetDurum);
+    orta.append(cap, rozet);
+
+    // İkincil değerler: küçük, sessiz, iki sütun
+    const liste = document.createElement('dl');
+    liste.className = 'kart-ikincil';
+    for (const anahtar of ikincilAlanlar) {
+      const sutun = SUTUNLAR.find(c => c.k === anahtar);
+      const bantAlani = { sigmaD: 'sigmaD', dT: 'dT', PkW: 'P' }[anahtar];
+      const bant = bantSatiri && bantAlani ? bantSatiri[bantAlani] : null;
+      const bolen = anahtar === 'PkW' ? 1000 : 1;
+      const satir = document.createElement('div');
+      const dt = document.createElement('dt');
+      dt.textContent = M.sutun[anahtar] + (sutun.birim ? ' (' + sutun.birim + ')' : '');
+      const dd = document.createElement('dd');
+      dd.textContent = bant
+        ? fmt(bant[0] / bolen, sutun.bas) + ' – ' + fmt(bant[1] / bolen, sutun.bas)
+        : fmt(deger[anahtar], sutun.bas);
+      const sinif = anahtar === 'delta' ? deltaDurumu(p.delta)
+                  : anahtar === 'dT' ? dTDurumu(bant ? bant[1] : p.dT) : null;
+      if (sinif) dd.className = sinif;
+      satir.append(dt, dd);
+      liste.appendChild(satir);
+    }
+
+    kart.append(ust, orta, liste);
+    kart.addEventListener('click', (olay) => {
+      if (olay.target.closest('label')) return;
+      durum.secilenPas = p.no;
+      durum.kalipAlpha = null;
+      durum.kalipR = null;
+      ciz();
+    });
+    kap.appendChild(kart);
+  }
+}
+
+function tabloyuCiz(prog) {
+  // Dar ekranda tablo yerine kartlar çizilir; ikisi aynı anda DOM'da bulunmaz.
+  const dar = DAR_EKRAN.matches;
+  $('pasTablosuKabi').hidden = dar;
+  $('pasKartlari').hidden = !dar;
+  if (dar) { $('tabloGovde').textContent = ''; kartlariCiz(prog); return; }
+  $('pasKartlari').textContent = '';
+
+  const govde = $('tabloGovde');
+  govde.textContent = '';
+  if (!prog) return;
+
+  for (const p of prog.passes) {
+    const tr = document.createElement('tr');
+    if (p.anneal) tr.className = 'tavlandi';
+    const deger = satirDegerleri(p);
+
+    const bantSatiri = sonBant ? sonBant.paslar[p.no - 1] : null;
+    for (const s of SUTUNLAR) {
+      const td = document.createElement('td');
+
+      // Bant açıkken belirsizliğe tabi büyüklükler aralık olarak yazılır.
+      const bantAlani = { sigmaD: 'sigmaD', safety: 'safety', dT: 'dT', PkW: 'P' }[s.k];
+      const bant = bantSatiri && bantAlani ? bantSatiri[bantAlani] : null;
+      const bolen = s.k === 'PkW' ? 1000 : 1;
+      const metin = bant
+        ? fmt(bant[0] / bolen, s.bas) + ' – ' + fmt(bant[1] / bolen, s.bas)
+        : fmt(deger[s.k], s.bas);
+
+      // Eşik değerlendirmesi: bant açıkken kötümser taraf, yani üst uç kullanılır.
+      const emniyetDegeri = bant && s.k === 'safety' ? bant[1] : p.safety;
+      const dTDegeri = bant && s.k === 'dT' ? bant[1] : p.dT;
+      const sinif = s.k === 'safety' ? safetyDurumu(emniyetDegeri)
+                  : s.k === 'delta'  ? deltaDurumu(p.delta)
+                  : s.k === 'dT'     ? dTDurumu(dTDegeri) : null;
+
+      if (sinif) {
+        td.className = sinif;
+        const durum = document.createElement('span');
+        durum.className = 'durum';
+        // Renk tek başına bilgi taşımaz: uyarı/tehlike hücrelerinde simge ve
+        // ekran okuyucu için durum metni de var.
+        if (sinif !== 'ok') {
+          const sim = ikon(sinif === 'crit' ? 'kritik' : 'uyari');
+          sim.setAttribute('aria-hidden', 'true');
+          durum.appendChild(sim);
+        }
+        const sayi = document.createElement('span');
+        sayi.textContent = metin;
+        durum.appendChild(sayi);
+        const aciklama = durumMetni(s.k, s.k === 'safety' ? emniyetDegeri
+                          : s.k === 'dT' ? dTDegeri : deger[s.k]);
+        if (aciklama) {
+          td.title = aciklama;
+          const gizli = document.createElement('span');
+          gizli.className = 'gorsel-gizli';
+          gizli.textContent = ' — ' + aciklama;
+          durum.appendChild(gizli);
+        }
+        td.appendChild(durum);
+      } else {
+        td.textContent = metin;
+        if (s.k !== 'no' && s.k !== 'd1') td.className = 'ikincil';
+      }
+      tr.appendChild(td);
+    }
+
+    // Ara tavlama kutusu — işaretlenince o pastan sonra gerinim sıfırlanır.
+    const td = document.createElement('td');
+    const lab = document.createElement('label');
+    lab.className = 'kutu';
+    const kutu = document.createElement('input');
+    kutu.type = 'checkbox';
+    kutu.checked = p.anneal;
+    kutu.setAttribute('aria-label', S().sutun.anneal + ' — ' + S().sutun.no + ' ' + p.no);
+    // Satıra dokununca kalıp kesiti o pası gösterir.
+    tr.addEventListener('click', (olay) => {
+      if (olay.target.closest('label')) return;   // tavlama kutusu kendi işini yapsın
+      durum.secilenPas = p.no;
+      durum.kalipAlpha = null;
+      durum.kalipR = null;
+      ciz();
+    });
+    if (p.no === durum.secilenPas) tr.classList.add('secili');
+
+    kutu.addEventListener('change', () => {
+      durum.anneals = kutu.checked
+        ? durum.anneals.concat(p.no).sort((a, b) => a - b)
+        : durum.anneals.filter(x => x !== p.no);
+      ciz();
+    });
+    const gorsel = document.createElement('span');
+    gorsel.className = 'gorsel';
+    gorsel.appendChild(ikon('onay'));
+    lab.append(kutu, gorsel);
+    td.appendChild(lab);
+    if (p.anneal) {
+      const et = document.createElement('span');
+      et.className = 'tavlama-etiketi';
+      et.textContent = ' ' + S().tavlamaEtiketi;
+      td.appendChild(et);
+    }
+    tr.appendChild(td);
+    govde.appendChild(tr);
+  }
+}
+
+
+/* ==== ÇİZİM ====
+   Bütün görseller el yapımı inline SVG. Kütüphane yok.
+   Tema kuralı: hiçbir şekle sabit renk yazılmaz. Renkler ya `currentColor` ile
+   CSS sınıfından ya da doğrudan var(--...) ile gelir; böylece açık ve koyu temada
+   ikisi de doğru okunur.
+   Ölçek kuralı: viewBox genişliği kabın piksel genişliğine eşitlenir, yani 1 birim
+   = 1 piksel. Yazı boyutu 11–13 px olarak yazıldığında dar ekranda da o boyutta
+   görünür; küçülen tek şey etiket sayısıdır. */
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+function sv(etiket, ozellikler, sinif) {
+  const el = document.createElementNS(SVG_NS, etiket);
+  for (const k in ozellikler) {
+    if (ozellikler[k] !== null && ozellikler[k] !== undefined) el.setAttribute(k, ozellikler[k]);
+  }
+  if (sinif) el.setAttribute('class', sinif);
+  return el;
+}
+
+function svYazi(x, y, metin, sinif, hiza) {
+  const t = sv('text', { x, y, 'text-anchor': hiza || 'middle' }, sinif || 'g-etiket');
+  t.textContent = metin;
+  return t;
+}
+
+/* Kabı boşaltıp yeni bir SVG kurar. Genişlik kabın kendi genişliğidir. */
+function svgKur(kap, yukseklik, ariaEtiket) {
+  kap.textContent = '';
+  const genislik = Math.max(280, Math.round(kap.clientWidth || 320));
+  const s = sv('svg', {
+    viewBox: '0 0 ' + genislik + ' ' + yukseklik,
+    role: 'img', 'aria-label': ariaEtiket   // boyut CSS'den: .g-svg { width:100%; height:auto }
+  }, 'g-svg');
+  kap.appendChild(s);
+  return { s, g: genislik, y: yukseklik };
+}
+
+/* Dar ekranda etiketler çakışmasın diye kaç pasta bir etiket yazılacağını seçer. */
+function etiketAdimi(adet, genislik, etiketGenisligi) {
+  const sigacak = Math.max(2, Math.floor(genislik / etiketGenisligi));
+  return Math.ceil(adet / sigacak);
+}
+
+/* ---- 4.1 Ana grafik: malzeme dayanımı ve çekme gerilmesi ---- */
+function anaGrafikCiz(prog) {
+  const M = S();
+  const kap = $('gorselAna');
+  if (!prog) { kap.textContent = ''; return; }
+
+  const p = prog.passes;
+  const enBuyuk = Math.max(...p.map(x => x.sigmaFOut));
+  const ust = Math.ceil(enBuyuk / 100) * 100;
+  const { s, g, y } = svgKur(kap, 300, doldur(M.gorsel.anaAria, {
+    n: p.length, sd0: fmt(p[0].sigmaD, 0), sd1: fmt(p[p.length - 1].sigmaD, 0),
+    sf0: fmt(p[0].sigmaFOut, 0), sf1: fmt(p[p.length - 1].sigmaFOut, 0)
+  }));
+
+  // Üstte 34 px pay: en yüksek noktanın etiketi viewBox dışına taşmasın (V1).
+  const sol = 52, sag = 12, ustBosluk = 34, alt = 34;
+  const gx = (i) => sol + (g - sol - sag) * (p.length === 1 ? 0.5 : i / (p.length - 1));
+  const gy = (v) => y - alt - (y - alt - ustBosluk) * (v / ust);
+
+  // Y ekseni: 100 MPa'lık kademeler
+  for (let v = 0; v <= ust; v += ust <= 400 ? 100 : 200) {
+    s.appendChild(sv('line', { x1: sol, y1: gy(v), x2: g - sag, y2: gy(v) }, 'g-izgara'));
+    s.appendChild(svYazi(sol - 8, gy(v) + 4, fmt(v, 0), 'g-etiket', 'end'));
+  }
+  s.appendChild(svYazi(sol - 8, ustBosluk - 6, 'MPa', 'g-eksen-adi', 'end'));
+
+  // Emniyet payı: iki eğri arasındaki alan
+  const alan = p.map((x, i) => gx(i) + ',' + gy(x.sigmaFOut)).join(' ') + ' ' +
+               p.map((x, i) => gx(p.length - 1 - i) + ',' + gy(p[p.length - 1 - i].sigmaD)).join(' ');
+  s.appendChild(sv('polygon', { points: alan }, 'g-pay'));
+
+  // Belirsizlik bandı: çekme gerilmesi eğrisinin etrafındaki alan.
+  if (sonBant) {
+    const ustUc = p.map((x, i) => gx(i) + ',' + gy(Math.min(sonBant.paslar[i].sigmaD[1], ust)));
+    const altUc = p.map((x, i) => gx(p.length - 1 - i) + ',' +
+      gy(sonBant.paslar[p.length - 1 - i].sigmaD[0]));
+    s.appendChild(sv('polygon', { points: ustUc.concat(altUc).join(' ') }, 'g-bant'));
+  }
+
+  const cizgi = (deger, sinif) =>
+    sv('polyline', { points: p.map((x, i) => gx(i) + ',' + gy(deger(x))).join(' '), fill: 'none' }, sinif);
+  s.appendChild(cizgi(x => x.sigmaFOut, 'g-dayanim'));
+  s.appendChild(cizgi(x => x.sigmaD, 'g-gerilme'));
+
+  // Tavlama: dikey kesikli çizgi
+  for (const x of p.filter(x => x.anneal)) {
+    const px = gx(x.no - 1);
+    s.appendChild(sv('line', { x1: px, y1: ustBosluk, x2: px, y2: y - alt }, 'g-tavlama'));
+    s.appendChild(svYazi(px, ustBosluk - 6, M.tavlamaEtiketi, 'g-tavlama-etiket'));
+  }
+
+  // X ekseni ve pas etiketleri
+  s.appendChild(sv('line', { x1: sol, y1: y - alt, x2: g - sag, y2: y - alt }, 'g-eksen'));
+  const adim = etiketAdimi(p.length, g - sol - sag, 34);
+  p.forEach((x, i) => {
+    if (i % adim === 0 || i === p.length - 1) {
+      s.appendChild(svYazi(gx(i), y - alt + 16, fmt(x.no, 0), 'g-etiket'));
+    }
+  });
+  s.appendChild(svYazi((sol + g - sag) / 2, y - 6, M.gorsel.eksenPas, 'g-eksen-adi'));
+
+  // Gerçek değer taşıyan işaretler: ilk ve son noktalar
+  const nokta = (i, deger, sinif) => {
+    s.appendChild(sv('circle', { cx: gx(i), cy: gy(deger), r: 3 }, sinif));
+  };
+  const sonPas = p[p.length - 1];
+  nokta(0, p[0].sigmaD, 'g-nokta-gerilme');
+  nokta(p.length - 1, sonPas.sigmaD, 'g-nokta-gerilme');
+  nokta(p.length - 1, sonPas.sigmaFOut, 'g-nokta-dayanim');
+
+  // Eğriler doğrudan etiketlenir; efsane kutusu yok (V2).
+  // Etiketler eğrinin altına, taralı alanın içine yazılır: eğriyle çakışmaz.
+  const dayanimY = gy(sonPas.sigmaFOut) + 28;
+  s.appendChild(svYazi(g - sag, dayanimY, fmt(sonPas.sigmaFOut, 0) + ' MPa', 'g-deger', 'end'));
+  s.appendChild(svYazi(g - sag, dayanimY + 13, M.gorsel.dayanim, 'g-etiket', 'end'));
+
+  const gerilmeY = gy(sonPas.sigmaD) + 16;
+  s.appendChild(svYazi(g - sag, gerilmeY, fmt(sonPas.sigmaD, 0) + ' MPa', 'g-deger-vurgu', 'end'));
+  s.appendChild(svYazi(g - sag, gerilmeY + 13, M.gorsel.gerilme, 'g-etiket', 'end'));
+
+  // Taralı alanın ne olduğu alanın içinde yazar.
+  const ortaIndeks = Math.floor(p.length * 0.35);
+  const ortaPas = p[ortaIndeks];
+  s.appendChild(svYazi(gx(ortaIndeks), (gy(ortaPas.sigmaFOut) + gy(ortaPas.sigmaD)) / 2 + 4,
+    M.gorsel.pay, 'g-etiket'));
+}
+
+/* Grafik altındaki renk açıklaması (legend) — metinli, yalnızca renkle anlatmaz. */
+function aciklamaYaz(kap, ogeler) {
+  kap.textContent = '';
+  for (const o of ogeler) {
+    const el = document.createElement('span');
+    el.className = 'g-orn';
+    const kutu = document.createElement('span');
+    kutu.className = 'g-orn-kutu ' + o.sinif;
+    const metin = document.createElement('span');
+    metin.textContent = o.metin;
+    el.append(kutu, metin);
+    kap.appendChild(el);
+  }
+}
+
+/* ---- 4.2 Emniyet oranı bar grafiği ---- */
+function emniyetGrafigiCiz(prog) {
+  const M = S();
+  const kap = $('gorselEmniyet');
+  if (!prog) { kap.textContent = ''; return; }
+
+  const p = prog.passes;
+  const riskli = p.reduce((a, b) => (b.safety > a.safety ? b : a));
+  // En riskli barı yalnızca ikinciden anlamlı ölçüde yüksekse vurgula (V3):
+  // eşit emniyet yönteminde bütün paslar tanım gereği eşittir, orada vurgu gürültüdür.
+  const vurgulanacak = belirginTepe(p) ? riskli.no : null;
+  const ust = Math.max(0.7, Math.ceil(Math.max(...p.map(x => x.safety)) * 10) / 10 + 0.05);
+  const { s, g, y } = svgKur(kap, 250, doldur(M.gorsel.emniyetAria, {
+    n: p.length, en: fmt(riskli.safety, 3), pas: riskli.no
+  }));
+
+  const sol = 44, sag = 12, ustBosluk = 16, alt = 34;
+  const genislik = g - sol - sag;
+  const gy = (v) => y - alt - (y - alt - ustBosluk) * (v / ust);
+  const barGenislik = Math.max(3, Math.min(28, genislik / p.length - 3));
+
+  for (let v = 0; v <= ust; v += 0.2) {
+    s.appendChild(sv('line', { x1: sol, y1: gy(v), x2: g - sag, y2: gy(v) }, 'g-izgara'));
+    s.appendChild(svYazi(sol - 8, gy(v) + 4, fmt(v, 1), 'g-etiket', 'end'));
+  }
+
+  p.forEach((x, i) => {
+    const merkez = sol + genislik * ((i + 0.5) / p.length);
+    const sinif = 'g-bar-' + safetyDurumu(x.safety) + (x.no === vurgulanacak ? ' g-bar-vurgu' : '');
+    s.appendChild(sv('rect', {
+      x: merkez - barGenislik / 2, y: gy(x.safety),
+      width: barGenislik, height: (y - alt) - gy(x.safety)
+    }, sinif));
+  });
+
+  // Eşik çizgileri: 0,60 kritik, 0,50 uyarı
+  const esik = (v, sinif, etiket) => {
+    s.appendChild(sv('line', { x1: sol, y1: gy(v), x2: g - sag, y2: gy(v) }, sinif));
+    s.appendChild(svYazi(g - sag, gy(v) - 5, etiket, sinif + '-etiket', 'end'));
+  };
+  esik(SAFETY_CRITICAL, 'g-esik-crit', fmt(SAFETY_CRITICAL, 2));
+  esik(SAFETY_WARNING, 'g-esik-warn', fmt(SAFETY_WARNING, 2));
+
+  s.appendChild(sv('line', { x1: sol, y1: y - alt, x2: g - sag, y2: y - alt }, 'g-eksen'));
+  const adim = etiketAdimi(p.length, genislik, 34);
+  p.forEach((x, i) => {
+    if (i % adim === 0 || i === p.length - 1) {
+      s.appendChild(svYazi(sol + genislik * ((i + 0.5) / p.length), y - alt + 16, fmt(x.no, 0), 'g-etiket'));
+    }
+  });
+  s.appendChild(svYazi((sol + g - sag) / 2, y - 6, M.gorsel.eksenPas, 'g-eksen-adi'));
+
+  aciklamaYaz($('gorselEmniyetAciklama'), [
+    { sinif: 'g-orn-crit', metin: M.durum.crit + ' (> ' + fmt(SAFETY_CRITICAL, 2) + ')' },
+    { sinif: 'g-orn-warn', metin: M.durum.warn + ' (> ' + fmt(SAFETY_WARNING, 2) + ')' },
+    { sinif: 'g-orn-ok', metin: M.durum.ok }
+  ]);
+}
+
+/* ---- 4.3 Çap profili ---- */
+function capProfiliCiz(prog) {
+  const M = S();
+  const kap = $('gorselProfil');
+  if (!prog) { kap.textContent = ''; return; }
+
+  const p = prog.passes;
+  const caplar = [p[0].d0].concat(p.map(x => x.d1));
+  const enBuyuk = caplar[0];
+  const { s, g, y } = svgKur(kap, 230, doldur(M.gorsel.profilAria, {
+    d0: fmt(caplar[0], 2), d1: fmt(caplar[caplar.length - 1], 2), n: p.length
+  }));
+
+  const sol = 44, sag = 44, ustBosluk = 24, alt = 34;
+  const merkez = (ustBosluk + (y - alt)) / 2;
+  const yariYukseklik = (y - alt - ustBosluk) / 2;
+  const gx = (i) => sol + (g - sol - sag) * (i / (caplar.length - 1));
+  const gr = (d) => yariYukseklik * (d / enBuyuk);
+
+  // Basamaklı profil (V4): tel bir pas boyunca sabit çapta ilerler, kalıpta düşer.
+  // Böylece hangi pasta ne kadar inceldiği görünür; eşit gerinim ile kademeli
+  // azalan gözle ayırt edilebilir.
+  const ustKenar = [], altKenar = [];
+  for (let i = 0; i < caplar.length - 1; i++) {
+    ustKenar.push(gx(i) + ',' + (merkez - gr(caplar[i])), gx(i + 1) + ',' + (merkez - gr(caplar[i])));
+    ustKenar.push(gx(i + 1) + ',' + (merkez - gr(caplar[i + 1])));
+    altKenar.push(gx(i) + ',' + (merkez + gr(caplar[i])), gx(i + 1) + ',' + (merkez + gr(caplar[i])));
+    altKenar.push(gx(i + 1) + ',' + (merkez + gr(caplar[i + 1])));
+  }
+  s.appendChild(sv('polygon', { points: ustKenar.concat(altKenar.slice().reverse()).join(' ') }, 'g-profil'));
+  s.appendChild(sv('polyline', { points: ustKenar.join(' '), fill: 'none' }, 'g-profil-kenar'));
+  s.appendChild(sv('polyline', { points: altKenar.join(' '), fill: 'none' }, 'g-profil-kenar'));
+  s.appendChild(sv('line', { x1: sol, y1: merkez, x2: g - sag, y2: merkez }, 'g-merkez'));
+
+  // Kalıp konumları ve pas numaraları
+  const adimP = etiketAdimi(p.length, g - sol - sag, 34);
+  for (let i = 1; i < caplar.length; i++) {
+    const px = gx(i);
+    s.appendChild(sv('line', { x1: px, y1: merkez - gr(caplar[i]) - 4, x2: px, y2: merkez + gr(caplar[i]) + 4 },
+      'g-profil-kalip'));
+    if ((i - 1) % adimP === 0 || i === caplar.length - 1) {
+      s.appendChild(svYazi(px, y - alt + 16, fmt(i, 0), 'g-etiket'));
+    }
+  }
+
+  // Tavlama noktaları
+  for (const x of p.filter(x => x.anneal)) {
+    const px = gx(x.no);
+    s.appendChild(sv('line', { x1: px, y1: merkez - yariYukseklik, x2: px, y2: merkez + yariYukseklik }, 'g-tavlama'));
+    s.appendChild(svYazi(px, merkez - yariYukseklik - 6, M.tavlamaEtiketi, 'g-tavlama-etiket'));
+  }
+
+  s.appendChild(svYazi(sol, merkez - gr(caplar[0]) - 8, fmt(caplar[0], 2) + ' mm', 'g-deger', 'start'));
+  s.appendChild(svYazi(g - sag, merkez - gr(caplar[caplar.length - 1]) - 8,
+    fmt(caplar[caplar.length - 1], 2) + ' mm', 'g-deger-vurgu', 'end'));
+  s.appendChild(svYazi((sol + g - sag) / 2, y - 6, M.gorsel.eksenPas, 'g-eksen-adi'));
+}
+
+/* ---- 4.4 Canlı kalıp kesiti ----
+   Seçili pasın kalıbı. α ve r kaydırıcıları yalnızca bu görseli değiştirir:
+   program etkilenmez, amaç geometrinin sezgisini vermek. */
+function kalipKesitiCiz(prog) {
+  const M = S();
+  const kap = $('gorselKalip');
+  if (!prog) { kap.textContent = ''; return; }
+
+  const p = prog.passes;
+  // Varsayılan: 1. pas — hem hattın başı hem de görünür bir çap değişimi (V5).
+  const secili = p.find(x => x.no === durum.secilenPas) || p[0];
+  durum.secilenPas = secili.no;
+
+  const alpha = durum.kalipAlpha === null ? secili.alphaDeg : durum.kalipAlpha;
+  const r = durum.kalipR === null ? secili.r : durum.kalipR;
+  const d0 = secili.d0;
+  const d1 = d0 * Math.sqrt(1 - r);
+
+  // Kaydırıcılar ve başlık
+  kalipKontrolleriYaz(secili, alpha, r);
+
+  let hesap = null;
+  try {
+    hesap = calcPass({ d0, d1, epsIn: secili.epsIn, alphaDeg: alpha, mu: durum.mu,
+                       K: durum.K, n: durum.n, v0: secili.v0 });
+  } catch (err) { /* r teorik sınırı aşarsa kuvvet yazılmaz, şekil yine çizilir */ }
+
+  const { s, g, y } = svgKur(kap, 280, doldur(M.gorsel.kalipAria, {
+    pas: secili.no, d0: fmt(d0, 2), d1: fmt(d1, 2), alpha: fmt(alpha, 1)
+  }));
+
+  // Çizim alanı: kenarlarda ölçü çizgileri ve etiketler için pay bırakılır.
+  const solKenar = 64, sagKenar = 64;
+  const merkez = y * 0.46;
+  const kullanilir = g - solKenar - sagKenar;
+
+  // d0 çizimde en fazla bu yarıçapa otursun; kalıp gövdesi üstte kalan yere sığar.
+  // Şematik ölçek (V5): gerçek oranda %20'lik bir kesit azalması ekranda
+  // görünmez (çapta yalnızca %10). Çap oranı görünürlük için abartılır;
+  // gerçek değerler etiketlerde verilir ve altına şematik olduğu yazılır.
+  const enBuyukYariCap = Math.min(y * 0.17, 54);
+  const r0 = enBuyukYariCap;
+  const r1 = r0 * Math.pow(1 - r, 1.6);
+
+  // Koni boyu açıdan gelir; çizim alanına sığmazsa kısaltılır (şekil orantısı korunur).
+  const koniBoyHam = (r0 - r1) / Math.tan(alpha * Math.PI / 180);
+  const koniBoy = Math.min(koniBoyHam, kullanilir * 0.42);
+  const konikBaslangic = solKenar + kullanilir * 0.30;
+  const konikBitis = konikBaslangic + koniBoy;
+  const tasimaBoyu = Math.max(10, r1 * 0.8);
+  const kalipSonu = konikBitis + tasimaBoyu + kullanilir * 0.06;
+  const kalipAgzi = konikBaslangic - kullanilir * 0.12;
+  const kalipKalinligi = Math.min(58, merkez - enBuyukYariCap - 26);
+  const telSol = solKenar, telSag = g - sagKenar;
+
+  // Tel: giriş kalın, koni boyunca incelir, çıkış ince
+  const tel = [
+    [telSol, merkez - r0], [konikBaslangic, merkez - r0], [konikBitis, merkez - r1],
+    [telSag, merkez - r1], [telSag, merkez + r1], [konikBitis, merkez + r1],
+    [konikBaslangic, merkez + r0], [telSol, merkez + r0]
+  ].map(k => k[0].toFixed(1) + ',' + k[1].toFixed(1)).join(' ');
+  s.appendChild(sv('polygon', { points: tel }, 'g-tel'));
+
+  // Kalıp gövdesi: üst ve alt yarı. İç sınır koni ağzını ve taşıma bölgesini izler.
+  const govde = (isaret) => [
+    [kalipAgzi, merkez + isaret * (r0 + kalipKalinligi)],
+    [kalipSonu, merkez + isaret * (r0 + kalipKalinligi)],
+    [kalipSonu, merkez + isaret * r1],
+    [konikBitis, merkez + isaret * r1],
+    [konikBaslangic, merkez + isaret * r0],
+    [kalipAgzi, merkez + isaret * r0]
+  ].map(k => k[0].toFixed(1) + ',' + k[1].toFixed(1)).join(' ');
+  s.appendChild(sv('polygon', { points: govde(-1) }, 'g-kalip'));
+  s.appendChild(sv('polygon', { points: govde(1) }, 'g-kalip'));
+  s.appendChild(sv('line', { x1: telSol, y1: merkez, x2: telSag, y2: merkez }, 'g-merkez'));
+
+  // α açısı: koni ağzından yatay referans, üstünde yay ve etiket
+  const ax = konikBaslangic, ay = merkez - r0;
+  const yayR = Math.max(22, Math.min(48, koniBoy * 0.8));
+  const aciRad = Math.atan2(r0 - r1, koniBoy);
+  s.appendChild(sv('line', { x1: ax, y1: ay, x2: ax + yayR + 18, y2: ay }, 'g-olcu-ince'));
+  s.appendChild(sv('path', {
+    d: 'M ' + (ax + yayR).toFixed(1) + ' ' + ay.toFixed(1) +
+       ' A ' + yayR.toFixed(1) + ' ' + yayR.toFixed(1) + ' 0 0 1 ' +
+       (ax + yayR * Math.cos(aciRad)).toFixed(1) + ' ' + (ay + yayR * Math.sin(aciRad)).toFixed(1),
+    fill: 'none'
+  }, 'g-aci'));
+  s.appendChild(svYazi(ax + yayR + 22, ay - 10, 'α = ' + fmt(alpha, 1) + '°', 'g-deger', 'start'));
+
+  // d0 ve d1 ölçü çizgileri — kenar payının içinde
+  const olcu = (x, ust, altNokta, etiket, saga) => {
+    s.appendChild(sv('line', { x1: x, y1: ust, x2: x, y2: altNokta }, 'g-olcu'));
+    s.appendChild(sv('line', { x1: x - 5, y1: ust, x2: x + 5, y2: ust }, 'g-olcu'));
+    s.appendChild(sv('line', { x1: x - 5, y1: altNokta, x2: x + 5, y2: altNokta }, 'g-olcu'));
+    s.appendChild(svYazi(x, altNokta + 16, etiket, 'g-deger', 'middle'));
+  };
+  olcu(telSol - 18, merkez - r0, merkez + r0, fmt(d0, 2) + ' mm', false);
+  olcu(telSag + 18, merkez - r1, merkez + r1, fmt(d1, 2) + ' mm', true);
+
+  // F kuvvet oku ve notu — çıkan telin üstünde
+  if (hesap) {
+    const okY = merkez - r1 - 24;
+    const okBas = kalipSonu + 10, okSon = telSag - 4;
+    // Dar çizimde ok kısalır ama kuvvet değeri ve notu her zaman görünür.
+    if (okSon - okBas > 14) {
+      s.appendChild(sv('line', { x1: okBas, y1: okY, x2: okSon, y2: okY }, 'g-ok'));
+      s.appendChild(sv('polyline', {
+        points: (okSon - 7) + ',' + (okY - 4) + ' ' + okSon + ',' + okY + ' ' + (okSon - 7) + ',' + (okY + 4),
+        fill: 'none'
+      }, 'g-ok'));
+    }
+    s.appendChild(svYazi(Math.min(telSag, (okBas + okSon) / 2 + 10), okY - 8,
+      'F = ' + fmt(hesap.F / 1000, 2) + ' kN', 'g-deger-vurgu'));
+    s.appendChild(svYazi((kalipSonu + telSag) / 2, merkez + r1 + 22, M.gorsel.kalipNot, 'g-not'));
+  }
+
+  $('kalipOzet').textContent = doldur(M.gorsel.kalipOzet, {
+    pas: secili.no, r: fmt(r * 100, 2),
+    emniyet: hesap ? fmt(hesap.safety, 3) : '—',
+    delta: hesap ? fmt(hesap.delta, 2) : '—'
+  });
+}
+
+/* Kalıp kesiti kaydırıcıları. Ray dolgusu --dolgu değişkeniyle boyanır. */
+function kalipKontrolleriYaz(secili, alpha, r) {
+  const M = S();
+  const a = $('kalipAlpha'), rr = $('kalipR');
+  if (document.activeElement !== a) a.value = alpha;
+  if (document.activeElement !== rr) rr.value = (r * 100).toFixed(1);
+  a.style.setProperty('--dolgu', ((alpha - 2) / (16 - 2) * 100) + '%');
+  rr.style.setProperty('--dolgu', ((r * 100 - 2) / (60 - 2) * 100) + '%');
+  $('kalipAlphaDeger').textContent = fmt(alpha, 1) + '°';
+  $('kalipRDeger').textContent = '%' + fmt(r * 100, 1);
+  $('kalipPasEtiketi').textContent = doldur(M.gorsel.kalipPas, { pas: secili.no });
+}
+
+/* Bütün görselleri çizer. Kaydırma/yeniden boyutlamada tekrar çağrılır. */
+let cizimBekliyor = false;
+function gorselleriCiz(prog) {
+  sonProgram = prog;
+  anaGrafikCiz(prog);
+  emniyetGrafigiCiz(prog);
+  capProfiliCiz(prog);
+  kalipKesitiCiz(prog);
+}
+
+let sonProgram = null;
+let sonBant = null;
+function gorselleriYenidenCiz() {
+  if (cizimBekliyor) return;
+  cizimBekliyor = true;
+  requestAnimationFrame(() => {
+    cizimBekliyor = false;
+    if (sonProgram) gorselleriCiz(sonProgram);
+  });
+}
+
+
+/* ==== BELİRSİZLİK VE DUYARLILIK ====
+   İki ayrı şey: belirsizlik bilmediğimiz malzeme/sürtünme parametreleri (K, n, μ),
+   duyarlılık ise değiştirebileceğimiz kaldıraçlar (α, r, pas sayısı).
+   Emniyet oranı K'dan bağımsızdır (bkz. kabuller M-9), enerji ise K ile doğrusaldır. */
+
+/* Bir programı, verilen çap dizisiyle ama farklı malzeme/sürtünme değerleriyle
+   yeniden hesaplar. Geometri sabit tutulur: bant, verilen programın çıktılarındaki
+   belirsizliği gösterir. */
+function programKopyasi(prog, K, n, mu) {
+  const caplar = [prog.passes[0].d0].concat(prog.passes.map(x => x.d1));
+  return buildSchedule({
+    method: 'manual', diameters: caplar, alphaDeg: durum.alphaDeg,
+    mu, K, n, v0: durum.v0, anneals: durum.anneals
+  });
+}
+
+/* Köşe taraması: üç parametrenin alt/üst uçlarının sekiz kombinasyonu taranır ve
+   her büyüklük için en küçük/en büyük alınır. Monte Carlo kullanılmaz. */
+function bandHesapla(prog) {
+  const b = durum.bant;
+  const koseler = [], koseBilgisi = [];
+  for (const K of b.K) for (const n of b.n) for (const mu of b.mu) {
+    try {
+      const o = programKopyasi(prog, K, n, mu);
+      koseler.push(o);
+      koseBilgisi.push({
+        K, n, mu,
+        enerji: o.totalPower / o.massFlow / 3600,
+        guc: o.totalPower / 1000,
+        enYuksekEmniyet: Math.max(...o.passes.map(x => x.safety))
+      });
+    } catch (err) { /* köşe geçersizse atlanır */ }
+  }
+  if (koseler.length === 0) return null;
+
+  const alanlar = ['sigmaD', 'safety', 'dT', 'P'];
+  const paslar = prog.passes.map((_, i) => {
+    const satir = {};
+    for (const alan of alanlar) {
+      const degerler = koseler.map(k => k.passes[i][alan]);
+      satir[alan] = [Math.min(...degerler), Math.max(...degerler)];
+    }
+    return satir;
+  });
+
+  const enerjiler = koseler.map(k => k.totalPower / k.massFlow / 3600);
+  const gucler = koseler.map(k => k.totalPower / 1000);
+  const enYuksekEmniyetler = koseler.map(k => Math.max(...k.passes.map(x => x.safety)));
+  // Hangi köşenin bandın uçlarını ürettiği yazılır: kullanıcı, önce hangi
+  // varsayımı netleştirmesi gerektiğini böyle öğrenir.
+  const siraliEnerji = koseBilgisi.slice().sort((x, y) => x.enerji - y.enerji);
+  return {
+    paslar,
+    koseler: koseBilgisi,
+    altUc: siraliEnerji[0],
+    ustUc: siraliEnerji[siraliEnerji.length - 1],
+    enerji: [Math.min(...enerjiler), Math.max(...enerjiler)],
+    guc: [Math.min(...gucler), Math.max(...gucler)],
+    enYuksekEmniyet: [Math.min(...enYuksekEmniyetler), Math.max(...enYuksekEmniyetler)],
+    koseSayisi: koseler.length
+  };
+}
+
+/* Duyarlılık — emniyet oranı. Seçili pas için her girdi kendi aralığında oynatılır.
+   K çubuğunun sıfır çıkması beklenir: bu, grafiğin kendi doğrulamasıdır. */
+function duyarlilikEmniyet(pas) {
+  const temel = { alphaRad: pas.alphaDeg * Math.PI / 180, mu: pas.mu, K: pas.K, n: pas.n };
+  const olc = (degistir, alt, ust) => {
+    const a = degistir(alt), b = degistir(ust);
+    return { alt: Math.min(a, b), ust: Math.max(a, b), etki: Math.abs(b - a) };
+  };
+  const emniyet = (params, epsPas) => safetyForStrain(epsPas, pas.epsIn, params);
+
+  const araliklar = [
+    { k: 'n',  alt: durum.bant.n[0],  ust: durum.bant.n[1],
+      f: (v) => emniyet(Object.assign({}, temel, { n: v }), pas.epsPas) },
+    { k: 'mu', alt: durum.bant.mu[0], ust: durum.bant.mu[1],
+      f: (v) => emniyet(Object.assign({}, temel, { mu: v }), pas.epsPas) },
+    { k: 'alphaDeg', alt: Math.max(2, pas.alphaDeg - 4), ust: pas.alphaDeg + 4,
+      f: (v) => emniyet(Object.assign({}, temel, { alphaRad: v * Math.PI / 180 }), pas.epsPas) },
+    { k: 'r', alt: pas.r * 0.8, ust: Math.min(pas.r * 1.2, R_THEORETICAL_MAX * 0.98),
+      f: (v) => emniyet(temel, -Math.log(1 - v)) },
+    { k: 'K', alt: durum.bant.K[0], ust: durum.bant.K[1],
+      f: (v) => emniyet(Object.assign({}, temel, { K: v }), pas.epsPas) }
+  ];
+  return araliklar.map(a => Object.assign({ k: a.k, alt: a.alt, ust: a.ust }, olc(a.f, a.alt, a.ust)))
+    .sort((x, y) => y.etki - x.etki);
+}
+
+/* Duyarlılık — özgül enerji (kWh/ton). Buradaki kaldıraçlar farklı: K doğrusal
+   ve en büyük etkiye sahip, pas sayısı fazlalık iş üzerinden etkiliyor. */
+function duyarlilikEnerji(prog) {
+  const enerjiOf = (o) => o.totalPower / o.massFlow / 3600;
+  const kur = (degisim) => {
+    const temel = {
+      d0: durum.d0, dTarget: durum.dTarget, method: durum.method, passes: prog.passCount,
+      alphaDeg: durum.alphaDeg, mu: durum.mu, K: durum.K, n: durum.n, v0: durum.v0,
+      anneals: durum.anneals
+    };
+    return enerjiOf(buildSchedule(Object.assign(temel, degisim)));
+  };
+  const guvenli = (f, v) => { try { return f(v); } catch (err) { return null; } };
+  const olc = (k, alt, ust, yap) => {
+    const a = guvenli(yap, alt), b = guvenli(yap, ust);
+    if (a === null || b === null) return null;
+    return { k, alt, ust, etki: Math.abs(b - a) };
+  };
+
+  return [
+    olc('K', durum.bant.K[0], durum.bant.K[1], (v) => kur({ K: v })),
+    olc('mu', durum.bant.mu[0], durum.bant.mu[1], (v) => kur({ mu: v })),
+    olc('alphaDeg', Math.max(2, durum.alphaDeg - 4), durum.alphaDeg + 4, (v) => kur({ alphaDeg: v })),
+    olc('passes', Math.max(2, prog.passCount - 3), prog.passCount + 3, (v) => kur({ passes: v }))
+  ].filter(Boolean).sort((x, y) => y.etki - x.etki);
+}
+
+/* Bant giriş alanları: her parametre için alt ve üst sınır. */
+function kurBantAlanlari() {
+  const M = S();
+  const kap = $('bantAlanlari');
+  kap.textContent = '';
+  const basamak = { K: 0, n: 2, mu: 3 };
+  for (const anahtar of ['K', 'n', 'mu']) {
+    const alan = document.createElement('div');
+    alan.className = 'bant-alan';
+    const etiket = document.createElement('span');
+    etiket.className = 'etiket';
+    etiket.textContent = M.bantAlan[anahtar];
+    const ikili = document.createElement('div');
+    ikili.className = 'ikili';
+    [0, 1].forEach(uc => {
+      const inp = document.createElement('input');
+      inp.type = 'text';
+      inp.inputMode = 'decimal';
+      inp.id = 'bant-' + anahtar + '-' + uc;
+      inp.value = fmt(durum.bant[anahtar][uc], basamak[anahtar]);
+      inp.setAttribute('aria-label', M.bantAlan[anahtar] + ' — ' + (uc === 0 ? M.bantAlt : M.bantUst));
+      inp.addEventListener('input', () => {
+        const v = sayiOku(inp.value);
+        if (Number.isFinite(v)) { durum.bant[anahtar][uc] = v; ciz(); }
+      });
+      ikili.appendChild(inp);
+    });
+    alan.append(etiket, ikili);
+    kap.appendChild(alan);
+  }
+}
+
+/* Köşe tablosu: sekiz köşenin hepsi parametreleriyle birlikte. Bandın hangi
+   varsayımdan geldiğini görünür kılar. */
+function bantKoselerCiz() {
+  const M = S();
+  const kap = $('bantKoseler');
+  kap.hidden = !(durum.bant.acik && sonBant);
+  if (kap.hidden) { kap.textContent = ''; return; }
+
+  kap.textContent = '';
+  const ozet = document.createElement('p');
+  ozet.className = 'ipucu';
+  ozet.textContent =
+    M.bantAltUc + ': K=' + fmt(sonBant.altUc.K, 0) + ' · n=' + fmt(sonBant.altUc.n, 2) +
+    ' · μ=' + fmt(sonBant.altUc.mu, 3) + ' → ' + fmt(sonBant.altUc.enerji, 1) + ' kWh/t   ·   ' +
+    M.bantUstUc + ': K=' + fmt(sonBant.ustUc.K, 0) + ' · n=' + fmt(sonBant.ustUc.n, 2) +
+    ' · μ=' + fmt(sonBant.ustUc.mu, 3) + ' → ' + fmt(sonBant.ustUc.enerji, 1) + ' kWh/t';
+  kap.appendChild(ozet);
+
+  const kabi = document.createElement('div');
+  kabi.className = 'tablo-kabi';
+  const tablo = document.createElement('table');
+  const bas = document.createElement('thead');
+  const basSatir = document.createElement('tr');
+  for (const m of M.bantKoseSutun) {
+    const th = document.createElement('th');
+    th.scope = 'col';
+    th.textContent = m;
+    basSatir.appendChild(th);
+  }
+  bas.appendChild(basSatir);
+  const govde = document.createElement('tbody');
+  for (const k of sonBant.koseler) {
+    const tr = document.createElement('tr');
+    const uc = k === sonBant.altUc ? M.bantAltUc : k === sonBant.ustUc ? M.bantUstUc : '';
+    const hucre = (metin, sinif) => {
+      const td = document.createElement('td');
+      td.textContent = metin;
+      if (sinif) td.className = sinif;
+      return td;
+    };
+    tr.append(hucre(fmt(k.K, 0), 'sayi'), hucre(fmt(k.n, 2), 'sayi'), hucre(fmt(k.mu, 3), 'sayi'),
+      hucre(fmt(k.enerji, 1), 'sayi'), hucre(fmt(k.guc, 1), 'sayi'),
+      hucre(fmt(k.enYuksekEmniyet, 3), 'sayi ' + safetyDurumu(k.enYuksekEmniyet)), hucre(uc));
+    govde.appendChild(tr);
+  }
+  tablo.append(bas, govde);
+  kabi.appendChild(tablo);
+  kap.appendChild(kabi);
+}
+
+/* ==== SEKMELER (doğrulama · formüller · kabuller) ==== */
+
+function sekmeSec(ad) {
+  durum.sekme = ad;
+  for (const d of document.querySelectorAll('[data-sekme]')) {
+    const secili = d.dataset.sekme === ad;
+    d.setAttribute('aria-selected', String(secili));
+  }
+  for (const panel of document.querySelectorAll('[data-panel]')) {
+    panel.hidden = panel.dataset.panel !== ad;
+  }
+}
+
+/* Doğrulama paneli: testler + referans pas karşılaştırması. */
+function dogrulamaPaneliCiz() {
+  const M = S();
+  const basliklar = (satirId, metinler) => {
+    const satir = $(satirId);
+    satir.textContent = '';
+    for (const m of metinler) {
+      const th = document.createElement('th');
+      th.scope = 'col';
+      th.textContent = m;
+      satir.appendChild(th);
+    }
+  };
+  basliklar('testBaslik', M.testSutun);
+  basliklar('referansBaslikSatiri', M.referansSutun);
+
+  const govde = $('testGovde');
+  govde.textContent = '';
+  let testler = [];
+  try { testler = runValidation(); } catch (err) { /* çekirdek hatası hata kutusunda görünür */ }
+
+  for (const t of testler) {
+    const tr = document.createElement('tr');
+    const rozet = document.createElement('td');
+    const r = document.createElement('span');
+    r.className = 'rozet ' + (t.gecti ? 'gecti' : 'kaldi');
+    r.textContent = t.gecti ? M.dogrulama.gecti : M.dogrulama.kaldi;
+    rozet.appendChild(r);
+    const hucre = (metin, sinif) => {
+      const td = document.createElement('td');
+      td.textContent = metin;
+      if (sinif) td.className = sinif;
+      return td;
+    };
+    rozet.className = 'durum-hucresi';
+    tr.append(hucre(t.id, 'mono'), hucre(M.test[t.id] ? M.test[t.id].ad : t.ad),
+      hucre(M.test[t.id] ? M.test[t.id].aciklama : t.aciklama, 'aciklama'),
+      hucre(t.beklenen, 'mono'), hucre(t.bulunan, 'mono'), rozet);
+    govde.appendChild(tr);
+  }
+  $('testOzeti').textContent = doldur(M.dogrulama.ozet, {
+    gecen: testler.filter(t => t.gecti).length, toplam: testler.length
+  });
+
+  // Referans pas: beklenen, hesaplanan, sapma
+  const ref = calcPass(REFERANS_GIRDI);
+  const satirlar = [
+    ['r', 0.1990, ref.r, 4], ['epsPas', 0.2218, ref.epsPas, 4],
+    ['sigmaBar', 196.7, ref.sigmaBar, 1], ['sigmaFOut', 265.5, ref.sigmaFOut, 1],
+    ['sigmaD', 77.6, ref.sigmaD, 1], ['safety', 0.292, ref.safety, 3],
+    ['delta', 2.52, ref.delta, 2], ['dT', 22.5, ref.dT, 1],
+    ['A1', 40.26, ref.A1, 2], ['F', 3123, ref.F, 0], ['v1', 4.99, ref.v1, 2]
+  ];
+  const refGovde = $('referansGovde');
+  refGovde.textContent = '';
+  for (const [ad, beklenen, bulunan, bas] of satirlar) {
+    const sapma = Math.abs(bulunan - beklenen) / beklenen * 100;
+    const tr = document.createElement('tr');
+    const td = (metin, sinif) => {
+      const e = document.createElement('td');
+      e.textContent = metin;
+      if (sinif) e.className = sinif;
+      return e;
+    };
+    tr.append(td(ad, 'mono'), td(fmt(beklenen, bas), 'sayi'), td(fmt(bulunan, bas), 'sayi'),
+      td('%' + fmt(sapma, 2), 'sayi ' + (sapma < 0.5 ? 'ok' : 'warn')));
+    refGovde.appendChild(tr);
+  }
+}
+
+/* Formüller paneli. */
+function formulPaneliCiz() {
+  const M = S();
+  const kap = $('formulListesi');
+  kap.textContent = '';
+  for (const f of M.formuller) {
+    const kutu = document.createElement('div');
+    kutu.className = 'formul';
+    const ad = document.createElement('h3');
+    ad.textContent = f.ad;
+    const kod = document.createElement('code');
+    kod.textContent = f.formul;
+    const aciklama = document.createElement('p');
+    aciklama.textContent = f.aciklama;
+    const alt = document.createElement('p');
+    alt.className = 'formul-alt';
+    alt.textContent = M.formulAralik + ': ' + f.aralik + ' · ' + M.formulKaynak + ': ' + f.kaynak;
+    kutu.append(ad, kod, aciklama, alt);
+    kap.appendChild(kutu);
+  }
+}
+
+/* Kabuller paneli. */
+function kabullerPaneliCiz() {
+  const M = S();
+  const kap = $('kabulListesi');
+  kap.textContent = '';
+  const giris = document.createElement('p');
+  giris.textContent = M.kabuller.giris;
+  kap.appendChild(giris);
+  const liste = document.createElement('ul');
+  for (const m of M.kabuller.maddeler) {
+    const li = document.createElement('li');
+    li.textContent = m;
+    liste.appendChild(li);
+  }
+  kap.appendChild(liste);
+  for (const n of M.kabuller.notlar) {
+    const p = document.createElement('p');
+    p.textContent = n;
+    kap.appendChild(p);
+  }
+}
+
+/* ==== TORNADO GRAFİKLERİ ==== */
+
+function tornadoCiz(kapId, veri, birim, basamak, ariaEtiket) {
+  const M = S();
+  const kap = $(kapId);
+  if (!veri || veri.length === 0) { kap.textContent = ''; return; }
+  const satirYuksekligi = 30;
+  const { s, g, y } = svgKur(kap, veri.length * satirYuksekligi + 24, ariaEtiket);
+  const sol = Math.min(120, g * 0.34), sag = 64;
+  const enBuyuk = Math.max(...veri.map(v => v.etki)) || 1;
+
+  veri.forEach((v, i) => {
+    const merkezY = 12 + i * satirYuksekligi + satirYuksekligi / 2;
+    const uzunluk = (g - sol - sag) * (v.etki / enBuyuk);
+    s.appendChild(svYazi(sol - 8, merkezY + 4, M.duyarlilikAd[v.k] || v.k, 'g-etiket', 'end'));
+    s.appendChild(sv('rect', {
+      x: sol, y: merkezY - 8, width: Math.max(uzunluk, v.etki > 0 ? 2 : 0), height: 16
+    }, v.etki > 0 ? 'g-tornado' : 'g-tornado-sifir'));
+    s.appendChild(svYazi(sol + Math.max(uzunluk, 2) + 6, merkezY + 4,
+      (v.etki > 0 ? fmt(v.etki, basamak) + birim : M.duyarlilikSifir), 'g-deger', 'start'));
+  });
+}
+
+function duyarlilikCiz(prog) {
+  const M = S();
+  if (!prog) { $('tornadoEmniyet').textContent = ''; $('tornadoEnerji').textContent = ''; return; }
+  const pas = prog.passes.find(x => x.no === durum.secilenPas) || prog.passes[0];
+  $('tornadoEmniyetBaslik').textContent = doldur(M.duyarlilik.emniyetBaslik, { pas: pas.no });
+  tornadoCiz('tornadoEmniyet', duyarlilikEmniyet(pas), '', 3,
+    doldur(M.duyarlilik.emniyetAria, { pas: pas.no }));
+  tornadoCiz('tornadoEnerji', duyarlilikEnerji(prog), ' kWh/t', 1, M.duyarlilik.enerjiAria);
+}
+
+/* ==== TEMA VE TERCİHLER ====
+   localStorage okuma/yazma try/catch içinde; değer yoksa sayfa yine düzgün açılır. */
+
+function tercihOku(anahtar) {
+  try { return localStorage.getItem('telcekme.' + anahtar); } catch (err) { return null; }
+}
+
+function tercihYaz(anahtar, deger) {
+  try { localStorage.setItem('telcekme.' + anahtar, deger); } catch (err) { /* yok sayılır */ }
+}
+
+/* Tema: 'sistem' varsayılan, kullanıcı seçerse data-theme özniteliği yazılır. */
+function temaUygula() {
+  const kok = document.documentElement;
+  if (durum.tema === 'sistem') kok.removeAttribute('data-theme');
+  else kok.setAttribute('data-theme', durum.tema);
+  const koyuMu = durum.tema === 'dark' ||
+    (durum.tema === 'sistem' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const d = $('temaDugmesi');
+  d.textContent = koyuMu ? S().temaAcik : S().tema;
+  d.setAttribute('aria-pressed', String(koyuMu));
+  gorselleriYenidenCiz();
+}
+
+function temaDegistir() {
+  const koyuMu = durum.tema === 'dark' ||
+    (durum.tema === 'sistem' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  durum.tema = koyuMu ? 'light' : 'dark';
+  tercihYaz('tema', durum.tema);
+  temaUygula();
+}
+
+/* ==== PAYLAŞILABİLİR BAĞLANTI ====
+   Bütün girdiler ve belirsizlik bandı ayarları adres çubuğunda taşınır; böylece
+   gönderilen bağlantı karşı tarafta aynı tabloyu açar. */
+
+function adresYaz() {
+  const p = new URLSearchParams();
+  const s = (x, b) => String(Number(x.toFixed(b)));
+  p.set('d0', s(durum.d0, 3)); p.set('d1', s(durum.dTarget, 3));
+  p.set('a', s(durum.alphaDeg, 2)); p.set('mu', s(durum.mu, 4));
+  p.set('K', s(durum.K, 1)); p.set('n', s(durum.n, 3)); p.set('v0', s(durum.v0, 2));
+  p.set('m', durum.method);
+  if (durum.passes !== null) p.set('N', String(durum.passes));
+  // Liste ayırıcısı '_': ondalık noktayla çakışmaz.
+  if (durum.anneals.length) p.set('an', durum.anneals.join('_'));
+  if (durum.manuelCaplar) p.set('dia', durum.manuelCaplar.map(x => s(x, 3)).join('_'));
+  p.set('lang', durum.dil);
+  if (durum.tema !== 'sistem') p.set('theme', durum.tema);
+  if (durum.bant.acik) {
+    p.set('b', '1');
+    p.set('bK', durum.bant.K.join('_'));
+    p.set('bn', durum.bant.n.join('_'));
+    p.set('bmu', durum.bant.mu.join('_'));
+  }
+  const adres = location.origin + location.pathname + '?' + p.toString();
+  try { history.replaceState(null, '', adres); } catch (err) { /* file:// altında yok sayılır */ }
+  return adres;
+}
+
+/* Sayfa açılırken adresten okur. Geçersiz değerler yok sayılır, senaryo bozulmaz. */
+function adrestenOku() {
+  const p = new URLSearchParams(location.search);
+  if ([...p.keys()].length === 0) return false;
+  const sayi = (anahtar, alan) => {
+    const v = parseFloat(p.get(anahtar));
+    if (Number.isFinite(v) && v > 0) durum[alan] = v;
+  };
+  sayi('d0', 'd0'); sayi('d1', 'dTarget'); sayi('a', 'alphaDeg'); sayi('mu', 'mu');
+  sayi('K', 'K'); sayi('n', 'n'); sayi('v0', 'v0');
+  const yontem = p.get('m');
+  if (['equalStrain', 'tapered', 'equalSafety'].includes(yontem)) durum.method = yontem;
+  const N = parseInt(p.get('N'), 10);
+  durum.passes = Number.isInteger(N) && N > 0 ? N : null;
+  const an = p.get('an');
+  durum.anneals = an ? an.split('_').map(Number).filter(Number.isInteger) : [];
+  const dia = p.get('dia');
+  if (dia) {
+    const caplar = dia.split('_').map(Number).filter(x => Number.isFinite(x) && x > 0);
+    if (caplar.length >= 2) durum.manuelCaplar = caplar;
+  }
+  const dil = p.get('lang');
+  if (dil === 'tr' || dil === 'en') durum.dil = dil;
+  const tema = p.get('theme');
+  if (tema === 'dark' || tema === 'light') durum.tema = tema;
+  if (p.get('b') === '1') {
+    durum.bant.acik = true;
+    for (const [anahtar, param] of [['K', 'bK'], ['n', 'bn'], ['mu', 'bmu']]) {
+      const uc = (p.get(param) || '').split('_').map(Number);
+      if (uc.length === 2 && uc.every(Number.isFinite)) durum.bant[anahtar] = uc;
+    }
+  }
+  return true;
+}
+
+function baglantiKopyala() {
+  const adres = adresYaz();
+  const bildir = (metin) => {
+    const k = $('paylasimDurumu');
+    k.textContent = metin;
+    k.hidden = false;
+  };
+  try {
+    navigator.clipboard.writeText(adres)
+      .then(() => bildir(S().baglantiKopyalandi))
+      .catch(() => bildir(S().baglantiHatasi));
+  } catch (err) { bildir(S().baglantiHatasi); }
+}
+
+/* ==== CSV ====
+   Türkçede noktalı virgül ayırıcı ve ondalık virgül; İngilizcede virgül ve nokta.
+   Bant açıkken değerler "alt – üst" olarak yazılır, kapalıyken başlıkta merkez
+   değerler olduğu belirtilir. */
+
+function csvUret(prog) {
+  const M = S();
+  const ayirici = durum.dil === 'tr' ? ';' : ',';
+  const satirlar = [];
+  const alan = (metin) => {
+    const t = String(metin);
+    return (t.includes(ayirici) || t.includes('"')) ? '"' + t.replace(/"/g, '""') + '"' : t;
+  };
+
+  satirlar.push([M.baslik].map(alan).join(ayirici));
+  satirlar.push([M.alan.d0, fmt(durum.d0, 2) + ' mm', M.alan.dTarget, fmt(durum.dTarget, 2) + ' mm',
+                 M.alan.method, durum.manuelCaplar ? M.ozetManuel : M.ozetYontem[durum.method],
+                 M.alan.passes, fmt(prog.passCount, 0)].map(alan).join(ayirici));
+  satirlar.push([M.alan.alphaDeg, fmt(durum.alphaDeg, 1) + '°', M.alan.mu, fmt(durum.mu, 3),
+                 M.alan.K, fmt(durum.K, 0) + ' MPa', M.alan.n, fmt(durum.n, 2),
+                 M.alan.v0, fmt(durum.v0, 1) + ' m/s'].map(alan).join(ayirici));
+  satirlar.push(alan(sonBant ? M.csvBant : M.csvMerkez));
+  satirlar.push('');
+
+  const basliklar = SUTUNLAR.map(c => M.sutun[c.k] + (c.birim ? ' (' + c.birim + ')' : ''))
+    .concat([M.sutun.anneal]);
+  satirlar.push(basliklar.map(alan).join(ayirici));
+
+  for (const pas of prog.passes) {
+    const deger = satirDegerleri(pas);
+    const bantSatiri = sonBant ? sonBant.paslar[pas.no - 1] : null;
+    const hucreler = SUTUNLAR.map(c => {
+      const bantAlani = { sigmaD: 'sigmaD', safety: 'safety', dT: 'dT', PkW: 'P' }[c.k];
+      const bant = bantSatiri && bantAlani ? bantSatiri[bantAlani] : null;
+      const bolen = c.k === 'PkW' ? 1000 : 1;
+      return bant
+        ? fmt(bant[0] / bolen, c.bas) + ' – ' + fmt(bant[1] / bolen, c.bas)
+        : fmt(deger[c.k], c.bas);
+    });
+    hucreler.push(pas.anneal ? M.tavlamaEtiketi : '');
+    satirlar.push(hucreler.map(alan).join(ayirici));
+  }
+  return satirlar.join('\r\n');
+}
+
+function csvIndir(prog) {
+  if (!prog) return;
+  const icerik = '\ufeff' + csvUret(prog);      // BOM: Excel Türkçe karakterleri doğru okusun
+  const bag = document.createElement('a');
+  bag.href = URL.createObjectURL(new Blob([icerik], { type: 'text/csv;charset=utf-8' }));
+  bag.download = 'tel-cekme-pas-programi.csv';
+  document.body.appendChild(bag);
+  bag.click();
+  document.body.removeChild(bag);
+  URL.revokeObjectURL(bag.href);
+  const k = $('paylasimDurumu');
+  k.textContent = S().csvIndi;
+  k.hidden = false;
+}
+
+/* ==== BAŞLANGIÇ ====
+   Sayfa boş açılmaz: "Otomotiv ince" senaryosu yüklü ve hesaplanmış gelir. */
+
+function baslat() {
+  kurSenaryoDugmeleri();
+  kurPanel();
+  kurBantAlanlari();
+  kurTabloBasligi();
+  $('dilTR').addEventListener('click', () => dilDegistir('tr'));
+  $('dilEN').addEventListener('click', () => dilDegistir('en'));
+  $('manuelHesapla').addEventListener('click', manuelHesapla);
+  $('manuelTemizle').addEventListener('click', manuelTemizle);
+  $('panelKatla').addEventListener('click', panelKatlaDegistir);
+  $('karsilastirSabitle').addEventListener('click', () => {
+    try {
+      const prog = durum.manuelCaplar
+        ? buildSchedule({ method: 'manual', diameters: durum.manuelCaplar, alphaDeg: durum.alphaDeg,
+            mu: durum.mu, K: durum.K, n: durum.n, v0: durum.v0, anneals: durum.anneals })
+        : buildSchedule({ d0: durum.d0, dTarget: durum.dTarget, method: durum.method,
+            passes: durum.passes, alphaDeg: durum.alphaDeg, mu: durum.mu, K: durum.K,
+            n: durum.n, v0: durum.v0, anneals: durum.anneals });
+      durum.karsilastirmaA = programOzeti(prog);
+      ciz();
+    } catch (err) { hataGoster(hataMetni(err)); }
+  });
+  $('karsilastirKapat').addEventListener('click', () => {
+    durum.karsilastirmaA = null;
+    ciz();
+  });
+  // Kalıp kesiti kaydırıcıları: yalnızca çizimi değiştirir, program etkilenmez.
+  $('kalipAlpha').addEventListener('input', () => {
+    durum.kalipAlpha = parseFloat($('kalipAlpha').value);
+    gorselleriYenidenCiz();
+  });
+  $('kalipR').addEventListener('input', () => {
+    durum.kalipR = parseFloat($('kalipR').value) / 100;
+    gorselleriYenidenCiz();
+  });
+  window.addEventListener('resize', gorselleriYenidenCiz);
+  DAR_EKRAN.addEventListener('change', () => ciz());
+  $('bantAnahtari').addEventListener('change', () => {
+    durum.bant.acik = $('bantAnahtari').checked;
+    ciz();
+  });
+  for (const d of document.querySelectorAll('[data-sekme]')) {
+    d.addEventListener('click', () => sekmeSec(d.dataset.sekme));
+  }
+  $('temaDugmesi').addEventListener('click', temaDegistir);
+  $('baglantiKopyala').addEventListener('click', baglantiKopyala);
+  $('csvIndir').addEventListener('click', () => csvIndir(sonProgram));
+  $('yazdir').addEventListener('click', () => window.print());
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    if (durum.tema === 'sistem') temaUygula();
+  });
+  $('kabullereGit').addEventListener('click', () => {
+    sekmeSec('kabuller');
+    $('guvenBolumu').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  // Tercihler: önce saklanan, sonra adres çubuğu (adres her zaman üstün gelir).
+  const saklananDil = tercihOku('dil');
+  if (saklananDil === 'tr' || saklananDil === 'en') durum.dil = saklananDil;
+  const saklananTema = tercihOku('tema');
+  if (saklananTema === 'light' || saklananTema === 'dark') durum.tema = saklananTema;
+
+  const adresten = adrestenOku();
+  document.documentElement.lang = durum.dil;
+  $('dilTR').setAttribute('aria-pressed', String(durum.dil === 'tr'));
+  $('dilEN').setAttribute('aria-pressed', String(durum.dil === 'en'));
+  $('bantAnahtari').checked = durum.bant.acik;
+  metinleriYaz();
+  kurBantAlanlari();
+  temaUygula();
+
+  // Sayfa boş açılmaz: adreste bir şey yoksa "Otomotiv ince" yüklenir.
+  if (adresten) { alanlariYaz(); ciz(); } else { senaryoYukle(SENARYOLAR[0]); }
+}
+
+baslat();
+</script>
+</body>
+</html>

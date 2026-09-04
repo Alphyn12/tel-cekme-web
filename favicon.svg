@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <title>Tel çekme</title>
+  <!-- Kalıbın konik ağzı: üst ve alt yarı, ortadan geçen tel -->
+  <g fill="none" stroke="#A6512A" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M3 5 h9 l6 6 h11"/>
+    <path d="M3 27 h9 l6 -6 h11"/>
+    <path d="M2 16 h28" stroke-width="2" stroke-dasharray="4 3" opacity="0.55"/>
+  </g>
+</svg>
