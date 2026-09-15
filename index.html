@@ -989,6 +989,37 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
   <div class="uyari" id="hataKutusu" hidden></div>
   <div class="bilgi" id="bilgiKutusu" hidden></div>
 
+  <!-- Sürtünme kalibrasyonu: ölçümden mu çözer. Optimizasyondan önce gelir,
+       çünkü mu bütün taramanın girdisidir. -->
+  <section class="bolum" id="kalibBolumu">
+    <h2 class="bolum-basligi" id="kalibBaslik"></h2>
+    <p class="gerekce" id="kalibAciklama"></p>
+    <div class="panel" id="kalibPaneli">
+      <div class="alan genis">
+        <label for="kalibPas" id="kalibPasEtiketi"></label>
+        <div class="secim">
+          <select id="kalibPas"></select>
+        </div>
+      </div>
+      <div class="alan">
+        <label for="kalibKuvvet" id="kalibKuvvetEtiketi"></label>
+        <input type="text" id="kalibKuvvet" inputmode="decimal" autocomplete="off">
+      </div>
+    </div>
+    <div class="opt-satiri">
+      <button type="button" class="dugme birincil" id="kalibCoz"></button>
+    </div>
+    <div class="opt-sonuc" id="kalibSonuc" hidden>
+      <p class="opt-ozet" id="kalibOzet"></p>
+      <ul class="opt-liste" id="kalibListe"></ul>
+      <div class="dugme-sirasi">
+        <button type="button" class="dugme" id="kalibUygula"></button>
+      </div>
+      <p class="ipucu" id="kalibDurum" hidden></p>
+    </div>
+    <p class="gerekce" id="kalibUyari"></p>
+  </section>
+
   <!-- Optimizasyon: girdi tarafının yardımcısı. Sonucu doğrudan ekrana yazmaz;
        "girdilere al" der ve bekleyen değişiklik şeridini açar (K-16). -->
   <section class="bolum" id="optBolumu">
@@ -1441,6 +1472,38 @@ function calcPass({ d0, d1, epsIn = 0, alphaDeg, mu, K, n, v0 }) {
 
   return { d0, d1, r, epsPas, epsIn, epsOut, sigmaFIn, sigmaFOut, sigmaBar, tabanPayi,
            sigmaD, safety, delta, dT, A0, A1, F, v0, v1, P, alphaDeg, mu, K, n };
+}
+
+/* ==== SÜRTÜNME KALİBRASYONU (ters problem) ====
+   Soru: bu pasta gerçekte şu kuvveti ölçtüm; bu hattın sürtünme katsayısı kaç?
+
+   Aracın kendi duyarlılık analizi en kritik parametrenin mu olduğunu söylüyor:
+   K emniyet oranında sadeleşir, mu sadeleşmez. Ama mu literatürden bilinemez —
+   yağa, kalıp yüzeyine ve hıza bağlı olarak hatta özgüdür. Tek bir kuvvet ölçümü
+   modeli o hatta bağlar.
+
+   Siebel'de çekme gerilmesi mu'da monoton artandır (sürtünme terimi mu ile
+   doğrusal), bu yüzden ikili arama tek köke yakınsar. Aralık dışı ölçümde sayı
+   uydurulmaz: hangi sınırın aşıldığı söylenir. */
+function muCoz(hedefSigmaD, { d0, d1, epsIn = 0, alphaDeg, K, n, v0 }) {
+  const dene = (mu) => calcPass({ d0, d1, epsIn, alphaDeg, mu, K, n, v0 }).sigmaD;
+  const muAlt = 0;                       // sürtünmesiz alt sınır: şekil verme + fazlalık iş
+  const muUst = GIRDI_SINIRLARI.mu.ust;  // arayüzün kabul ettiği üst uç
+
+  if (!Number.isFinite(hedefSigmaD) || hedefSigmaD <= 0) {
+    return { durum: 'gecersiz' };
+  }
+  const sigmaAlt = dene(muAlt), sigmaUst = dene(muUst);
+  if (hedefSigmaD < sigmaAlt) return { durum: 'dusuk', sinir: sigmaAlt, mu: muAlt };
+  if (hedefSigmaD > sigmaUst) return { durum: 'yuksek', sinir: sigmaUst, mu: muUst };
+
+  let lo = muAlt, hi = muUst;
+  for (let i = 0; i < 80; i++) {
+    const orta = (lo + hi) / 2;
+    if (dene(orta) < hedefSigmaD) lo = orta; else hi = orta;
+  }
+  const mu = (lo + hi) / 2;
+  return { durum: 'tamam', mu, sigmaD: dene(mu) };
 }
 
 /* Hedef emniyeti veren pas gerinimini ikili aramayla bulur.
@@ -2131,6 +2194,24 @@ const METIN = {
       rozet: { ok: 'Güvenli', warn: 'Sınırda', crit: 'Riskli' }
     },
     sozlukBaslik: 'Sütunlar ne anlama geliyor?',
+    kalib: {
+      baslik: 'Sürtünme kalibrasyonu',
+      aciklama: 'Bir pasta ölçülen çekme kuvvetini girin; araç Siebel bağıntısını ters çevirip o hattın sürtünme katsayısını çözer. Duyarlılık analizinin en kritik parametresi budur ve literatürden bilinemez — hatta özgüdür.',
+      pas: 'Ölçülen pas',
+      pasSecenek: 'Pas {no}: {d0} → {d1} mm',
+      kuvvet: 'Ölçülen çekme kuvveti',
+      coz: 'SÜRTÜNMEYİ ÇÖZ',
+      hesapYok: 'Önce bir program hesaplayın: kalibrasyon, ekrandaki programın bir pasının geometrisini kullanır.',
+      sonuc: 'μ = {mu}  (mevcut {eski})',
+      gerilme: 'Ölçülen {F} N, {A} mm² çıkış kesitinde {sigma} MPa çekme gerilmesi demek.',
+      fark: 'Bu pasın emniyet oranı {eski} yerine {yeni} olur.',
+      dusuk: 'Ölçülen kuvvet sürtünmesiz alt sınırın altında: bu geometri ve malzemeyle kuvvet en az {sinir} N olabilir (μ = 0). Ölçümü, çapları ya da K ve n değerlerini gözden geçirin.',
+      yuksek: 'Çözüm aracın üst sınırının ({ust}) üstünde: ölçülen kuvvet {sinir} N\'den büyük olamaz. Ya sürtünme modelin kapsadığı aralığın dışında, ya da kuvvet başka bir kayıp içeriyor.',
+      gecersiz: 'Geçerli bir kuvvet girin.',
+      uygula: 'Bu μ değerini girdilere al',
+      uygulandi: 'Girdilere alındı — sonucu görmek için HESAPLA.',
+      uyari: 'Kasnak momentinden hesaplanan kuvvet aktarma ve yatak kayıplarını da içerir; bu yolla çözülen μ sistematik olarak yüksek çıkar. Güvenilir sonuç için kalıp önü/arkası gerilme ölçümü gerekir. Çözülen değer, modelin bütün kabullerini (sabit μ, geri gerilim yok, izotermal akma) üstlenen tek bir sayıdır.'
+    },
     opt: {
       baslik: 'Optimizasyon',
       aciklama: 'Çapları ve malzemeyi sabit tutar; kalıp yarı açısını, pas dağıtım yöntemini ve pas sayısını tarayarak bütün kısıtları sağlayan en iyi programı arar. Kısıtlar: emniyet ≤ {emniyet} · delta {dmin}–{dmax} · ΔT ≤ {dt} °C.',
@@ -2441,6 +2522,24 @@ const METIN = {
       rozet: { ok: 'Safe', warn: 'Borderline', crit: 'At risk' }
     },
     sozlukBaslik: 'What do the columns mean?',
+    kalib: {
+      baslik: 'Friction calibration',
+      aciklama: 'Enter a drawing force measured on one pass; the tool inverts the Siebel relation and solves for that line\'s friction coefficient. It is the most critical parameter in the sensitivity analysis and cannot be looked up — it belongs to the line.',
+      pas: 'Measured pass',
+      pasSecenek: 'Pass {no}: {d0} → {d1} mm',
+      kuvvet: 'Measured drawing force',
+      coz: 'SOLVE FRICTION',
+      hesapYok: 'Calculate a schedule first: calibration uses the geometry of one pass from the schedule on screen.',
+      sonuc: 'μ = {mu}  (currently {eski})',
+      gerilme: '{F} N over the {A} mm² exit section is a drawing stress of {sigma} MPa.',
+      fark: 'This pass would have a safety ratio of {yeni} instead of {eski}.',
+      dusuk: 'The measured force is below the frictionless lower bound: with this geometry and material the force cannot be less than {sinir} N (μ = 0). Check the measurement, the diameters, or K and n.',
+      yuksek: 'The solution is above the tool\'s upper bound ({ust}): the measured force cannot exceed {sinir} N. Either friction is outside the modelled range, or the force carries another loss.',
+      gecersiz: 'Enter a valid force.',
+      uygula: 'Load this μ into the inputs',
+      uygulandi: 'Loaded into the inputs — press CALCULATE to see the result.',
+      uyari: 'A force derived from capstan torque also carries drivetrain and bearing losses, so a μ solved this way comes out systematically high. A reliable answer needs stress measured across the die. The solved value is a single number that absorbs every assumption of the model: constant μ, no back tension, isothermal flow.'
+    },
     opt: {
       baslik: 'Optimisation',
       aciklama: 'Diameters and material stay fixed; the tool sweeps die semi-angle, pass distribution method and pass count for the best schedule that meets every constraint. Constraints: safety ≤ {emniyet} · delta {dmin}–{dmax} · ΔT ≤ {dt} °C.',
@@ -3396,9 +3495,127 @@ function metinleriYaz() {
   $('manuelMetin').placeholder = durum.dil === 'tr' ? '8,00 7,16 6,40' : '8.00 7.16 6.40';
   girisiCiz();
   sozlukCiz();
+  kalibMetinleri();
   optMetinleri();
 }
 
+
+
+/* ==== KALİBRASYON ARAYÜZÜ ====
+   Ölçüm ekrandaki programın bir pasına aittir; pas listesi her hesapla birlikte
+   yenilenir. Çözülen mu ekrandaki sayıları değiştirmez, girdilere alınır (K-16). */
+let sonKalibSonuc = null;
+
+function kalibMetinleri() {
+  const C = S().kalib;
+  $('kalibBaslik').textContent = C.baslik;
+  $('kalibAciklama').textContent = C.aciklama;
+  $('kalibPasEtiketi').textContent = C.pas;
+  $('kalibKuvvetEtiketi').textContent = C.kuvvet;
+  const birim = document.createElement('span');
+  birim.className = 'birim';
+  birim.textContent = ' N';
+  $('kalibKuvvetEtiketi').appendChild(birim);
+  $('kalibCoz').textContent = C.coz;
+  $('kalibUygula').textContent = C.uygula;
+  $('kalibUyari').textContent = C.uyari;
+  kalibPaslariYaz(sonProgram);
+  kalibSonucuCiz(sonKalibSonuc);
+}
+
+/* Pas listesi: ekrandaki programın pasları. Program yoksa liste boşalır ve
+   çözme düğmesi kapanır — kalibrasyonun dayanacağı geometri yoktur. */
+function kalibPaslariYaz(prog) {
+  const C = S().kalib;
+  const sec = $('kalibPas');
+  const onceki = sec.value;
+  sec.textContent = '';
+  const varMi = Boolean(prog);
+  $('kalibCoz').disabled = !varMi;
+  if (!varMi) {
+    $('kalibAciklama').textContent = C.aciklama + ' ' + C.hesapYok;
+    return;
+  }
+  $('kalibAciklama').textContent = C.aciklama;
+  for (const pas of prog.passes) {
+    const o = document.createElement('option');
+    o.value = String(pas.no);
+    o.textContent = doldur(C.pasSecenek, { no: pas.no, d0: fmt(pas.d0, 3), d1: fmt(pas.d1, 3) });
+    sec.appendChild(o);
+  }
+  // Kullanıcının seçtiği pas yeni programda da varsa korunur.
+  if (onceki && prog.passes.some(x => String(x.no) === onceki)) sec.value = onceki;
+}
+
+function kalibSonucuCiz(sonuc) {
+  const C = S().kalib;
+  $('kalibSonuc').hidden = !sonuc;
+  $('kalibDurum').hidden = true;
+  if (!sonuc) return;
+
+  const liste = $('kalibListe');
+  liste.textContent = '';
+  const satir = (metin) => {
+    const li = document.createElement('li');
+    li.textContent = metin;
+    liste.appendChild(li);
+  };
+
+  if (sonuc.durum !== 'tamam') {
+    $('kalibUygula').hidden = true;
+    $('kalibOzet').textContent =
+      sonuc.durum === 'dusuk' ? doldur(C.dusuk, { sinir: fmt(sonuc.sinirKuvvet, 0) })
+      : sonuc.durum === 'yuksek' ? doldur(C.yuksek, { ust: fmt(GIRDI_SINIRLARI.mu.ust, 2), sinir: fmt(sonuc.sinirKuvvet, 0) })
+      : C.gecersiz;
+    return;
+  }
+
+  $('kalibUygula').hidden = false;
+  $('kalibOzet').textContent = doldur(C.sonuc, { mu: fmt(sonuc.mu, 4), eski: fmt(taslak.mu, 3) });
+  satir(doldur(C.gerilme, { F: fmt(sonuc.F, 0), A: fmt(sonuc.A1, 3), sigma: fmt(sonuc.sigmaD, 1) }));
+  satir(doldur(C.fark, { eski: fmt(sonuc.eskiSafety, 3), yeni: fmt(sonuc.yeniSafety, 3) }));
+}
+
+function kalibCoz() {
+  const C = S().kalib;
+  if (!sonProgram) return;
+  const pas = sonProgram.passes.find(x => String(x.no) === $('kalibPas').value) || sonProgram.passes[0];
+  const F = sayiOku($('kalibKuvvet').value);
+
+  if (!Number.isFinite(F) || F <= 0) {
+    sonKalibSonuc = { durum: 'gecersiz' };
+    kalibSonucuCiz(sonKalibSonuc);
+    return;
+  }
+
+  // Çekme gerilmesi ÇIKIŞ kesitinde tanımlıdır: sigma_d = F / A1.
+  const sigmaOlculen = F / pas.A1;
+  const geometri = { d0: pas.d0, d1: pas.d1, epsIn: pas.epsIn, alphaDeg: pas.alphaDeg,
+                     K: pas.K, n: pas.n, v0: pas.v0 };
+  const cozum = muCoz(sigmaOlculen, geometri);
+
+  if (cozum.durum !== 'tamam') {
+    sonKalibSonuc = Object.assign({}, cozum,
+      { sinirKuvvet: cozum.sinir !== undefined ? cozum.sinir * pas.A1 : null });
+  } else {
+    const yeni = calcPass(Object.assign({}, geometri, { mu: cozum.mu }));
+    sonKalibSonuc = { durum: 'tamam', mu: cozum.mu, F, A1: pas.A1, sigmaD: sigmaOlculen,
+                      eskiSafety: pas.safety, yeniSafety: yeni.safety };
+  }
+  kalibSonucuCiz(sonKalibSonuc);
+}
+
+function kalibUygula() {
+  if (!sonKalibSonuc || sonKalibSonuc.durum !== 'tamam') return;
+  // Girdi alanı 0,005 alt sınırıyla çalışır; çözüm daha düşükse sınıra oturtulur.
+  taslak.mu = Math.min(GIRDI_SINIRLARI.mu.ust,
+                       Math.max(GIRDI_SINIRLARI.mu.alt, Number(sonKalibSonuc.mu.toFixed(4))));
+  alanlariYaz();
+  butunAlanlariDenetle();
+  girdiDegisti();
+  $('kalibDurum').textContent = S().kalib.uygulandi;
+  $('kalibDurum').hidden = false;
+}
 
 /* ==== OPTİMİZASYON ARAYÜZÜ ====
    Bölüm girdi tarafının yardımcısıdır: bulduğu programı ekrana yazmaz, girdilere
@@ -3927,6 +4144,7 @@ function gorunumuYaz(g) {
 
   bantKoselerCiz();
   kararCiz(g);
+  kalibPaslariYaz(g.prog);
   ozetSeridiniCiz(g);
   oneriyiCiz(g);
   karsilastirmayiCiz(g);
@@ -3964,6 +4182,7 @@ function hesaplanamadiDurumu(hata) {
 
   bantKoselerCiz();
   kararCiz(null);
+  kalibPaslariYaz(null);
   ozetSeridiniCiz(null);
   oneriyiCiz(null);
   karsilastirmayiCiz(null);
@@ -5416,6 +5635,11 @@ function baslat() {
   kurPanel();
   kurBantAlanlari();
   kurTabloBasligi();
+  $('kalibCoz').addEventListener('click', kalibCoz);
+  $('kalibUygula').addEventListener('click', kalibUygula);
+  $('kalibKuvvet').addEventListener('keydown', (olay) => {
+    if (olay.key === 'Enter') { olay.preventDefault(); kalibCoz(); }
+  });
   $('optCalistir').addEventListener('click', optCalistir);
   $('optUygula').addEventListener('click', optUygula);
   $('optAmacEnerji').addEventListener('click', () => optAmacSec('enerji'));

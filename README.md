@@ -39,6 +39,32 @@ Bedeli de görünür: 11 pasta delta 1,32'ye (aşırı sürtünme sınırı) ve 
 100,3 °C'ye çıkar, araç ikisini de uyarı olarak gösterir ve gereken kalıp açısını
 (9,1°) söyler.
 
+## Sürtünme kalibrasyonu
+
+Bir pasta **ölçülen çekme kuvvetini** girin; araç Siebel bağıntısını ters çevirip
+o hattın sürtünme katsayısını çözer. Aracın kendi duyarlılık analizi en kritik
+parametrenin `μ` olduğunu söylüyor — `K` emniyet oranında sadeleşir, `μ` sadeleşmez —
+ve `μ` literatürden bilinemez: yağa, kalıp yüzeyine ve hıza bağlı olarak hatta özgüdür.
+Tek bir ölçüm modeli o hatta bağlar.
+
+Çekme gerilmesi `μ`'de monoton artandır, dolayısıyla ters çözümün kökü tektir;
+ikili arama kullanılır. Ölçüm modelin kapsadığı aralığın dışındaysa sayı
+uydurulmaz, hangi sınırın aşıldığı söylenir: sürtünmesiz alt sınır (`μ = 0`)
+ya da `μ = 0,30` üst sınırı, ikisi de kuvvet cinsinden yazılır.
+
+Genel amaçlı senaryoda 3. pasın model kuvveti 4025 N. Sahada 4508 N ölçülmüşse
+(%12 fazla) çözülen değer `μ = 0,0895` olur ve araç şunu söyler: o pasın emniyet
+oranı 0,470 değil **0,527**, yani uyarı eşiğinin üstünde. Kalibrasyonun bütün
+anlamı bu cümlededir.
+
+Çözülen `μ` ekrandaki sayıları değiştirmez; girdilere alınır ve sonucu HESAPLA
+getirir (K-16).
+
+**Sınır:** Kasnak momentinden hesaplanan kuvvet aktarma ve yatak kayıplarını da
+içerir, bu yolla çözülen `μ` sistematik olarak yüksek çıkar. Güvenilir sonuç kalıp
+önü/arkası gerilme ölçümü ister. Çözülen sayı, modelin bütün kabullerini (sabit `μ`,
+geri gerilim yok, izotermal akma) üstlenen tek bir değerdir.
+
 ## Optimizasyon
 
 Çapları ve malzemeyi sabit tutup **kalıp yarı açısını, dağıtım yöntemini ve pas

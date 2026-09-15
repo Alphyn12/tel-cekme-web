@@ -496,3 +496,36 @@ kalıp açısı değişince yağlama rejimi ve kalıp aşınması da değişir, 
 listesinde "hesaba katılmayanlar" arasında. Optimizer "açıyı 9,3°'ye çıkar" derse bu
 modelde kazançtır, sahada doğrulanması gerekir. Uyarı cümlesi sonucun altında sabit
 durur, kapatılamaz.
+
+## K-19 · Sürtünme kalibrasyonu: modeli ölçümle hatta bağlamak
+**Tarih:** 2026-09-15
+
+Araç `μ`'yü girdi olarak alıyordu ve kendi duyarlılık analizinde "en kritik
+parametre budur" diyordu. İkisi birlikte tuhaf bir boşluk üretiyor: sonucu en çok
+belirleyen sayı, kullanıcının en az bilebileceği sayı. `K` için literatür aralığı
+var (315–530 MPa) ve zaten emniyet oranında sadeleşiyor; `μ` için literatür aralığı
+bir şey söylemiyor, çünkü `μ` malzemenin değil **hattın** özelliğidir.
+
+**Karar:** Ters problem eklendi. Kullanıcı ekrandaki programın bir pasını seçip o
+pasta ölçülen çekme kuvvetini girer; araç `σ_d = F / A₁` ile gerilmeyi bulur ve
+Siebel'i `μ` için çözer.
+
+**Neden ikili arama:** `σ_d` ifadesinde sürtünme terimi `μ` ile doğrusaldır, yani
+`σ_d` `μ`'de monoton artandır — kök tektir, türev gerekmez, yakınsama garantilidir.
+Bir test bu monotonluğu ayrıca sınıyor: ters çözümün tekliği varsayım değil, kontrol
+edilen bir özellik.
+
+**Aralık dışında sayı uydurulmaz.** Ölçülen kuvvet sürtünmesiz alt sınırın (`μ = 0`)
+altındaysa fizik değil ölçüm ya da girdi hatalıdır; üst sınırın üstündeyse sürtünme
+modelin kapsadığı yerin dışındadır. İki durumda da aşılan sınır **kuvvet cinsinden**
+yazılır, çünkü kullanıcının elindeki büyüklük odur.
+
+**K-16 korundu:** çözülen `μ` girdilere alınır, ekrandaki sayılar HESAPLA'ya kadar
+değişmez.
+
+**Sınır — kalibrasyon bir kayıp toplayıcıdır.** Kasnak momentinden hesaplanan kuvvet
+aktarma ve yatak kayıplarını içerir; o kayıplar `μ`'ye yıkılır ve sonuç sistematik
+olarak yüksek çıkar. Daha derini: çözülen sayı modelin bütün ihmallerini (geri
+gerilim, sıcaklık geri beslemesi, kalıp esnemesi) tek bir katsayıya yükler. Yani
+"gerçek sürtünme katsayısı" değil, **modelin o pası açıklamak için ihtiyaç duyduğu
+sürtünme katsayısıdır**. Uyarı bu ayrımı açıkça yazar.
