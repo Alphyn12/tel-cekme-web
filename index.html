@@ -11,7 +11,7 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://tel-cekme.bariskirli.com/">
 <meta property="og:title" content="Tel Çekme Pas Programı Hesaplayıcısı">
-<meta property="og:description" content="Pas programı, kopma riski ve belirsizlik bir arada: Siebel çekme gerilmesi, eşit gerinim / kademeli azalan / eşit emniyet dağıtımı, dokuz canlı doğrulama testi.">
+<meta property="og:description" content="Pas programı, kopma riski ve belirsizlik bir arada: Siebel çekme gerilmesi, eşit gerinim / kademeli azalan / eşit emniyet dağıtımı, on bir canlı doğrulama testi.">
 <meta property="og:site_name" content="Tel Çekme Pas Programı Hesaplayıcısı">
 <meta property="og:image" content="https://tel-cekme.bariskirli.com/og.png">
 <meta property="og:image:secure_url" content="https://tel-cekme.bariskirli.com/og.png">
@@ -2352,6 +2352,49 @@ function runValidation() {
     gecti: t9Sonuc.every(x => x.dogru)
   });
 
+  /* T10 — Geri gerilim aktarımı: Sachs çarpanı e^(−μ·cotα·ε) kapalı formla birebir
+     tutmalı, σ_b = 0 eski sayıyı bozmamalı ve artış her zaman σ_b'den küçük olmalı
+     (sürtünme bir kısmını yutar). Üç koşul birden sınanır. */
+  const t10Sb = 40;
+  const t10Yok = calcPass(REFERANS_GIRDI);
+  const t10Var = calcPass(Object.assign({}, REFERANS_GIRDI, { sigmaB: t10Sb }));
+  const t10AlphaRad = REFERANS_GIRDI.alphaDeg * Math.PI / 180;
+  const t10Eps = 2 * Math.log(REFERANS_GIRDI.d0 / REFERANS_GIRDI.d1);
+  const t10Beklenen = Math.exp(-(REFERANS_GIRDI.mu / Math.tan(t10AlphaRad)) * t10Eps);
+  const t10Sifir = calcPass(Object.assign({}, REFERANS_GIRDI, { sigmaB: 0 }));
+  const t10Artis = t10Var.sigmaD - t10Yok.sigmaD;
+  const t10Gecti = Math.abs(t10Var.geriAktarim - t10Beklenen) < 1e-12 &&
+                   t10Sifir.sigmaD === t10Yok.sigmaD &&
+                   t10Artis > 0 && t10Artis < t10Sb;
+  sonuc.push({
+    id: 'T10', ad: 'Geri gerilim aktarımı',
+    aciklama: 'Geri gerilimin kalıbın öbür tarafına geçen payı e^(−μ·cotα·ε) kapalı formuyla ' +
+              'aynı olmalı; σ_b = 0 sayıları değiştirmemeli ve artış σ_b\'den küçük kalmalı.',
+    beklenen: 'aktarım ' + t10Beklenen.toFixed(4) + ' · artış < ' + t10Sb + ' MPa',
+    bulunan: 'aktarım ' + t10Var.geriAktarim.toFixed(4) + ' · artış ' + t10Artis.toFixed(2) + ' MPa',
+    gecti: t10Gecti
+  });
+
+  /* T11 — Malzeme akma tabanı: her malzemenin kendi tabanı geçerli olmalı. Taban
+     sabit kalsaydı (eski hâl) bakır dışı malzemeler yanlış tabanla hesaplanırdı;
+     bu test o gerilemeyi yakalar. */
+  const t11 = MALZEMELER.map((m) => {
+    const prog = buildSchedule({ d0: 8, dTarget: 2.5, method: 'equalStrain', passes: 11,
+      alphaDeg: 8, mu: 0.06, v0: 3, K: m.K, n: m.n, rho: m.rho, cp: m.cp, sigmaY0: m.sigmaY0 });
+    const enDusukBar = Math.min(...prog.passes.map(x => x.sigmaBar));
+    const enDusukCikis = Math.min(...prog.passes.map(x => x.sigmaFOut));
+    return { ad: m.tr, dogru: enDusukBar >= m.sigmaY0 - 1e-9 && enDusukCikis >= m.sigmaY0 - 1e-9 };
+  });
+  sonuc.push({
+    id: 'T11', ad: 'Malzemenin kendi akma tabanı',
+    aciklama: 'Listedeki her malzemede hem ortalama akma gerilmesi hem çıkış dayanımı, o ' +
+              'malzemenin kendi tabanının altına düşmemeli (bakır 70, alüminyum 28, çelik 180 MPa).',
+    beklenen: t11.length + ' / ' + t11.length,
+    bulunan: t11.filter(x => x.dogru).length + ' / ' + t11.length +
+             (t11.every(x => x.dogru) ? '' : ' (kalan: ' + t11.filter(x => !x.dogru).map(x => x.ad).join(', ') + ')'),
+    gecti: t11.every(x => x.dogru)
+  });
+
   return sonuc;
 }
 
@@ -2373,7 +2416,7 @@ const METIN = {
     adimAraclar: 'Programı iyileştir',
     adimAraclarAmac: 'Beş aracın ortak sözleşmesi var: hiçbiri ekrandaki sayıyı değiştirmez. Buldukları değeri girdilere yazarlar, hesabı siz başlatırsınız.',
     adimYontem: 'Yöntem ve sınırlar',
-    adimYontemAmac: 'Her formülün kaynağı, sayfa her açıldığında koşan dokuz doğrulama testi ve modelin bilerek dışarıda bıraktıkları.',
+    adimYontemAmac: 'Her formülün kaynağı, sayfa her açıldığında koşan on bir doğrulama testi ve modelin bilerek dışarıda bıraktıkları.',
     girdiler: 'Girdiler',
     gizle: 'Gizle',
     goster: 'Göster',
@@ -2482,7 +2525,9 @@ const METIN = {
       T6: { ad: 'Otomatik pas sayısı — eşit emniyet', aciklama: 'Emniyeti 0,50 altında tutan en küçük pas sayısı 11, 8 ve 17 olmalı.' },
       T7: { ad: 'Toplam iş / ideal iş', aciklama: 'Hattın özgül enerjisi ideal şekil verme işinin makul bir katı olmalı.' },
       T8: { ad: 'K değişmezliğinin koşulu', aciklama: 'K = 315 ile K = 530 arasında emniyet oranı, taban devre dışıyken (A) ve pasın tamamı taban üzerindeyken (C) aynı kalmalı; aradaki geçiş bölgesinde (B) değişmelidir.' },
-      T9: { ad: 'Sınır denetimi', aciklama: 'Modelin geçerli olmadığı girdiler (negatif μ, K = 0, n = 1,5, hedef çap > başlangıç çapı) reddedilmeli; geçerli taban kabul edilmeli.' }
+      T9: { ad: 'Sınır denetimi', aciklama: 'Modelin geçerli olmadığı girdiler (negatif μ, K = 0, n = 1,5, hedef çap > başlangıç çapı) reddedilmeli; geçerli taban kabul edilmeli.' },
+      T10: { ad: 'Geri gerilim aktarımı', aciklama: 'Geri gerilimin kalıbın öbür tarafına geçen payı e^(−μ·cotα·ε) kapalı formuyla aynı olmalı; σ_b = 0 sayıları değiştirmemeli ve artış σ_b\'den küçük kalmalı — sürtünme bir kısmını yutar.' },
+      T11: { ad: 'Malzemenin kendi akma tabanı', aciklama: 'Listedeki her malzemede ortalama akma gerilmesi ve çıkış dayanımı, o malzemenin kendi tabanının altına düşmemeli (bakır 70, alüminyum 28, çelik 180 MPa).' }
     },
     formulAralik: 'Geçerlilik', formulKaynak: 'Kaynak',
     formuller: [
@@ -2757,7 +2802,7 @@ const METIN = {
     adimAraclar: 'Improve the schedule',
     adimAraclarAmac: 'All five tools share one contract: none of them changes a number on screen. They write what they find into the inputs, and you start the calculation.',
     adimYontem: 'Method and limits',
-    adimYontemAmac: 'The source of every formula, the nine validation tests that run each time the page opens, and what the model deliberately leaves out.',
+    adimYontemAmac: 'The source of every formula, the eleven validation tests that run each time the page opens, and what the model deliberately leaves out.',
     girdiler: 'Inputs',
     gizle: 'Hide',
     goster: 'Show',
@@ -2866,7 +2911,9 @@ const METIN = {
       T6: { ad: 'Automatic pass count — equal safety', aciklama: 'The smallest pass count keeping safety below 0.50 must be 11, 8 and 17.' },
       T7: { ad: 'Total work / ideal work', aciklama: 'The specific energy of the line must be a plausible multiple of the ideal deformation work.' },
       T8: { ad: 'Condition for K invariance', aciklama: 'Between K = 315 and K = 530 the safety ratio must stay identical where the floor is inactive (A) and where the whole pass sits on the floor (C), and must differ in the transition between them (B).' },
-      T9: { ad: 'Validity bounds', aciklama: 'Inputs outside the model\'s validity range (negative μ, K = 0, n = 1.5, target diameter > start diameter) must be rejected; a valid baseline must be accepted.' }
+      T9: { ad: 'Validity bounds', aciklama: 'Inputs outside the model\'s validity range (negative μ, K = 0, n = 1.5, target diameter > start diameter) must be rejected; a valid baseline must be accepted.' },
+      T10: { ad: 'Back tension transmitted', aciklama: 'The share of back tension reaching the far side of the die must match the closed form e^(−μ·cotα·ε); σ_b = 0 must leave the numbers untouched and the increase must stay below σ_b — friction absorbs part of it.' },
+      T11: { ad: 'Each material\'s own flow floor', aciklama: 'For every material on the list, both the mean flow stress and the exit strength must stay at or above that material\'s own floor (copper 70, aluminium 28, steel 180 MPa).' }
     },
     formulAralik: 'Validity', formulKaynak: 'Source',
     formuller: [

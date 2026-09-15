@@ -180,7 +180,7 @@ sonucu değiştirmedikleri için düğme beklemezler.
 
 ## Doğrulama
 
-Dokuz test sayfa her açıldığında canlı çalışır:
+On bir test sayfa her açıldığında canlı çalışır:
 
 | # | Test | Beklenen |
 |---|---|---|
@@ -193,6 +193,8 @@ Dokuz test sayfa her açıldığında canlı çalışır:
 | T7 | Toplam iş / ideal iş | 1,30 – 2,50 (bulunan 1,78) |
 | T8 | K değişmezliğinin koşulu | oran, taban devre dışıyken ve tamamen taban üzerindeyken `K` ile değişmemeli; geçiş bölgesinde değişmeli |
 | T9 | Sınır denetimi | aralık dışı girdi (negatif `μ`, `K = 0`, `n = 1,5`, hedef > `d0`) reddedilmeli |
+| T10 | Geri gerilim aktarımı | aktarılan pay `e^(−μ·cotα·ε)` ile birebir; `σ_b = 0` sayıları bozmamalı; artış `σ_b`'den küçük |
+| T11 | Malzemenin kendi akma tabanı | beş malzemede de `σ̄` ve çıkış dayanımı kendi tabanının altına düşmemeli |
 
 Girdi yazmanın ekrandaki hesabı değiştirmediği, HESAPLA'nın taslağı eksiksiz
 geçirdiği ve her hesap girdisinin bekleyen değişiklik listesinde tam bir kez
@@ -262,7 +264,7 @@ hassasiyeti ve dışa aktarma düzeltildi. Kademeli azalan otomatik program art�
 her pasta %20 kesit azalma sınırını denetler (otomotiv örneği: 20 pas).
 
 Tekrarlanabilir test: `node tests/audit.cjs`. Testler bağımlılık veya ağ erişimi
-gerektirmez. Yerleşik 9 testin yanı sıra regresyon kontrolleri ve sabit tohumlu
+gerektirmez. Yerleşik 11 testin yanı sıra regresyon kontrolleri ve sabit tohumlu
 500 girdilik tarama çalışır. Rapor: `output/pdf/tel-cekme-inceleme.pdf`.
 
 **Girdi değiştiği hâlde oran neden sabit kalabilir?** K, taban devre dışıyken

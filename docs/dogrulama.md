@@ -3,7 +3,7 @@
 ## 7 Eylül 2026 ek incelemesi
 
 Yeni testler `node tests/audit.cjs` ile ağsız ve bağımlılıksız çalışır. Yerleşik
-9 test; girdi/sonuç tutarlılığı, parametre duyarlılığı, URL hassasiyeti, manuel
+11 test; girdi/sonuç tutarlılığı, parametre duyarlılığı, URL hassasiyeti, manuel
 çap dizisi, belirsizlik sınırları, kütle ve enerji korunumu ile tamamlandı.
 Kademeli azalan otomatik program her pasta %20 sınırını sağlar (otomotiv: 20 pas).
 
@@ -50,7 +50,7 @@ Tolerans %0,5; en büyük sapma %0,03.
 
 ---
 
-## Dokuz test
+## On bir test
 
 | # | Test | Ne yapar | Geçme koşulu | Sonuç |
 |---|---|---|---|---|
@@ -63,6 +63,8 @@ Tolerans %0,5; en büyük sapma %0,03.
 | T7 | Toplam iş / ideal iş | Hattın özgül enerjisini ideal şekil verme işine oranlar | 1,30 – 2,50 | 1,78 (56,4 → 100,5 kWh/ton) ✔ |
 | T8 | K değişmezliğinin koşulu | Referans pası `K = 315` / `K = 530` ile üç bölgede hesaplar | A < 1e-9 · B > 1e-6 · C < 1e-9 | A 0,0 · B 2,0e-3 · C 0,0 ✔ |
 | T9 | Sınır denetimi | Aralık dışı dört girdiyi ve geçerli tabanı `girdiDenetimi`'ne verir | 5 / 5 | 5 / 5 ✔ |
+| T10 | Geri gerilim aktarımı | Referans pası `σ_b = 40 MPa` ile hesaplar | aktarım `e^(−μ·cotα·ε)` ile birebir (< 1e-12), `σ_b = 0` sayıları değiştirmez, artış `σ_b`'den küçük | 0,9241 · artış 36,96 MPa ✔ |
+| T11 | Malzemenin kendi akma tabanı | Beş malzemenin her biriyle 11 paslık program kurar | `σ̄` ve `σ_f,çıkış` malzemenin kendi tabanının altına düşmez | 5 / 5 ✔ |
 
 **T1'in referansı bağımsızdır:** `sigma_ideal = K · ε^(n+1) / (n+1)` kapalı formundan
 gelir, kodun kendi `sigmaBar`'ından değil. Böylece hem Siebel'in sıfır limiti hem de
@@ -189,7 +191,7 @@ Ekranda birbirine ait olmayan sayıların yan yana durmaması, hesap kadar sına
 | Kalıp kesiti kaydırıcısı + girdi değişimi | kesit pasın kendi değerlerine döner, tabloyla birebir aynı | ✔ 0,305 / 0,305 |
 | Kaydırıcı + senaryo değişimi | aynı | ✔ 0,279 / 0,279 |
 | Hata durumunda dışa aktarma | CSV / yazdır / bağlantı düğmeleri kapanır | ✔ |
-| Dil değişimi | doğrulama paneli iki dilde de 9/9 yazar | ✔ |
+| Dil değişimi | doğrulama paneli iki dilde de 11/11 yazar | ✔ |
 | 360 px, dört durum | yatay kaydırma yok | ✔ |
 
 ## Rapor üretimi
