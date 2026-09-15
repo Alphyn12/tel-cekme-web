@@ -560,3 +560,35 @@ kütüphanesi (açılır liste) bir sonraki adımdır; bu adım yalnızca **sess
 yarıya iner, güç değişmez; özgül ısı yalnızca sıcaklığı değiştirir; alüminyum
 değerleriyle ΔT ve kWh/ton gerçekten değişir; sınır dışı değerler reddedilir ve
 varsayılanlar eski sayıları birebir korur.
+
+## K-21 · Kalıp çapına yuvarlama: ideal program ile depodaki program
+**Tarih:** 2026-09-15
+
+Araç `7,197 mm` gibi çaplar üretiyordu. Bu sayı doğru ama uygulanamaz: kalıplar
+katalog adımlarında gelir. Kullanıcı ideal programı alıp elle yuvarlarsa emniyet
+oranının nasıl değiştiğini göremez — oysa asıl soru odur.
+
+**Karar:** Ekrandaki programın çapları seçilen kalıp adımına oturtulur ve manuel
+program olarak girdilere alınır. Sonucu HESAPLA getirir (K-16).
+
+**Uç çaplar yuvarlanmaz.** `d₀` hattın beslemesi, son çap ürünün kendisidir. Onları
+adıma oturtmak, sorulan soruyu değiştirmek olur; araç cevabı değiştirmeli, soruyu
+değil.
+
+**Çakışma düzeltilmez, reddedilir.** Kaba bir adımda iki komşu çap aynı değere
+düşebilir ya da sıra bozulabilir. Diziyi "en yakın geçerli hâle" itmek sessiz bir
+tasarım kararı olurdu; bunun yerine hangi çiftin çakıştığı söylenir ve daha ince
+adım istenir. Aracın her yerindeki kural burada da geçerli: sınırını bilen model,
+sessizce saçmalayandan iyidir.
+
+**Hangi çapın nereye gittiği tek tek yazılır.** Yuvarlama görünmez bir işlem
+olmamalı; liste `7,197 → 7,200` biçiminde bütün kaymaları gösterir, en büyük sapma
+ayrıca söylenir.
+
+**Ölçülen sonuç:** genel amaçlı senaryoda 0,05 mm adımı on çapı kaydırıyor, en büyük
+sapma 0,025 mm, ve en yüksek emniyet oranı 0,389'dan 0,410'a çıkıyor. Yuvarlama
+ücretsiz değildir; bedeli sayıyla görünür.
+
+Üç test eklendi: uç çaplar korunur ve ara çapların hepsi adımın tam katıdır, sapma
+yarım adımı aşmaz, sıra korunur; yuvarlanmış dizi geçerli bir program kurar; kaba
+adım reddedilir ve geçersiz girdiler ayrı durum kodlarıyla döner.

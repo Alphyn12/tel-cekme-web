@@ -1203,6 +1203,29 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
       <button type="button" class="dugme sessiz" id="manuelTemizle" data-t="manuelTemizle"></button>
     </div>
     <p class="ipucu" id="manuelIpucu"></p>
+
+    <!-- Kalıp çapına yuvarlama: manuel programın yanında durur, çünkü çıktısı da
+         bir çap dizisidir. Sonucu ekrana yazmaz, girdilere alır (K-16). -->
+    <h3 class="bolum-basligi" id="yuvarlaBaslik"></h3>
+    <p class="gerekce" id="yuvarlaAciklama"></p>
+    <div class="opt-satiri">
+      <div class="alan">
+        <label for="yuvarlaAdim" id="yuvarlaAdimEtiketi"></label>
+        <div class="secim">
+          <select id="yuvarlaAdim"></select>
+        </div>
+      </div>
+      <button type="button" class="dugme birincil" id="yuvarlaCalistir"></button>
+    </div>
+    <div class="opt-sonuc" id="yuvarlaSonuc" hidden>
+      <p class="opt-ozet" id="yuvarlaOzet"></p>
+      <ul class="opt-liste" id="yuvarlaListe"></ul>
+      <div class="dugme-sirasi">
+        <button type="button" class="dugme" id="yuvarlaUygula"></button>
+      </div>
+      <p class="ipucu" id="yuvarlaDurum" hidden></p>
+    </div>
+    <p class="gerekce" id="yuvarlaUyari"></p>
   </section>
 
   <footer class="alt-not">
@@ -1741,6 +1764,42 @@ function massFlowOf(pass) {
 /* Kullanıcının yapıştırdığı çap listesini sayı dizisine çevirir.
    Ayırıcı: boşluk, satır sonu, noktalı virgül veya virgül. Virgül aynı zamanda
    ondalık ayırıcı olabildiği için iki okuma denenir, geçerli olan seçilir. */
+/* ==== KALIP ÇAPINA YUVARLAMA ====
+   Hesap 7,163 mm der; kalıp deposunda öyle bir kalıp yoktur. Bu fonksiyon çap
+   dizisini gerçek kalıp adımına oturtur.
+
+   UÇ ÇAPLARA DOKUNULMAZ: giriş filmaşini hattın beslemesi, son çap ürünün kendisi.
+   İkisini yuvarlamak soruyu değiştirmek olurdu, cevabı değil.
+
+   Adım kaba olduğunda iki komşu çap aynı değere düşebilir ya da sıra bozulabilir.
+   O durumda dizi düzeltilmez, REDDEDİLİR: sessizce "yakın bir şey" üretmek, aracın
+   bütün mantığına aykırı. Hangi çiftin çakıştığı söylenir. */
+const YUVARLAMA_ADIMLARI = [0.01, 0.02, 0.05, 0.1, 0.25];
+
+function caplariYuvarla(caplar, adim) {
+  if (!Array.isArray(caplar) || caplar.length < 2 || !caplar.every(Number.isFinite)) {
+    return { durum: 'gecersizDizi' };
+  }
+  if (!(adim > 0) || !Number.isFinite(adim)) return { durum: 'gecersizAdim' };
+
+  const yeni = caplar.slice();
+  let sapma = 0, degisen = 0;
+  for (let i = 1; i < yeni.length - 1; i++) {
+    // toFixed(6): 0,1 adımında 7,1000000000000005 gibi kayan nokta artığı kalmasın
+    const yuvarlanmis = Number((Math.round(caplar[i] / adim) * adim).toFixed(6));
+    if (yuvarlanmis !== caplar[i]) degisen++;
+    sapma = Math.max(sapma, Math.abs(yuvarlanmis - caplar[i]));
+    yeni[i] = yuvarlanmis;
+  }
+
+  for (let i = 1; i < yeni.length; i++) {
+    if (!(yeni[i] < yeni[i - 1])) {
+      return { durum: 'cakisma', ilk: i, son: i + 1, deger: yeni[i] };
+    }
+  }
+  return { durum: 'tamam', caplar: yeni, sapma, degisen, adim };
+}
+
 function parseManualSchedule(text) {
   if (typeof text !== 'string' || text.trim() === '') {
     throw new DrawingError('MANUEL_BOS', 'Çap listesi boş.', {});
@@ -2208,6 +2267,20 @@ const METIN = {
       rozet: { ok: 'Güvenli', warn: 'Sınırda', crit: 'Riskli' }
     },
     sozlukBaslik: 'Sütunlar ne anlama geliyor?',
+    yuvarla: {
+      baslik: 'Kalıp çapına yuvarla',
+      aciklama: 'Hesaplanan ara çaplar kalıp deposunda birebir bulunmaz. Çapları gerçek kalıp adımına oturtur; giriş çapı ve hedef çap değişmez, çünkü biri hattın beslemesi, öteki ürünün kendisidir.',
+      adim: 'Kalıp adımı',
+      calistir: 'ÇAPLARI YUVARLA',
+      hesapYok: 'Önce bir program hesaplayın.',
+      ozet: '{degisen} çap yuvarlandı · en büyük sapma {sapma} mm',
+      degismedi: 'Bütün ara çaplar zaten {adim} mm adımında; değişen yok.',
+      cakisma: 'Adım çok kaba: {ilk}. ve {son}. çap aynı değere ({deger} mm) düşüyor, sıra bozulur. Daha ince bir adım seçin.',
+      gecersizAdim: 'Geçerli bir kalıp adımı girin.',
+      uygula: 'Yuvarlanmış diziyi girdilere al',
+      uygulandi: 'Manuel program olarak girdilere alındı — sonucu görmek için HESAPLA.',
+      uyari: 'Yuvarlama kesit azalmalarını değiştirir, dolayısıyla emniyet oranını da değiştirir. İdeal program güvenli görünürken yuvarlanmış program sınırı aşabilir; farkı görmek için yuvarlamadan önce "Bu programı A olarak sabitle" deyip sonra karşılaştırın.'
+    },
     kalib: {
       baslik: 'Sürtünme kalibrasyonu',
       aciklama: 'Bir pasta ölçülen çekme kuvvetini girin; araç Siebel bağıntısını ters çevirip o hattın sürtünme katsayısını çözer. Duyarlılık analizinin en kritik parametresi budur ve literatürden bilinemez — hatta özgüdür.',
@@ -2540,6 +2613,20 @@ const METIN = {
       rozet: { ok: 'Safe', warn: 'Borderline', crit: 'At risk' }
     },
     sozlukBaslik: 'What do the columns mean?',
+    yuvarla: {
+      baslik: 'Snap to die sizes',
+      aciklama: 'The intermediate diameters a calculation produces are not the ones on the die shelf. This snaps them to a real die increment; the entry and target diameters are left alone, because one is the line feedstock and the other is the product.',
+      adim: 'Die increment',
+      calistir: 'SNAP DIAMETERS',
+      hesapYok: 'Calculate a schedule first.',
+      ozet: '{degisen} diameters snapped · largest shift {sapma} mm',
+      degismedi: 'Every intermediate diameter already sits on the {adim} mm increment; nothing changed.',
+      cakisma: 'The increment is too coarse: diameters {ilk} and {son} both land on {deger} mm, which breaks the order. Choose a finer increment.',
+      gecersizAdim: 'Enter a valid die increment.',
+      uygula: 'Load the snapped series into the inputs',
+      uygulandi: 'Loaded as a manual schedule — press CALCULATE to see the result.',
+      uyari: 'Snapping changes the area reductions and therefore the safety ratios. An ideal schedule can look safe while the snapped one crosses the limit; to see the difference, pin the schedule as A before snapping and compare afterwards.'
+    },
     kalib: {
       baslik: 'Friction calibration',
       aciklama: 'Enter a drawing force measured on one pass; the tool inverts the Siebel relation and solves for that line\'s friction coefficient. It is the most critical parameter in the sensitivity analysis and cannot be looked up — it belongs to the line.',
@@ -3525,10 +3612,110 @@ function metinleriYaz() {
   girisiCiz();
   sozlukCiz();
   kalibMetinleri();
+  yuvarlaMetinleri();
   optMetinleri();
 }
 
 
+
+
+/* ==== YUVARLAMA ARAYÜZÜ ====
+   Ekrandaki programın çaplarını kalıp adımına oturtur ve manuel program olarak
+   girdilere alır. Ekrandaki sayılar HESAPLA'ya kadar değişmez (K-16). */
+let sonYuvarlaSonuc = null;
+
+function yuvarlaMetinleri() {
+  const Y = S().yuvarla;
+  $('yuvarlaBaslik').textContent = Y.baslik;
+  $('yuvarlaAciklama').textContent = Y.aciklama + (sonProgram ? '' : ' ' + Y.hesapYok);
+  $('yuvarlaAdimEtiketi').textContent = Y.adim;
+  const birim = document.createElement('span');
+  birim.className = 'birim';
+  birim.textContent = ' mm';
+  $('yuvarlaAdimEtiketi').appendChild(birim);
+  $('yuvarlaCalistir').textContent = Y.calistir;
+  $('yuvarlaCalistir').disabled = !sonProgram;
+  $('yuvarlaUygula').textContent = Y.uygula;
+  $('yuvarlaUyari').textContent = Y.uyari;
+
+  const sec = $('yuvarlaAdim');
+  const onceki = sec.value;
+  sec.textContent = '';
+  for (const adim of YUVARLAMA_ADIMLARI) {
+    const o = document.createElement('option');
+    o.value = String(adim);
+    o.textContent = fmt(adim, 2) + ' mm';
+    sec.appendChild(o);
+  }
+  sec.value = onceki || '0.05';
+  yuvarlaSonucuCiz(sonYuvarlaSonuc);
+}
+
+function yuvarlaSonucuCiz(sonuc) {
+  const Y = S().yuvarla;
+  $('yuvarlaSonuc').hidden = !sonuc;
+  $('yuvarlaDurum').hidden = true;
+  if (!sonuc) return;
+
+  const liste = $('yuvarlaListe');
+  liste.textContent = '';
+  const satir = (metin) => {
+    const li = document.createElement('li');
+    li.textContent = metin;
+    liste.appendChild(li);
+  };
+
+  if (sonuc.durum === 'cakisma') {
+    $('yuvarlaUygula').hidden = true;
+    $('yuvarlaOzet').textContent = doldur(Y.cakisma,
+      { ilk: sonuc.ilk, son: sonuc.son, deger: fmt(sonuc.deger, 3) });
+    return;
+  }
+  if (sonuc.durum !== 'tamam') {
+    $('yuvarlaUygula').hidden = true;
+    $('yuvarlaOzet').textContent = Y.gecersizAdim;
+    return;
+  }
+  if (sonuc.degisen === 0) {
+    $('yuvarlaUygula').hidden = true;
+    $('yuvarlaOzet').textContent = doldur(Y.degismedi, { adim: fmt(sonuc.adim, 2) });
+    return;
+  }
+
+  $('yuvarlaUygula').hidden = false;
+  $('yuvarlaOzet').textContent = doldur(Y.ozet,
+    { degisen: fmt(sonuc.degisen, 0), sapma: fmt(sonuc.sapma, 3) });
+  // Hangi çapın nereye gittiği tek tek yazılır: yuvarlama görünmez bir işlem olmamalı.
+  for (let i = 1; i < sonuc.caplar.length - 1; i++) {
+    if (sonuc.caplar[i] === sonuc.eski[i]) continue;
+    satir(fmt(sonuc.eski[i], 3) + ' → ' + fmt(sonuc.caplar[i], 3) + ' mm');
+  }
+}
+
+function yuvarlaCalistir() {
+  if (!sonProgram) return;
+  const adim = sayiOku($('yuvarlaAdim').value);
+  const eski = [sonProgram.passes[0].d0].concat(sonProgram.passes.map(x => x.d1));
+  const sonuc = caplariYuvarla(eski, adim);
+  sonYuvarlaSonuc = Object.assign({}, sonuc, { eski });
+  yuvarlaSonucuCiz(sonYuvarlaSonuc);
+}
+
+function yuvarlaUygula() {
+  if (!sonYuvarlaSonuc || sonYuvarlaSonuc.durum !== 'tamam' || sonYuvarlaSonuc.degisen === 0) return;
+  const caplar = sonYuvarlaSonuc.caplar;
+  taslak.manuelCaplar = caplar.slice();
+  taslak.d0 = caplar[0];
+  taslak.dTarget = caplar[caplar.length - 1];
+  taslak.anneals = [];       // pas dizisi değişti: eski tavlama işaretleri anlamsız
+  $('manuelMetin').value = caplar.map(x => girdiMetni(x)).join(' ');
+  manuelHatasiniYaz(null);
+  alanlariYaz();
+  butunAlanlariDenetle();
+  girdiDegisti();
+  $('yuvarlaDurum').textContent = S().yuvarla.uygulandi;
+  $('yuvarlaDurum').hidden = false;
+}
 
 /* ==== KALİBRASYON ARAYÜZÜ ====
    Ölçüm ekrandaki programın bir pasına aittir; pas listesi her hesapla birlikte
@@ -4175,6 +4362,8 @@ function gorunumuYaz(g) {
   bantKoselerCiz();
   kararCiz(g);
   kalibPaslariYaz(g.prog);
+  sonYuvarlaSonuc = null;
+  yuvarlaMetinleri();
   ozetSeridiniCiz(g);
   oneriyiCiz(g);
   karsilastirmayiCiz(g);
@@ -4213,6 +4402,8 @@ function hesaplanamadiDurumu(hata) {
   bantKoselerCiz();
   kararCiz(null);
   kalibPaslariYaz(null);
+  sonYuvarlaSonuc = null;
+  yuvarlaMetinleri();
   ozetSeridiniCiz(null);
   oneriyiCiz(null);
   karsilastirmayiCiz(null);
@@ -5673,6 +5864,8 @@ function baslat() {
   kurPanel();
   kurBantAlanlari();
   kurTabloBasligi();
+  $('yuvarlaCalistir').addEventListener('click', yuvarlaCalistir);
+  $('yuvarlaUygula').addEventListener('click', yuvarlaUygula);
   $('kalibCoz').addEventListener('click', kalibCoz);
   $('kalibUygula').addEventListener('click', kalibUygula);
   $('kalibKuvvet').addEventListener('keydown', (olay) => {

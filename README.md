@@ -39,6 +39,21 @@ Bedeli de görünür: 11 pasta delta 1,32'ye (aşırı sürtünme sınırı) ve 
 100,3 °C'ye çıkar, araç ikisini de uyarı olarak gösterir ve gereken kalıp açısını
 (9,1°) söyler.
 
+## Kalıp çapına yuvarlama
+
+Hesap `7,197 mm` der; kalıp deposunda öyle bir kalıp yoktur. Araç çap dizisini
+gerçek kalıp adımına (0,01 – 0,25 mm) oturtur. **Uç çaplara dokunulmaz:** giriş
+filmaşini hattın beslemesi, son çap ürünün kendisidir; ikisini yuvarlamak soruyu
+değiştirmek olurdu.
+
+Adım kaba olduğunda iki komşu çap aynı değere düşebilir. O durumda dizi düzeltilmez,
+**reddedilir** ve hangi çiftin çakıştığı söylenir — sessizce "yakına benzer bir şey"
+üretmek aracın bütün mantığına aykırı olurdu.
+
+Yuvarlamanın bedeli görünür: genel amaçlı senaryoda 0,05 mm adımı on çapı kaydırıyor
+(en büyük sapma 0,025 mm) ve en yüksek emniyet oranı **0,389'dan 0,410'a** çıkıyor.
+İdeal program ile depodan çıkan program arasındaki fark tam olarak budur.
+
 ## Sürtünme kalibrasyonu
 
 Bir pasta **ölçülen çekme kuvvetini** girin; araç Siebel bağıntısını ters çevirip
