@@ -236,6 +236,12 @@ Technology*) · Avitzur (*Metal Forming*) · Wistreich (*The Fundamentals of Wir
 gerekmez; tek istisna yazı tiplerinin çevrimiçi yüklenmesidir, o da olmazsa sistem
 yazı tipleriyle açılır.
 
+Yayındaki sürüm bir ziyaretçi sayacı taşır (Vercel Web Analytics). Betik **aynı
+kökenden** (`/_vercel/insights/script.js`) yüklenir: harici bir alan adına istek
+gitmez ve dosya yerelden açıldığında sessizce bulunamaz, sayfa olduğu gibi çalışır.
+Çerez kullanmaz, kişi izlemez; sayfa görüntüleme ve ziyaretçi sayısı dışında bir şey
+toplamaz ve hesabın hiçbir parçasına dokunmaz.
+
 Arayüz Türkçe ve İngilizce. Girdiler yuvarlanmadan adres çubuğunda taşınır, yani bir senaryoyu
 bağlantı olarak paylaşabilirsiniz; adres yalnızca hesaplandığında güncellendiği için
 paylaşılan bağlantı her zaman gerçekten hesaplanmış bir programı taşır. Pas tablosu iki biçimde indirilir. **CSV** her yerde açılır. **Excel (.xlsx)** biçimi
