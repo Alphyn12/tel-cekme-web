@@ -109,7 +109,7 @@ kuralı kazanır. Sayfaya gömülecekler:
 
 - **Ad:** Barış Kırlı
 - **Unvan:** Makine Mühendisi / Mechanical Engineer (dile göre değişir)
-- **E-posta:** bariskirli9@gmail.com
+- **E-posta:** kirlibaris12@gmail.com
 - **LinkedIn:** https://www.linkedin.com/in/bariskirli
 - **Telefon numarası sayfaya konmaz.** Sayfa herkese açık ve taranabilir olacak.
 

@@ -156,7 +156,7 @@ docs/
 
 ---
 
-Barış Kırlı — Makine Mühendisi · [bariskirli9@gmail.com](mailto:bariskirli9@gmail.com) ·
+Barış Kırlı — Makine Mühendisi · [kirlibaris12@gmail.com](mailto:kirlibaris12@gmail.com) ·
 [linkedin.com/in/bariskirli](https://www.linkedin.com/in/bariskirli)
 
 Bağımsız bir mühendislik çalışmasıdır, herhangi bir şirketle resmî ilişkisi yoktur.
