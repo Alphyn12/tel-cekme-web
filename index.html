@@ -11,7 +11,7 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://tel-cekme.vercel.app/">
 <meta property="og:title" content="Tel Çekme Pas Programı Hesaplayıcısı">
-<meta property="og:description" content="Pas programı, kopma riski ve belirsizlik bir arada: Siebel çekme gerilmesi, eşit gerinim / kademeli azalan / eşit emniyet dağıtımı, sekiz canlı doğrulama testi.">
+<meta property="og:description" content="Pas programı, kopma riski ve belirsizlik bir arada: Siebel çekme gerilmesi, eşit gerinim / kademeli azalan / eşit emniyet dağıtımı, dokuz canlı doğrulama testi.">
 <meta property="og:site_name" content="Tel Çekme Pas Programı Hesaplayıcısı">
 <meta property="og:image" content="https://tel-cekme.vercel.app/og.png">
 <meta property="og:image:secure_url" content="https://tel-cekme.vercel.app/og.png">
@@ -181,6 +181,22 @@ body {
   gap: 0 var(--s4);
 }
 .alan .birim { color: var(--ink3); font-weight: 400; letter-spacing: 0; text-transform: none; }
+
+/* Alan hatası: kutunun hemen altında tek satır. Renk tek başına bilgi taşımasın
+   diye kenarlık da değişir; ekran okuyucuya aria-describedby ile bağlanır. */
+.alan-hatasi {
+  margin: 0;
+  font: 400 var(--t11)/1.35 var(--yazi-govde);
+  color: var(--crit);
+}
+.alan-hatasi[hidden] { display: none !important; }
+/* Manuel bölümün ipucu satırı hata olarak kullanıldığında: .ipucu daha sonra
+   tanımlı olduğu için birleşik seçici gerekiyor. */
+.ipucu.alan-hatasi { font: 400 var(--t11)/1.35 var(--yazi-govde); color: var(--crit); }
+input[type="text"].gecersiz, input[type="number"].gecersiz {
+  border-color: var(--crit);
+  background: var(--crit-tint);
+}
 
 input[type="number"], input[type="text"], textarea, select {
   font: 500 var(--t16)/1 var(--yazi-mono);   /* sayısal değerler mono */
@@ -598,6 +614,76 @@ tbody td.ok { color: var(--patina); }
   border: 1px solid var(--line-strong); background: var(--sunk); color: var(--ink2);
   padding: var(--s12); font-size: var(--t125);
 }
+/* Girdi geçersizken: aşağıdaki sayılar bir önceki geçerli hesaba ait. */
+.uyari.bayat { border-left-width: 3px; font-weight: 500; }
+
+/* ---- Hesapla düğmesi ----
+   Sayfada tek bir birincil eylem var: hesaplamak. Bakır dolgu yalnızca ona ayrılmıştır,
+   böylece "sonucu değiştiren düğme" gözle tek bakışta ayırt edilir. */
+.dugme.birincil {
+  border-color: var(--copper);
+  background: var(--copper);
+  color: #FFF;
+  font: 600 var(--t14)/1 var(--yazi-baslik);
+  letter-spacing: .04em;
+  padding: 0 var(--s24);
+}
+.dugme.birincil:hover { background: var(--ink); border-color: var(--ink); color: #FFF; }
+.dugme.birincil:disabled {
+  background: var(--sunk); border-color: var(--line); color: var(--ink3);
+  cursor: not-allowed;
+}
+/* Bekleyen değişiklik varken düğme yanıp sönmez, kalınlaşır: hareket değil ağırlık. */
+.dugme.birincil.bekliyor { box-shadow: 0 0 0 3px var(--copper-tint); }
+
+.hesapla-kutusu {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--s12);
+  margin-top: var(--s16); padding-top: var(--s16);
+  border-top: 1px solid var(--line);
+}
+.hesapla-metin { flex: 1 1 200px; min-width: 0; }
+.hesapla-metin p { margin: 0; }
+.hesapla-durum { font: 500 var(--t125)/1.4 var(--yazi-govde); color: var(--ink2); }
+.hesapla-durum.guncel { color: var(--patina); }
+.hesapla-durum.bekliyor { color: var(--copper); }
+.hesapla-durum.gecersiz { color: var(--crit); }
+#hesaplaAciklama { margin-top: var(--s8); }
+
+/* ---- Bekleyen değişiklik şeridi ---- */
+.uyari.bekleyen {
+  border-color: var(--copper); background: var(--copper-tint);
+  border-left-width: 3px;
+}
+.bekleyen-baslik { margin: 0; font: 600 var(--t14)/1.4 var(--yazi-baslik); color: var(--ink); }
+.bekleyen-govde { margin: var(--s4) 0 0; font-size: var(--t125); color: var(--ink2); }
+.bekleyen-liste {
+  margin: var(--s8) 0 var(--s12); padding-left: var(--s16);
+  font: 400 var(--t125)/1.6 var(--yazi-mono);
+  font-variant-numeric: tabular-nums; color: var(--ink);
+}
+.bekleyen-liste li { margin: 0; }
+
+/* Sonuç bölümleri bekleyen değişiklik varken soluklaşır: okunur kalır ama
+   "bu sayılar en son yazdığın girdiye ait değil" görsel olarak da söylenir. */
+.bayat-sonuc { opacity: .55; transition: opacity var(--gecis); }
+
+/* ---- Yapışkan alt çubuk ---- */
+.yapiskan-cubuk {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+  gap: var(--s12); padding: var(--s12) var(--s16);
+  background: var(--surface); border-top: 2px solid var(--copper);
+  box-shadow: 0 -2px 12px rgba(0,0,0,.12);
+}
+.yapiskan-metin {
+  font: 600 var(--t125)/1.2 var(--yazi-govde); color: var(--copper);
+}
+@media (max-width: 719px) {
+  .yapiskan-cubuk { justify-content: space-between; }
+  .yapiskan-cubuk .dugme.birincil { flex: 0 0 auto; }
+}
+/* Çubuk son bölümün üstüne binmesin. */
+body.cubuk-acik .kabuk { padding-bottom: 96px; }
 [hidden] { display: none !important; }
 
 /* Ekran okuyucuya açık, gözle görünmez metin (durum açıklamaları) */
@@ -646,7 +732,10 @@ tbody td.ok { color: var(--patina); }
 
   /* Kontroller ve etkileşimli parçalar basılmaz */
   .ust-kontroller, #senaryoDugmeleri, #panelKatla, .dugme-sirasi, .sekme-satiri,
-  #bantAlanlari, .kaydirici-satiri, #paylasimDurumu, .alt-not .dugme { display: none !important; }
+  #bantAlanlari, .kaydirici-satiri, #paylasimDurumu, .alt-not .dugme,
+  .hesapla-kutusu, #hesaplaAciklama, .yapiskan-cubuk { display: none !important; }
+  /* Baskıda sonuçlar soluk çıkmasın; bekleyen uyarısı metin olarak kalır. */
+  .bayat-sonuc { opacity: 1 !important; }
 
   /* Sayfa 1'de yalnızca ana grafik kalır */
   .gorsel-bolum .gorsel-kutu:not(:first-child) { display: none; }
@@ -747,8 +836,31 @@ tbody td.ok { color: var(--patina); }
     <p class="ozet" id="panelOzet" hidden></p>
     <div class="panel" id="girdiPaneli"></div>
     <p class="gerekce" id="yontemGerekcesi"></p>
+
+    <!-- Hesap yalnızca buradan başlar. Girdiyi değiştirmek ekrandaki hiçbir
+         sayıyı değiştirmez; bu düğmeye basılana kadar sonuçlar olduğu gibi kalır. -->
+    <div class="hesapla-kutusu" id="hesaplaKutusu">
+      <button type="button" class="dugme birincil" id="hesaplaDugmesi"></button>
+      <div class="hesapla-metin">
+        <p class="hesapla-durum" id="hesaplaDurumu" role="status"></p>
+        <p class="ipucu" id="hesaplaKisayol"></p>
+      </div>
+    </div>
+    <p class="gerekce" id="hesaplaAciklama"></p>
   </section>
 
+  <!-- Bekleyen değişiklik şeridi: sonuçlar ile girdiler ayrıştığı anda görünür. -->
+  <div class="uyari bekleyen" id="bekleyenKutusu" hidden>
+    <p class="bekleyen-baslik" id="bekleyenBaslik"></p>
+    <p class="bekleyen-govde" id="bekleyenGovde"></p>
+    <ul class="bekleyen-liste" id="bekleyenListe"></ul>
+    <div class="dugme-sirasi">
+      <button type="button" class="dugme birincil" id="bekleyenHesapla"></button>
+      <button type="button" class="dugme sessiz" id="bekleyenGeriAl"></button>
+    </div>
+  </div>
+
+  <div class="uyari bayat" id="bayatKutusu" role="status" hidden></div>
   <div class="uyari" id="hataKutusu" hidden></div>
   <div class="bilgi" id="bilgiKutusu" hidden></div>
 
@@ -910,6 +1022,13 @@ tbody td.ok { color: var(--patina); }
   </footer>
 
 </div>
+
+<!-- Sayfa uzun: tabloya bakarken girdi değiştirildiğinde de Hesapla erişilebilir kalsın.
+     Yalnızca bekleyen değişiklik varken görünür. -->
+<div class="yapiskan-cubuk" id="yapiskanCubuk" hidden>
+  <span class="yapiskan-metin" id="yapiskanMetin"></span>
+  <button type="button" class="dugme birincil" id="yapiskanHesapla"></button>
+</div>
 <script>
 /* ============================================================================
    TEL ÇEKME PAS PROGRAMI HESAPLAYICISI
@@ -998,6 +1117,57 @@ const BANT_VARSAYILAN = { K: [380, 520], n: [0.33, 0.45], mu: [0.03, 0.08] };
 const MANUAL_D_MIN = 0.01;  // mm
 const MANUAL_D_MAX = 50;    // mm
 
+/* --- Girdi geçerlilik aralıkları ---
+   Modelin geçerli olduğu alan. Siebel yaklaşımı ve Hollomon pekleşmesi bu
+   aralıkların dışında fiziksel anlamını yitirir: negatif sürtünme çekme
+   gerilmesini eksiye düşürür, n > 0,80 pekleşmeyi bakır için anlamsız kılar.
+   Sınır dışı girdiyle hesap YAPILMAZ; aracın kendi sınırını bilmesi,
+   sessizce saçma bir sayı üretmesinden iyidir. */
+const GIRDI_SINIRLARI = {
+  d0:       { alt: 0.1,   ust: 50 },     // mm
+  dTarget:  { alt: 0.01,  ust: null },   // mm — üst sınır d0'dır, bağlamdan gelir
+  alphaDeg: { alt: 1,     ust: 20 },     // °
+  mu:       { alt: 0.005, ust: 0.30 },   // —
+  K:        { alt: 100,   ust: 1000 },   // MPa
+  n:        { alt: 0.05,  ust: 0.80 },   // —
+  v0:       { alt: 0.1,   ust: 20 }      // m/s
+};
+
+/* --- Çekirdek savunma sınırları ---
+   GIRDI_SINIRLARI arayüzün kabul ettiği alandır: modelin GÜVENİLİR sayıldığı yer.
+   Çekirdek bundan daha geniş bir alanda çalışabilmelidir, çünkü doğrulama testleri
+   sınırları bilerek yoklar (T1 sıfır limitini μ = 0 ve α = 0,001° ile sınar).
+   Bu yüzden alt uçlar fiziksel gerekliliktir, üst uçlar arayüzle ORTAKTIR —
+   sabit ikinci kez yazılmaz. */
+const CEKIRDEK_SINIRLARI = {
+  d0:       { alt: 0, ust: GIRDI_SINIRLARI.d0.ust,       sifirDisi: true },
+  alphaDeg: { alt: 0, ust: GIRDI_SINIRLARI.alphaDeg.ust, sifirDisi: true },
+  mu:       { alt: 0, ust: GIRDI_SINIRLARI.mu.ust },
+  K:        { alt: 0, ust: GIRDI_SINIRLARI.K.ust,        sifirDisi: true },
+  n:        { alt: 0, ust: GIRDI_SINIRLARI.n.ust },
+  v0:       { alt: 0, ust: Infinity,                     sifirDisi: true }
+};
+
+/* Bir alanın o anki sınırı. Yalnızca hedef çapınki bağlama bağlıdır: hedef,
+   başlangıç çapından büyük olamaz. */
+function girdiSiniri(alan, d0) {
+  const s = GIRDI_SINIRLARI[alan];
+  if (!s) return null;
+  return alan === 'dTarget' ? { alt: s.alt, ust: Number.isFinite(d0) ? d0 : GIRDI_SINIRLARI.d0.ust } : s;
+}
+
+/* Girdi kümesini sınırlara göre denetler ve sınır dışı alan adlarını döndürür.
+   Saf fonksiyon: hem arayüz hem T9 bunu çağırır, kural tek yerde durur. */
+function girdiDenetimi(girdi) {
+  const disinda = [];
+  for (const alan of Object.keys(GIRDI_SINIRLARI)) {
+    const v = girdi[alan];
+    const s = girdiSiniri(alan, girdi.d0);
+    if (!Number.isFinite(v) || v < s.alt || v > s.ust || (alan === 'dTarget' && v === s.ust)) disinda.push(alan);
+  }
+  return disinda;
+}
+
 /* Hesap hatası. `code` makine tarafı içindir (Faz 2'de METIN sözlüğüne bağlanacak),
    `message` Türkçe insan okunur karşılığıdır. */
 class DrawingError extends Error {
@@ -1021,8 +1191,23 @@ function yuzdeTR(oran) {
 function passStress(epsIn, epsPas, { alphaRad, mu, K, n }) {
   const epsOut = epsIn + epsPas;
 
-  // Pas boyunca ortalama akma gerilmesi (Hollomon'un integrali) — tabana tabi değil.
-  const sigmaBar = K * (epsOut ** (n + 1) - epsIn ** (n + 1)) / ((n + 1) * epsPas);
+  /* Pas boyunca ortalama akma gerilmesi. Taban HEM burada hem çıkış akma
+     gerilmesinde geçerlidir: malzeme 70 MPa'nın altında akamıyorsa, işi de o
+     tabanın altında hesaplanamaz. Aksi hâlde payda "akamaz" derken pay
+     akabiliyormuş gibi davranır ve düşük gerinimde kuvvet eksik çıkar.
+     eps* tabanın kesiştiği gerinimdir; integral parça parça alınır. */
+  const epsYildiz = (SIGMA_Y0 / K) ** (1 / n);
+  const hollomonIntegral = (a, b) => K * (b ** (n + 1) - a ** (n + 1)) / (n + 1);
+  const tabansizBar = hollomonIntegral(epsIn, epsOut) / epsPas;
+  let sigmaBar;
+  if (epsOut <= epsYildiz) sigmaBar = SIGMA_Y0;                        // pasın tamamı taban üzerinde
+  else if (epsIn >= epsYildiz) sigmaBar = tabansizBar;                 // taban hiç devrede değil
+  else sigmaBar = (SIGMA_Y0 * (epsYildiz - epsIn) +                    // geçiş: iki parça
+                   hollomonIntegral(epsYildiz, epsOut)) / epsPas;
+
+  // Tabanın sonuca katkısı. Arayüz bunu eşikle karşılaştırıp uyarı gösterir:
+  // taban baskınsa sayı bir modelleme tercihinden geliyor demektir.
+  const tabanPayi = (sigmaBar - tabansizBar) / sigmaBar;
 
   // SIEBEL: şekil verme + sürtünme + fazlalık (redundant) iş
   const sigmaD = sigmaBar * ((1 + mu / alphaRad) * epsPas + (2 / 3) * alphaRad);
@@ -1030,7 +1215,7 @@ function passStress(epsIn, epsPas, { alphaRad, mu, K, n }) {
   // Hollomon eps=0'da sıfır verir; tavlanmış bakır tabanı uygulanır.
   const sigmaFOut = Math.max(K * epsOut ** n, SIGMA_Y0);
 
-  return { epsOut, sigmaBar, sigmaD, sigmaFOut, safety: sigmaD / sigmaFOut };
+  return { epsOut, sigmaBar, tabanPayi, sigmaD, sigmaFOut, safety: sigmaD / sigmaFOut };
 }
 
 /* Verilen gerinim için emniyet oranı. Eşit emniyet çözücüsünün iç fonksiyonu. */
@@ -1040,6 +1225,20 @@ function safetyForStrain(epsPas, epsIn, params) {
 
 /* Tek pasın bütün çıktıları. Girdiler: çaplar mm, açı derece, hız m/s, K MPa. */
 function calcPass({ d0, d1, epsIn = 0, alphaDeg, mu, K, n, v0 }) {
+  // Çekirdek savunması. CEKIRDEK_SINIRLARI arayüzünkinden bilerek daha geniştir:
+  // doğrulama testleri limitleri sınamak için μ = 0 ve α = 0,001° gibi değerler
+  // kullanır. Üst uçlar GIRDI_SINIRLARI ile ortaktır, sabit tekrarlanmaz.
+  const sinirDisi = Object.keys(CEKIRDEK_SINIRLARI).some((alan) => {
+    const v = { d0, alphaDeg, mu, K, n, v0 }[alan];
+    const s = CEKIRDEK_SINIRLARI[alan];
+    return v < s.alt || v > s.ust || (s.sifirDisi && v === 0);
+  });
+  if (![d0, d1, epsIn, alphaDeg, mu, K, n, v0].every(Number.isFinite) ||
+      epsIn < 0 || sinirDisi) {
+    throw new DrawingError('GECERSIZ_PARAMETRE',
+      'Hesap parametreleri modelin geçerli olduğu aralıkta ve sonlu olmalı.',
+      { d0, d1, epsIn, alphaDeg, mu, K, n, v0 });
+  }
   if (!(d0 > 0) || !(d1 > 0)) {
     throw new DrawingError('GECERSIZ_CAP', 'Çaplar sıfırdan büyük olmalı.', { d0, d1 });
   }
@@ -1057,14 +1256,14 @@ function calcPass({ d0, d1, epsIn = 0, alphaDeg, mu, K, n, v0 }) {
   // Teorik sınır: tek pasta bu azalmanın üstü mümkün değil, hesap durur.
   if (r > R_THEORETICAL_MAX) {
     throw new DrawingError('R_TEORIK_ASIM',
-      'Bu pasta %' + yuzdeTR(r) + ' kesit azalma gerekiyor; teorik sınır %' +
+      'Bu pasta %' + yuzdeTR(r) + ' kesit azalma gerekiyor; aracın kesit azalma sınırı %' +
       yuzdeTR(R_THEORETICAL_MAX) + '.', { r, d0, d1 });
   }
 
   const epsPas = 2 * Math.log(d0 / d1);
 
   // Gerilmeler tek kaynaktan (passStress) gelir.
-  const { epsOut, sigmaBar, sigmaD, sigmaFOut, safety } =
+  const { epsOut, sigmaBar, tabanPayi, sigmaD, sigmaFOut, safety } =
     passStress(epsIn, epsPas, { alphaRad, mu, K, n });
   const sigmaFIn = Math.max(K * epsIn ** n, SIGMA_Y0);
 
@@ -1079,7 +1278,7 @@ function calcPass({ d0, d1, epsIn = 0, alphaDeg, mu, K, n, v0 }) {
   const v1 = v0 * (d0 / d1) ** 2;             // hacim korunumu
   const P  = F * v1;                          // W
 
-  return { d0, d1, r, epsPas, epsIn, epsOut, sigmaFIn, sigmaFOut, sigmaBar,
+  return { d0, d1, r, epsPas, epsIn, epsOut, sigmaFIn, sigmaFOut, sigmaBar, tabanPayi,
            sigmaD, safety, delta, dT, A0, A1, F, v0, v1, P, alphaDeg, mu, K, n };
 }
 
@@ -1096,10 +1295,14 @@ function strainForSafety(targetSafety, epsIn, params) {
 }
 
 /* Otomatik pas sayısı: pas başına en fazla MAX_R_PER_PASS kesit azalma kabulüyle. */
-function autoPassCount(d0, dTarget) {
+function autoPassCount(d0, dTarget, method = 'equalStrain') {
   const epsTotal = 2 * Math.log(d0 / dTarget);
   const epsMax   = Math.log(1 / (1 - MAX_R_PER_PASS));
-  return Math.max(1, Math.ceil(epsTotal / epsMax));
+  let N = Math.max(1, Math.ceil(epsTotal / epsMax));
+  if (method === 'tapered') {
+    while (N <= MAX_PASSES && strainsTapered(epsTotal, N)[0] > epsMax + 1e-12) N++;
+  }
+  return N;
 }
 
 /* Eşit gerinim: her pasta aynı gerçek gerinim, dolayısıyla aynı % kesit azalma. */
@@ -1175,6 +1378,9 @@ function buildSchedule({ d0, dTarget, method = 'equalStrain', passes = null, dia
       throw new DrawingError('MANUEL_DIZI_YOK', 'Manuel pas programı için çap dizisi gerekli.', {});
     }
     d = diameters.slice();
+    if (d.length > MAX_PASSES + 1 || !d.every(x => Number.isFinite(x) && x >= MANUAL_D_MIN && x <= MANUAL_D_MAX)) {
+      throw new DrawingError('MANUEL_ARALIK_DISI', 'Manuel çap dizisi sınır dışında.', {});
+    }
   } else {
     if (!(d0 > 0) || !(dTarget > 0)) {
       throw new DrawingError('GECERSIZ_CAP', 'Çaplar sıfırdan büyük olmalı.', { d0, dTarget });
@@ -1186,19 +1392,28 @@ function buildSchedule({ d0, dTarget, method = 'equalStrain', passes = null, dia
 
     const epsTotal = 2 * Math.log(d0 / dTarget);
     const params   = { alphaRad: alphaDeg * Math.PI / 180, mu, K, n };
-    const autoN    = method === 'equalSafety'
-      ? autoPassCountEqualSafety(epsTotal, params, anneal)
-      : autoPassCount(d0, dTarget);
+    const automatic = passes === null || passes === undefined || passes === 'auto';
+    let autoN = null;
+    try {
+      autoN = method === 'equalSafety'
+        ? autoPassCountEqualSafety(epsTotal, params, anneal)
+        : autoPassCount(d0, dTarget, method);
+    } catch (err) {
+      if (automatic || !(err instanceof DrawingError) || err.code !== 'PAS_SAYISI_YAKINSAMADI') throw err;
+    }
 
     let N;
     if (passes === null || passes === undefined || passes === 'auto') {
       N = autoN;
     } else {
       N = Number(passes);
-      if (!Number.isInteger(N) || N < 1) {
+      if (!Number.isInteger(N) || N < 1 || N > MAX_PASSES) {
         throw new DrawingError('GECERSIZ_PAS_SAYISI',
-          'Pas sayısı 1 veya daha büyük bir tam sayı olmalı.', { passes });
+          'Pas sayısı 1–60 aralığında bir tam sayı olmalı.', { passes });
       }
+    }
+    if (!Number.isInteger(N) || N > MAX_PASSES) {
+      throw new DrawingError('GECERSIZ_PAS_SAYISI', 'Pas sayısı 1–60 aralığında bir tam sayı olmalı.', { passes: N });
     }
 
     const strains = method === 'equalStrain' ? strainsEqual(epsTotal, N)
@@ -1236,7 +1451,7 @@ function buildSchedule({ d0, dTarget, method = 'equalStrain', passes = null, dia
       if (err instanceof DrawingError && err.code === 'R_TEORIK_ASIM') {
         throw new DrawingError('R_TEORIK_ASIM',
           'Bu pas sayısıyla ' + no + '. pasta %' + yuzdeTR(err.info.r) +
-          ' kesit azalma gerekiyor; teorik sınır %' + yuzdeTR(R_THEORETICAL_MAX) +
+          ' kesit azalma gerekiyor; aracın kesit azalma sınırı %' + yuzdeTR(R_THEORETICAL_MAX) +
           '. Pas sayısını artırın.',
           Object.assign({ pas: no }, err.info));
       }
@@ -1372,7 +1587,7 @@ function runValidation() {
   sonuc.push({
     id: 'T1', ad: 'Sıfır limiti',
     aciklama: 'Sürtünme sıfır, kalıp açısı sıfıra yakınken çekme gerilmesi ideal şekil verme işine eşitlenmeli.',
-    beklenen: t1Ideal.toFixed(2) + ' MPa (±%1)',
+    beklenen: t1Ideal.toFixed(2) + ' MPa (±1%)',
     bulunan: t1.sigmaD.toFixed(2) + ' MPa',
     gecti: Math.abs(t1.sigmaD - t1Ideal) / t1Ideal < 0.01
   });
@@ -1393,15 +1608,15 @@ function runValidation() {
   let t3Gecti = false, t3Bulunan = '';
   try {
     calcPass(Object.assign({}, REFERANS_GIRDI, { d1: d1_70 }));
-    t3Bulunan = 'hesap yapıldı (hata yok)';
+    t3Bulunan = '—';
   } catch (err) {
     t3Gecti = err instanceof DrawingError && err.code === 'R_TEORIK_ASIM';
-    t3Bulunan = err.code + ': ' + err.message;
+    t3Bulunan = err.code;
   }
   sonuc.push({
     id: 'T3', ad: 'Teorik maksimum',
     aciklama: 'Kesit azalması %63,2 sınırını aşan pas hesaplanmamalı, açık hata vermeli.',
-    beklenen: 'R_TEORIK_ASIM hatası (r = %70,0)',
+    beklenen: 'R_TEORIK_ASIM · r = 70.0%',
     bulunan: t3Bulunan, gecti: t3Gecti
   });
 
@@ -1419,8 +1634,8 @@ function runValidation() {
   sonuc.push({
     id: 'T4', ad: 'Kütle korunumu',
     aciklama: 'Sürekli hatta bütün kalıplardan aynı kütle geçer: raporlanan çap ve hızlardan hesaplanan kütle debisi her pasta aynı olmalı.',
-    beklenen: 'sapma < %0,01',
-    bulunan: '%' + (t4Sapma * 100).toFixed(4) + ' (' + (enKucuk * 1000).toFixed(1) + ' g/s)',
+    beklenen: '< 0.01%',
+    bulunan: (t4Sapma * 100).toFixed(4) + '% (' + (enKucuk * 1000).toFixed(1) + ' g/s)',
     gecti: t4Sapma < 0.0001
   });
 
@@ -1459,24 +1674,57 @@ function runValidation() {
   sonuc.push({
     id: 'T7', ad: 'Toplam iş / ideal iş oranı',
     aciklama: 'Hattın özgül enerjisi, ideal şekil verme işinin makul bir katı olmalı; sürtünme ve fazlalık iş bu farkı açıklar.',
-    beklenen: '1,30 – 2,50',
+    beklenen: '1.30 – 2.50',
     bulunan: oran.toFixed(2) + ' (' + (idealOzgulIs / 3600).toFixed(1) + ' → ' +
              (gercekOzgulIs / 3600).toFixed(1) + ' kWh/ton)',
     gecti: oran >= 1.3 && oran <= 2.5
   });
 
-  // T8 — K değişmezliği. Emniyet oranı pekleşme katsayısından bağımsızdır:
-  // sigmaD ve sigmaFOut'un ikisi de K ile doğrusaldır, oran sadeleşir.
-  // Bu ucuz test, passStress içindeki cebirsel bir hatayı anında yakalar.
-  const t8Alt = calcPass(Object.assign({}, REFERANS_GIRDI, { K: 315 }));
-  const t8Ust = calcPass(Object.assign({}, REFERANS_GIRDI, { K: 530 }));
-  const t8Fark = Math.abs(t8Alt.safety - t8Ust.safety);
+  // T8 — K değişmezliği KOŞULLUDUR. 70 MPa tabanı hem ortalama akmada hem çıkış
+  // akmasında geçerli olunca K üç bölgenin ikisinde sadeleşir, birinde sadeleşmez:
+  //   A) taban hiç devrede değil (epsIn >= eps*)  -> sadeleşir
+  //   B) geçiş bölgesi (epsIn < eps* < epsOut)     -> SADELEŞMEZ, çünkü eps* K'ya bağlı
+  //   C) pasın tamamı taban üzerinde                -> sadeleşir (iki taraf da 70'e sabit)
+  // Testin değeri "üçünü birden" doğrulamasında: yalnız A'ya bakan bir test,
+  // tabanı tutarsız uygulayan bir çekirdeği de geçerdi.
+  const t8 = (ek) => [315, 530].map(K => calcPass(Object.assign({}, REFERANS_GIRDI, ek, { K })).safety);
+  const t8Fark = (ek) => { const [a, b] = t8(ek); return Math.abs(a - b); };
+  const t8A = t8Fark({ epsIn: 0.05 });      // taban dışı
+  const t8B = t8Fark({});                   // geçiş (referans pas: epsIn = 0)
+  const t8C = t8Fark({ d1: 7.99 });         // tamamen taban üzerinde
   sonuc.push({
-    id: 'T8', ad: 'K değişmezliği',
-    aciklama: 'Pekleşme katsayısı K = 315 ile K = 530 arasında değişirken emniyet oranı aynı kalmalı; K oranda sadeleşir.',
-    beklenen: 'fark < 1e-6',
-    bulunan: t8Alt.safety.toFixed(8) + ' / ' + t8Ust.safety.toFixed(8),
-    gecti: t8Fark < 1e-6
+    id: 'T8', ad: 'K değişmezliğinin koşulu',
+    aciklama: 'K = 315 ile K = 530 arasında emniyet oranı, taban devre dışıyken ve pasın tamamı taban üzerindeyken aynı kalmalı; geçiş bölgesinde ise değişmelidir — eps* = (70/K)^(1/n) K\'ya bağlıdır.',
+    beklenen: 'A < 1e-9 · B > 1e-6 · C < 1e-9',
+    bulunan: 'A ' + t8A.toExponential(1) + ' · B ' + t8B.toExponential(1) + ' · C ' + t8C.toExponential(1),
+    gecti: t8A < 1e-9 && t8B > 1e-6 && t8C < 1e-9
+  });
+
+  // T9 — Sınır denetimi: modelin geçerli olmadığı girdi hesaba sokulmamalı.
+  // Geçerli taban da sınanır; aksi hâlde "her şeyi reddet" diyen bir denetim de
+  // testi geçerdi.
+  const t9Taban = { d0: 8.00, dTarget: 1.38, alphaDeg: 8, mu: 0.05, K: 450, n: 0.35, v0: 2.0 };
+  const t9Vakalar = [
+    { ad: 'geçerli taban', girdi: {},              bekle: null },
+    { ad: 'negatif μ',     girdi: { mu: -0.05 },   bekle: 'mu' },
+    { ad: 'K = 0',         girdi: { K: 0 },        bekle: 'K' },
+    { ad: 'n = 1,5',       girdi: { n: 1.5 },      bekle: 'n' },
+    { ad: 'hedef > d0',    girdi: { dTarget: 9 },  bekle: 'dTarget' }
+  ];
+  const t9Sonuc = t9Vakalar.map(v => {
+    const disinda = girdiDenetimi(Object.assign({}, t9Taban, v.girdi));
+    const dogru = v.bekle === null ? disinda.length === 0 : disinda.includes(v.bekle);
+    return { ad: v.ad, dogru };
+  });
+  sonuc.push({
+    id: 'T9', ad: 'Sınır denetimi',
+    aciklama: 'Modelin geçerli olmadığı girdiler (negatif μ, K = 0, n = 1,5, hedef çap > başlangıç çapı) hesaba sokulmadan reddedilmeli; geçerli taban ise kabul edilmeli.',
+    beklenen: t9Vakalar.length + ' / ' + t9Vakalar.length,
+    bulunan: t9Sonuc.filter(x => x.dogru).length + ' / ' + t9Sonuc.length +
+             (t9Sonuc.every(x => x.dogru)
+               ? ''
+               : ' (kalan: ' + t9Sonuc.filter(x => !x.dogru).map(x => x.ad).join(', ') + ')'),
+    gecti: t9Sonuc.every(x => x.dogru)
   });
 
   return sonuc;
@@ -1488,7 +1736,7 @@ function runValidation() {
 const METIN = {
   tr: {
     baslik: 'Tel Çekme Pas Programı Hesaplayıcısı',
-    altBaslik: 'Bakır filmaşinden ince tele inen çekme hattı için pas programı kurar ve kopma riskini hesaplar.',
+    altBaslik: 'Bakır filmaşinden ince tele inen çekme hattı için pas programı, çekme gerilmesi ve model tarama oranı hesaplar.',
     senaryolar: 'Hazır senaryolar',
     girdiler: 'Girdiler',
     gizle: 'Gizle',
@@ -1496,7 +1744,7 @@ const METIN = {
     pasTablosu: 'Pas programı',
     manuelBaslik: 'Manuel pas programı',
     manuelAciklama: 'Kendi çap dizinizi yapıştırın. Ayırıcı: boşluk, satır sonu veya noktalı virgül. Örnek: 8,00 7,16 6,40',
-    manuelHesapla: 'Bu programı hesapla',
+    manuelHesapla: 'Listeyi girdilere al',
     manuelTemizle: 'Manuel programı temizle',
     manuelAktif: 'Manuel program hesaplanıyor: {n} pas. Dağıtım yöntemi ve pas sayısı devre dışı.',
     otomatigeDon: "Otomatik'e dön",
@@ -1513,15 +1761,15 @@ const METIN = {
       enerji: 'Enerji', uzama: 'Toplam uzama', cikisHizi: 'Çıkış hızı'
     },
     ozetPasNotu: 'pas {n}',
-    durum: { crit: 'Kopma riski', warn: 'Sınıra yakın', ok: 'Güvenli',
+    durum: { crit: 'Model eşiği aşıldı', warn: 'Uyarı bölgesi', ok: 'Model eşiği altında',
              deltaDusuk: 'Aşırı sürtünme, kalıp aşınması', deltaYuksek: 'Merkezi çatlak riski',
              isiYuksek: 'Yağ bozunma riski' },
     oneriBaslik: 'Öneri',
     oneriRiskli: 'En riskli pas {pas} (emniyet {emniyet}). Bu pasta kesit azalmayı %{r0}\'ten %{r1}\'e düşürürsen emniyet 0,50\'ye iner.',
-    oneriGuvenli: 'En yüksek emniyet oranı {emniyet} ({pas}. pas) — 0,50 sınırının altında, kopma riski görünmüyor.',
+    oneriGuvenli: 'En yüksek emniyet oranı {emniyet} ({pas}. pas) — 0,50 sınırının altında, nominal model oranı tarama eşiğinin altında.',
     oneriGuvenliDar: 'En yüksek emniyet oranı {emniyet} ({pas}. pas) — 0,50 sınırının hemen altında, pay çok dar.',
-    oneriEsitBolge: 'Paslar {ilk}–{son} aynı emniyet seviyesinde ({emniyet}); tek bir riskli pas yok.',
-    oneriGuvenliBolge: 'Bu seviye 0,50 sınırının altında, kopma riski görünmüyor.',
+    oneriEsitBolge: 'En yüksek orana yakın {adet} pas var ({ilk}–{son} aralığında; en yüksek {emniyet}).',
+    oneriGuvenliBolge: 'Bu seviye 0,50 sınırının altında, nominal model oranı tarama eşiğinin altında.',
     oneriDeltaDusuk: '{pas}. pasta delta {delta} (alt sınır 1,5) — aşırı sürtünme ve kalıp aşınması. Kalıp yarı açısını {alpha}°\'ye çıkarmak bu pası sınıra döndürür.',
     oneriDeltaYuksek: '{pas}. pasta delta {delta} (üst sınır 3,0) — merkezi çatlak (chevron) riski. Kalıp yarı açısını {alpha}°\'ye düşürmek bu pası sınıra döndürür.',
     oneriIsi: '{pas}. pasta adyabatik ΔT {dT} °C (eşik 100). Bu bir üst sınırdır; gerçek artış daha düşüktür, ama yağ rejimini kontrol edin.',
@@ -1532,7 +1780,7 @@ const METIN = {
     gorselKalipBaslik: 'Kalıp kesiti',
     kalipAlphaEtiket: 'Kalıp yarı açısı',
     kalipREtiket: 'Kesit azalma',
-    kalipSematikNot: 'Şematik — çap değişimi görünürlük için abartılmıştır; kalıp yarı açısı gerçek değerdir.',
+    kalipSematikNot: 'Şematik — çap değişimi görünürlük için abartılmıştır; etiketlerde hesap girdileri gösterilir; çizim ölçekli değildir.',
     kalipKaydiriciNot: 'Kaydırıcılar yalnızca bu çizimi değiştirir; pas programı olduğu gibi kalır. Tablodan bir pasa dokunarak o pası gösterebilirsiniz.',
     gorsel: {
       eksenPas: 'PAS',
@@ -1549,7 +1797,7 @@ const METIN = {
     },
     bantBaslik: 'Belirsizlik bandı',
     bantAc: 'Belirsizlik bandını göster',
-    bantYontem: 'K, n ve μ için tek değer yerine alt ve üst sınır girilir. Bandı köşe taraması üretir: üç parametrenin uçlarının sekiz kombinasyonu hesaplanır ve her büyüklük için en küçük ile en büyük alınır — Monte Carlo kullanılmaz. Tarama boyunca çap dizisi sabit tutulur; yalnızca K, n ve μ değişir, yani bant malzeme belirsizliğini gösterir, program değişimini değil. Eşik kontrolü bandın üst ucuna göre yapılır.',
+    bantYontem: 'K, n ve μ için tek değer yerine alt ve üst sınır girilir. Bandı köşe taraması üretir: üç parametrenin uçlarının sekiz kombinasyonu hesaplanır ve her büyüklük için en küçük ile en büyük alınır — Monte Carlo kullanılmaz. Tarama boyunca çap dizisi sabit tutulur; yalnızca K, n ve μ değişir, yani bant malzeme belirsizliğini gösterir, program değişimini değil. Eşik kontrolü taranan köşelerin üst ucuna göre yapılır. Bu bir istatistiksel güven aralığı değildir; aralık içindeki tüm parametre kombinasyonlarının uçlarını garanti etmez.',
     bantAlan: { K: 'Pekleşme katsayısı K', n: 'Pekleşme üsteli n', mu: 'Sürtünme katsayısı μ' },
     bantAlt: 'alt', bantUst: 'üst',
     bantAltUc: 'Alt uç', bantUstUc: 'Üst uç',
@@ -1557,7 +1805,7 @@ const METIN = {
     duyarlilikBaslik: 'Duyarlılık',
     duyarlilikAciklama: 'İki ayrı grafik, çünkü profilleri zıt: emniyet oranı pekleşme katsayısından bağımsızdır (K oranda sadeleşir), enerji ise K ile doğrusaldır. Belirsizlik bilmediğimiz malzeme değerleri, duyarlılık ise değiştirebileceğimiz kaldıraçlardır.',
     duyarlilikEnerjiBaslik: 'Özgül enerjiye etki (kWh/ton)',
-    duyarlilikEmniyetNot: 'K çubuğunun sıfır çıkması beklenir; bu, grafiğin kendi doğrulamasıdır.',
+    duyarlilikEmniyetNot: 'K çubuğu geçiş bölgesinde küçük ama sıfırdan farklı çıkar; 70 MPa tabanı tamamen devre dışıyken sıfırdır. Hız ise gerilmeyi değil güç ve debiyi değiştirir.',
     duyarlilikEnerjiNot: 'Pas sayısı fazlalık iş üzerinden etkiler: pas azaldıkça toplam fazlalık iş düşer.',
     duyarlilik: {
       emniyetBaslik: 'Emniyet oranına etki ({pas}. pas)',
@@ -1594,13 +1842,14 @@ const METIN = {
       T5: { ad: 'Otomatik pas sayısı — eşit gerinim', aciklama: 'Üç hazır senaryonun otomatik pas sayısı 16, 11 ve 25 olmalı.' },
       T6: { ad: 'Otomatik pas sayısı — eşit emniyet', aciklama: 'Emniyeti 0,50 altında tutan en küçük pas sayısı 11, 8 ve 17 olmalı.' },
       T7: { ad: 'Toplam iş / ideal iş', aciklama: 'Hattın özgül enerjisi ideal şekil verme işinin makul bir katı olmalı.' },
-      T8: { ad: 'K değişmezliği', aciklama: 'K = 315 ile K = 530 arasında emniyet oranı değişmemeli; K oranda sadeleşir.' }
+      T8: { ad: 'K değişmezliğinin koşulu', aciklama: 'K = 315 ile K = 530 arasında emniyet oranı, taban devre dışıyken (A) ve pasın tamamı taban üzerindeyken (C) aynı kalmalı; aradaki geçiş bölgesinde (B) değişmelidir.' },
+      T9: { ad: 'Sınır denetimi', aciklama: 'Modelin geçerli olmadığı girdiler (negatif μ, K = 0, n = 1,5, hedef çap > başlangıç çapı) reddedilmeli; geçerli taban kabul edilmeli.' }
     },
     formulAralik: 'Geçerlilik', formulKaynak: 'Kaynak',
     formuller: [
       { ad: 'Kesit azalma', formul: 'r = 1 − (d₁/d₀)²',
         aciklama: 'Pasta kesit alanının ne kadarının kaybolduğu.',
-        aralik: '0 < r ≤ 0,632 (tek pasta teorik sınır 1 − 1/e)', kaynak: 'Dieter, Mechanical Metallurgy' },
+        aralik: '0 < r ≤ 0,632 (aracın sınırı; 1 − 1/e ideal, pekleşmesiz modelden gelir)', kaynak: 'Dieter, Mechanical Metallurgy' },
       { ad: 'Gerçek gerinim', formul: 'ε = 2·ln(d₀/d₁)',
         aciklama: 'Pasın gerçek (logaritmik) gerinimi; hacim korunumundan gelir.',
         aralik: 'Bütün pas geometrileri', kaynak: 'Dieter, Mechanical Metallurgy' },
@@ -1614,8 +1863,8 @@ const METIN = {
         aciklama: 'Üç iş toplanır: şekil verme, sürtünme ve fazlalık (redundant) iş. α radyan cinsindendir.',
         aralik: 'Küçük yarı açı (α ≲ 15°), sabit sürtünme', kaynak: 'Siebel yaklaşımı; Dieter · Kalpakjian & Schmid' },
       { ad: 'Emniyet oranı', formul: 'emniyet = σ_d / σ_f,çıkış',
-        aciklama: 'Çekme gerilmesinin çıkan telin dayanımına oranı; 0,60 üstü kopma riski. K bu oranda sadeleşir.',
-        aralik: '0 < emniyet < 1 (teorik kopma sınırı 1)', kaynak: 'Dieter; Wistreich (1958)' },
+        aciklama: 'Çekme gerilmesinin çıkış akma gerilmesine oranı. 0,60 bu aracın tarama eşiğidir. K, taban devre dışıyken ve pasın tamamı taban üzerindeyken sadeleşir; geçiş bölgesinde sadeleşmez.',
+        aralik: 'Oran 1: çekme gerilmesi çıkış akma gerilmesine eşit; kırılma modeli değildir', kaynak: 'Dieter; Wistreich (1958)' },
       { ad: 'Delta faktörü', formul: 'Δ = α·(1 + √(1−r))² / r',
         aciklama: 'Şekil değiştirme bölgesinin biçim oranı: küçükse aşırı sürtünme, büyükse merkezi çatlak riski.',
         aralik: 'Uygun bölge 1,5 ≤ Δ ≤ 3,0', kaynak: 'Avitzur, Metal Forming; Wistreich (1958)' },
@@ -1635,8 +1884,8 @@ const METIN = {
         'Tel içindeki artık gerilmeler ve merkez–yüzey gerinim farkı'
       ],
       notlar: [
-        'Ayrıca σ = K·εⁿ bağıntısı ε→0\'da sıfır verdiği için, görüntülenen akma gerilmelerine tavlanmış ETP bakır için 70 MPa\'lık bir taban uygulanmıştır. Bu bir modelleme tercihidir.',
-        'Emniyet oranı pekleşme katsayısı K\'dan bağımsızdır: çekme gerilmesi de akma gerilmesi de K ile doğrusal olduğu için oran sadeleşir (tabanın devrede olmadığı ε > 0,02 bölgesinde). Bu yüzden K\'nın literatürdeki geniş aralığı (315–530 MPa) kopma riskini etkilemez; buna karşılık kuvvet, güç ve sıcaklık artışını doğrudan oranlı biçimde etkiler.',
+        'Ayrıca σ = K·εⁿ bağıntısı ε→0\'da sıfır verdiği için, akma gerilmelerine tavlanmış ETP bakır için 70 MPa\'lık bir taban uygulanmıştır. Taban hem çıkış akma gerilmesinde hem de pas boyunca ortalama akma integralinde geçerlidir: malzeme bu değerin altında akamıyorsa, işi de o tabanın altında hesaplanamaz. Taban bir modelleme tercihidir; çekme gerilmesine katkısı %0,5\'i aşınca arayüz uyarı gösterir.',
+        'Emniyet oranı pekleşme katsayısı K\'dan koşullu olarak bağımsızdır: taban hiç devrede değilken (ε_giriş ≥ ε*) ve pasın tamamı taban üzerindeyken oran sadeleşir; ikisinin arasındaki geçiş bölgesinde sadeleşmez, çünkü ε* = (70/K)^(1/n) K\'ya bağlıdır. Bu yüzden K\'nın literatürdeki geniş aralığı (315–530 MPa) kopma riskini etkilemez; buna karşılık kuvvet, güç ve sıcaklık artışını doğrudan oranlı biçimde etkiler.',
         'Hız hat boyunca zincirlenir: bir pasın giriş hızı bir önceki pasın çıkış hızıdır, kütle debisi sabittir. Tablodaki güç kalıplarda harcanan mekanik güçtür; şebekeden çekilen güç, aktarma ve motor kayıpları nedeniyle yaklaşık %15–25 daha yüksektir ve yardımcı tüketimler hiç hesaba katılmaz.',
         'İlk pasta birikmiş gerinim sıfır alınır: gelen 8 mm filmaşin sıcak haddelenmiş / tavlanmış kabul edilir. Ara tavlama işaretlenen pastan sonra gerinimi tam olarak sıfırlar; kısmi tavlama modellenmez.'
       ]
@@ -1676,13 +1925,15 @@ const METIN = {
     },
     hata: {
       baslik: 'Hesap yapılamadı.',
-      R_TEORIK_ASIM: 'Bu pas sayısıyla {pas}. pasta %{r} kesit azalma gerekiyor; teorik sınır %{sinir}. Pas sayısını artırın.',
-      R_TEORIK_ASIM_TEK: 'Bu pasta %{r} kesit azalma gerekiyor; teorik sınır %{sinir}.',
+      R_TEORIK_ASIM: 'Bu pas sayısıyla {pas}. pasta %{r} kesit azalma gerekiyor; aracın kesit azalma sınırı %{sinir}. Pas sayısını artırın.',
+      R_TEORIK_ASIM_TEK: 'Bu pasta %{r} kesit azalma gerekiyor; aracın kesit azalma sınırı %{sinir}.',
       GECERSIZ_CAP: 'Çaplar sıfırdan büyük olmalı.',
       CIKIS_CAPI_BUYUK: 'Çıkış çapı giriş çapından küçük olmalı.',
       GECERSIZ_ACI: 'Kalıp yarı açısı sıfırdan büyük olmalı.',
       HEDEF_CAP_BUYUK: 'Hedef çap başlangıç çapından küçük olmalı.',
-      GECERSIZ_PAS_SAYISI: 'Pas sayısı 1 veya daha büyük bir tam sayı olmalı.',
+      GECERSIZ_PAS_SAYISI: 'Pas sayısı 1–60 aralığında bir tam sayı olmalı.',
+      GECERSIZ_PARAMETRE: 'Hesap parametreleri modelin geçerli olduğu aralıkta ve sonlu olmalı.',
+      BANT_ARALIK: 'Belirsizlik sınırları geçersiz ({alan}). Alt ≤ üst olmalı ve ikisi de modelin geçerli aralığında kalmalı.',
       BILINMEYEN_YONTEM: 'Bilinmeyen pas dağıtım yöntemi.',
       YAKINSAMADI: 'Pas dağıtımı hedef gerinime yakınsamadı.',
       PAS_SAYISI_YAKINSAMADI: 'Hedef emniyet oranına {maks} pasa kadar ulaşılamadı.',
@@ -1692,12 +1943,39 @@ const METIN = {
       MANUEL_ARALIK_DISI: 'Çaplar {min} – {maks} mm aralığında olmalı.',
       MANUEL_SIRA: 'Çaplar azalan sırada olmalı: {sira}. değer ({deger}) kendinden öncekinden küçük değil.',
       MANUEL_BELIRSIZ: 'Virgül hem ondalık hem ayırıcı olarak kullanılmış, liste okunamadı. Ayırıcı olarak boşluk veya noktalı virgül kullanın: 8,00 7,16 6,40',
-      GECERSIZ_SAYI: '{alan} alanına geçerli bir sayı girin.'
-    }
+      GECERSIZ_SAYI: '{alan} alanına geçerli bir sayı girin.',
+      ALAN_ARALIK: '{alt} – {ust} aralığında olmalı.',
+      ALAN_SAYI: 'Geçerli bir sayı girin.'
+    },
+    // Girdi geçersizken ekrandaki sayılar bir önceki geçerli hesaba aittir.
+    // Bunu söylemeden eski değeri göstermek, kullanıcıyı yanlış sayıya inandırır.
+    bayatUyarisi: 'Girdi geçersiz — düzeltilmeden hesaplanamaz. Aşağıdaki bütün sayılar son hesaba ait.',
+
+    /* ---- Hesapla düğmesi ve bekleyen değişiklik ---- */
+    hesaplaDugmesi: 'HESAPLA',
+    hesaplaAciklama: 'Girdileri değiştirmek sonucu değiştirmez. Aşağıdaki bütün sayılar yalnızca bu düğmeye basınca yenilenir.',
+    hesaplaGuncel: 'Sonuçlar güncel — ekrandaki bütün sayılar aşağıdaki girdilerle hesaplandı.',
+    hesaplaBekliyor: '{n} girdi değişti, henüz hesaplanmadı.',
+    hesaplaBekliyorTek: '1 girdi değişti, henüz hesaplanmadı.',
+    hesaplaGecersiz: 'Girdi geçersiz — düzeltmeden hesaplanamaz.',
+    hesaplaIpucu: 'Kısayol: Enter veya Ctrl+Enter',
+    hesaplaYapildi: 'Hesaplandı.',
+    bekleyenBaslik: 'Aşağıdaki sonuçlar güncel değil.',
+    bekleyenGovde: 'Şu girdiler değişti ama henüz hesaba girmedi:',
+    bekleyenDugme: 'Şimdi hesapla',
+    bekleyenGeriAl: 'Değişiklikleri geri al',
+    yapiskanBekliyor: '{n} değişiklik bekliyor',
+    yapiskanBekliyorTek: '1 değişiklik bekliyor',
+    tavlamaBekliyor: 'Ara tavlama',
+    bantBekliyor: 'Belirsizlik bandı',
+    manuelBekliyor: 'Manuel çap listesi',
+    manuelAlindi: 'Liste girdilere alındı: {n} çap. Hesaplamak için HESAPLA düğmesine basın.',
+    hesapDamgasi: 'Son hesap: {saat}',
+    acikKapali: { acik: 'açık', kapali: 'kapalı' }
   },
   en: {
     baslik: 'Wire Drawing Pass Schedule Calculator',
-    altBaslik: 'Builds a pass schedule for a copper rod-to-fine-wire drawing line and computes the risk of breakage.',
+    altBaslik: 'Builds a pass schedule for a copper rod-to-fine-wire drawing line and computes drawing stress and the model screening ratio.',
     senaryolar: 'Presets',
     girdiler: 'Inputs',
     gizle: 'Hide',
@@ -1705,7 +1983,7 @@ const METIN = {
     pasTablosu: 'Pass schedule',
     manuelBaslik: 'Manual pass schedule',
     manuelAciklama: 'Paste your own diameter list. Separator: space, line break or semicolon. Example: 8.00 7.16 6.40',
-    manuelHesapla: 'Calculate this schedule',
+    manuelHesapla: 'Load list into inputs',
     manuelTemizle: 'Clear manual schedule',
     manuelAktif: 'Calculating a manual schedule: {n} passes. Distribution method and pass count are disabled.',
     otomatigeDon: 'Back to automatic',
@@ -1722,15 +2000,15 @@ const METIN = {
       enerji: 'Energy', uzama: 'Total elongation', cikisHizi: 'Exit speed'
     },
     ozetPasNotu: 'pass {n}',
-    durum: { crit: 'Risk of breakage', warn: 'Close to the limit', ok: 'Safe',
+    durum: { crit: 'Model threshold exceeded', warn: 'Warning region', ok: 'Below model threshold',
              deltaDusuk: 'Excessive friction, die wear', deltaYuksek: 'Centre-burst risk',
              isiYuksek: 'Lubricant breakdown risk' },
     oneriBaslik: 'Suggestion',
     oneriRiskli: 'The riskiest pass is {pas} (safety {emniyet}). Lowering its area reduction from {r0}% to {r1}% brings the safety ratio down to 0.50.',
-    oneriGuvenli: 'The highest safety ratio is {emniyet} at pass {pas} — below the 0.50 limit, no risk of breakage.',
+    oneriGuvenli: 'The highest safety ratio is {emniyet} at pass {pas} — below the nominal model screening threshold of 0.50.',
     oneriGuvenliDar: 'The highest safety ratio is {emniyet} at pass {pas} — just below the 0.50 limit, the margin is very thin.',
-    oneriEsitBolge: 'Passes {ilk}–{son} sit at the same safety level ({emniyet}); there is no single riskiest pass.',
-    oneriGuvenliBolge: 'That level is below the 0.50 limit, so there is no risk of breakage.',
+    oneriEsitBolge: '{adet} passes are near the highest ratio (within passes {ilk}–{son}; maximum {emniyet}).',
+    oneriGuvenliBolge: 'That level is below the nominal model screening threshold of 0.50.',
     oneriDeltaDusuk: 'Pass {pas} has delta {delta} (lower limit 1.5) — excessive friction and die wear. Raising the die semi-angle to {alpha}° brings this pass back to the limit.',
     oneriDeltaYuksek: 'Pass {pas} has delta {delta} (upper limit 3.0) — risk of centre burst (chevron). Lowering the die semi-angle to {alpha}° brings this pass back to the limit.',
     oneriIsi: 'Pass {pas} reaches an adiabatic ΔT of {dT} °C (threshold 100). This is an upper bound and the real rise is lower, but check the lubricant regime.',
@@ -1758,7 +2036,7 @@ const METIN = {
     },
     bantBaslik: 'Uncertainty band',
     bantAc: 'Show the uncertainty band',
-    bantYontem: 'K, n and μ are given as a lower and an upper bound instead of a single value. The band comes from a corner scan: the eight combinations of the three parameters\' bounds are evaluated and the minimum and maximum of each quantity is taken — no Monte Carlo. The diameter schedule is held fixed through the scan and only K, n and μ change, so the band shows material uncertainty rather than a change of schedule. Threshold checks use the upper end of the band.',
+    bantYontem: 'K, n and μ are given as a lower and an upper bound instead of a single value. The band comes from a corner scan: the eight combinations of the three parameters\' bounds are evaluated and the minimum and maximum of each quantity is taken — no Monte Carlo. The diameter schedule is held fixed through the scan and only K, n and μ change, so the band shows material uncertainty rather than a change of schedule. Threshold checks use the highest scanned corner. This is not a statistical confidence interval or a guaranteed bound over all interior parameter combinations.',
     bantAlan: { K: 'Strength coefficient K', n: 'Hardening exponent n', mu: 'Friction coefficient μ' },
     bantAlt: 'low', bantUst: 'high',
     bantAltUc: 'Lower end', bantUstUc: 'Upper end',
@@ -1803,13 +2081,14 @@ const METIN = {
       T5: { ad: 'Automatic pass count — equal strain', aciklama: 'The three presets must give 16, 11 and 25 passes.' },
       T6: { ad: 'Automatic pass count — equal safety', aciklama: 'The smallest pass count keeping safety below 0.50 must be 11, 8 and 17.' },
       T7: { ad: 'Total work / ideal work', aciklama: 'The specific energy of the line must be a plausible multiple of the ideal deformation work.' },
-      T8: { ad: 'K invariance', aciklama: 'The safety ratio must not change between K = 315 and K = 530; K cancels in the ratio.' }
+      T8: { ad: 'Condition for K invariance', aciklama: 'Between K = 315 and K = 530 the safety ratio must stay identical where the floor is inactive (A) and where the whole pass sits on the floor (C), and must differ in the transition between them (B).' },
+      T9: { ad: 'Validity bounds', aciklama: 'Inputs outside the model\'s validity range (negative μ, K = 0, n = 1.5, target diameter > start diameter) must be rejected; a valid baseline must be accepted.' }
     },
     formulAralik: 'Validity', formulKaynak: 'Source',
     formuller: [
       { ad: 'Area reduction', formul: 'r = 1 − (d₁/d₀)²',
         aciklama: 'The fraction of the cross-section removed in the pass.',
-        aralik: '0 < r ≤ 0.632 (single-pass theoretical limit 1 − 1/e)', kaynak: 'Dieter, Mechanical Metallurgy' },
+        aralik: '0 < r ≤ 0.632 (tool limit; 1 − 1/e assumes ideal, non-hardening material)', kaynak: 'Dieter, Mechanical Metallurgy' },
       { ad: 'True strain', formul: 'ε = 2·ln(d₀/d₁)',
         aciklama: 'The true (logarithmic) strain of the pass, from volume conservation.',
         aralik: 'All pass geometries', kaynak: 'Dieter, Mechanical Metallurgy' },
@@ -1823,8 +2102,8 @@ const METIN = {
         aciklama: 'Three terms added: deformation, friction and redundant work. α is in radians.',
         aralik: 'Small semi-angle (α ≲ 15°), constant friction', kaynak: 'Siebel approximation; Dieter · Kalpakjian & Schmid' },
       { ad: 'Safety ratio', formul: 'safety = σ_d / σ_f,exit',
-        aciklama: 'Drawing stress over the strength of the exiting wire; above 0.60 there is a risk of breakage. K cancels here.',
-        aralik: '0 < safety < 1 (theoretical break limit 1)', kaynak: 'Dieter; Wistreich (1958)' },
+        aciklama: 'Drawing stress over exit flow stress. 0.60 is a screening threshold. K cancels where the floor is inactive and where the whole pass sits on the floor, but not in the transition between them.',
+        aralik: 'Ratio 1: drawing stress equals exit flow stress; not a fracture model', kaynak: 'Dieter; Wistreich (1958)' },
       { ad: 'Delta factor', formul: 'Δ = α·(1 + √(1−r))² / r',
         aciklama: 'Shape ratio of the deformation zone: low means excessive friction, high means centre-burst risk.',
         aralik: 'Sound region 1.5 ≤ Δ ≤ 3.0', kaynak: 'Avitzur, Metal Forming; Wistreich (1958)' },
@@ -1844,8 +2123,8 @@ const METIN = {
         'Residual stresses and the centre-to-surface strain difference'
       ],
       notlar: [
-        'Because σ = K·εⁿ gives zero at ε→0, the displayed flow stresses carry a 70 MPa floor for annealed ETP copper. This is a modelling choice.',
-        'The safety ratio is independent of the strength coefficient K: drawing stress and flow stress are both linear in K, so the ratio cancels (in the ε > 0.02 region where the floor is inactive). The wide literature range for K (315–530 MPa) therefore does not affect the risk of breakage, while it scales force, power and temperature rise proportionally.',
+        'Because σ = K·εⁿ gives zero at ε→0, flow stresses carry a 70 MPa floor for annealed ETP copper. The floor applies both to the exit flow stress and to the mean-flow integral across the pass: if the material cannot flow below that value, its work cannot be computed below it either. The floor is a modelling choice; the interface warns when its contribution to the drawing stress exceeds 0.5%.',
+        'The safety ratio is conditionally independent of the strength coefficient K: the ratio cancels where the floor is inactive (ε_in ≥ ε*) and where the whole pass sits on the floor; in the transition between them it does not, because ε* = (70/K)^(1/n) depends on K. The wide literature range for K (315–530 MPa) therefore does not affect this model ratio under those conditions, while it scales force, power and temperature rise proportionally.',
         'Speed is chained along the line: each pass enters at the exit speed of the previous one and the mass flow is constant. The power in the table is the mechanical power at the dies; grid power is roughly 15–25% higher because of transmission and motor losses, and auxiliary consumption is not counted at all.',
         'Accumulated strain starts at zero in the first pass: the incoming 8 mm rod is assumed hot-rolled or annealed. An intermediate anneal resets the strain completely; partial annealing is not modelled.'
       ]
@@ -1885,13 +2164,15 @@ const METIN = {
     },
     hata: {
       baslik: 'Calculation failed.',
-      R_TEORIK_ASIM: 'With this pass count, pass {pas} needs {r}% area reduction; the theoretical limit is {sinir}%. Increase the pass count.',
-      R_TEORIK_ASIM_TEK: 'This pass needs {r}% area reduction; the theoretical limit is {sinir}%.',
+      R_TEORIK_ASIM: 'With this pass count, pass {pas} needs {r}% area reduction; the tool reduction limit is {sinir}%. Increase the pass count.',
+      R_TEORIK_ASIM_TEK: 'This pass needs {r}% area reduction; the tool reduction limit is {sinir}%.',
       GECERSIZ_CAP: 'Diameters must be greater than zero.',
       CIKIS_CAPI_BUYUK: 'The exit diameter must be smaller than the entry diameter.',
       GECERSIZ_ACI: 'The die semi-angle must be greater than zero.',
       HEDEF_CAP_BUYUK: 'The target diameter must be smaller than the starting diameter.',
-      GECERSIZ_PAS_SAYISI: 'The pass count must be a whole number of 1 or more.',
+      GECERSIZ_PAS_SAYISI: 'The pass count must be a whole number between 1 and 60.',
+      GECERSIZ_PARAMETRE: 'Calculation parameters must be finite and inside the model\'s validity range.',
+      BANT_ARALIK: 'Invalid uncertainty bounds ({alan}). Lower must not exceed upper, and both must stay inside the model\'s validity range.',
       BILINMEYEN_YONTEM: 'Unknown pass distribution method.',
       YAKINSAMADI: 'The pass distribution did not converge to the target strain.',
       PAS_SAYISI_YAKINSAMADI: 'The target safety ratio could not be reached within {maks} passes.',
@@ -1901,8 +2182,33 @@ const METIN = {
       MANUEL_ARALIK_DISI: 'Diameters must be between {min} and {maks} mm.',
       MANUEL_SIRA: 'Diameters must decrease: value {sira} ({deger}) is not smaller than the one before it.',
       MANUEL_BELIRSIZ: 'The comma is used both as a decimal mark and as a separator, so the list could not be read. Use a space or semicolon as separator: 8.00 7.16 6.40',
-      GECERSIZ_SAYI: 'Enter a valid number in the {alan} field.'
-    }
+      GECERSIZ_SAYI: 'Enter a valid number in the {alan} field.',
+      ALAN_ARALIK: 'Must be between {alt} and {ust}.',
+      ALAN_SAYI: 'Enter a valid number.'
+    },
+    bayatUyarisi: 'Input is invalid — cannot calculate until it is fixed. Every number below belongs to the last calculation.',
+
+    /* ---- Calculate button and pending changes ---- */
+    hesaplaDugmesi: 'CALCULATE',
+    hesaplaAciklama: 'Changing an input does not change the result. Every number below is refreshed only when you press this button.',
+    hesaplaGuncel: 'Results are current — every number on screen was computed from the inputs below.',
+    hesaplaBekliyor: '{n} inputs changed, not yet calculated.',
+    hesaplaBekliyorTek: '1 input changed, not yet calculated.',
+    hesaplaGecersiz: 'Input is invalid — cannot calculate until it is fixed.',
+    hesaplaIpucu: 'Shortcut: Enter or Ctrl+Enter',
+    hesaplaYapildi: 'Calculated.',
+    bekleyenBaslik: 'The results below are out of date.',
+    bekleyenGovde: 'These inputs changed but have not entered the calculation yet:',
+    bekleyenDugme: 'Calculate now',
+    bekleyenGeriAl: 'Discard changes',
+    yapiskanBekliyor: '{n} changes pending',
+    yapiskanBekliyorTek: '1 change pending',
+    tavlamaBekliyor: 'Interpass annealing',
+    bantBekliyor: 'Uncertainty band',
+    manuelBekliyor: 'Manual diameter list',
+    manuelAlindi: 'List loaded into inputs: {n} diameters. Press CALCULATE to compute it.',
+    hesapDamgasi: 'Last calculation: {saat}',
+    acikKapali: { acik: 'on', kapali: 'off' }
   }
 };
 
@@ -1923,9 +2229,107 @@ const durum = {
   kalipR: null,
   tema: 'sistem',           // 'sistem' | 'light' | 'dark'
   sekme: 'dogrulama',       // güven katmanı sekmesi
+  // Alan anahtarı -> 'sayi' | 'aralik'. Boş değilse hesap yapılmaz ve ekranda
+  // son geçerli hesap "güncel değil" uyarısıyla durur.
+  alanHatalari: {},
   bant: { acik: false, K: BANT_VARSAYILAN.K.slice(), n: BANT_VARSAYILAN.n.slice(),
           mu: BANT_VARSAYILAN.mu.slice() }
 };
+
+/* ==== TASLAK GİRDİ KATMANI ====
+   Bu aracın tek kuralı: HESAPLA'ya basılmadan ekrandaki hiçbir sayı değişmez.
+
+   Kural iki nesneyle uygulanır:
+     taslak — kullanıcının kutulara YAZDIĞI değerler. Yazarken anında güncellenir,
+              anında denetlenir, ama hiçbir hesaba girmez.
+     durum  — ekranda GÖSTERİLEN hesabın girdileri. Yalnızca hesapla() içinde,
+              taslaktan tek seferde kopyalanarak değişir.
+
+   Bu ayrım sayesinde "ekrandaki sayı hangi girdiyle üretildi" sorusunun tek bir
+   cevabı vardır: durum. Sonuç boru hattının tamamı (buildSchedule, bandHesapla,
+   duyarlilik*, csvUret, adresYaz) durum'dan okur ve hiç değişmedi. */
+
+// Hesabı etkileyen alanlar. Bu listede olan her şey HESAPLA'yı bekler;
+// olmayan her şey (dil, tema, seçili pas, karşılaştırma) anında uygulanır.
+const HESAP_ALANLARI = ['d0', 'dTarget', 'alphaDeg', 'mu', 'K', 'n', 'v0', 'method', 'passes'];
+
+const taslak = {
+  d0: durum.d0, dTarget: durum.dTarget, alphaDeg: durum.alphaDeg, mu: durum.mu,
+  K: durum.K, n: durum.n, v0: durum.v0,
+  method: durum.method,
+  passes: durum.passes,
+  anneals: durum.anneals.slice(),
+  manuelCaplar: null,
+  bant: { acik: durum.bant.acik, K: durum.bant.K.slice(),
+          n: durum.bant.n.slice(), mu: durum.bant.mu.slice() }
+};
+
+// Son hesabın saati — "bu sayılar ne zaman üretildi" sorusunun cevabı.
+let sonHesapSaati = null;
+
+/* Taslağı ekrandaki hesaba eşitler. Adresten okuma, sayfa açılışı gibi
+   durum'un dışarıdan doldurulduğu yollarda çağrılır. */
+function taslagiDurumdanAl() {
+  for (const k of HESAP_ALANLARI) taslak[k] = durum[k];
+  taslak.anneals = durum.anneals.slice();
+  taslak.manuelCaplar = durum.manuelCaplar ? durum.manuelCaplar.slice() : null;
+  taslak.bant.acik = durum.bant.acik;
+  for (const k of ['K', 'n', 'mu']) taslak.bant[k] = durum.bant[k].slice();
+}
+
+/* Taslağı ekrana geçirir: bu çağrıdan sonra durum artık kullanıcının yazdığıdır. */
+function taslagiDuruma() {
+  for (const k of HESAP_ALANLARI) durum[k] = taslak[k];
+  durum.anneals = taslak.anneals.slice();
+  durum.manuelCaplar = taslak.manuelCaplar ? taslak.manuelCaplar.slice() : null;
+  durum.bant.acik = taslak.bant.acik;
+  for (const k of ['K', 'n', 'mu']) durum.bant[k] = taslak.bant[k].slice();
+}
+
+const ayniDizi = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
+
+/* Taslak ile ekrandaki hesap arasındaki farklar — kullanıcıya gösterilecek
+   biçimde, etiketli. Boş dizi = ekrandaki sonuç güncel. */
+function bekleyenDegisiklikler() {
+  const M = S();
+  const liste = [];
+  const bas = { d0: 2, dTarget: 2, alphaDeg: 1, mu: 3, K: 0, n: 2, v0: 1 };
+
+  for (const k of ['d0', 'dTarget', 'alphaDeg', 'mu', 'K', 'n', 'v0']) {
+    if (taslak[k] === durum[k]) continue;
+    liste.push(M.alan[k] + ': ' + fmt(durum[k], bas[k]) + ' → ' + fmt(taslak[k], bas[k]));
+  }
+  if (taslak.method !== durum.method) {
+    liste.push(M.alan.method + ': ' + M.yontem[durum.method] + ' → ' + M.yontem[taslak.method]);
+  }
+  if (taslak.passes !== durum.passes) {
+    const yaz = (v) => v === null ? M.otomatikYer : String(v);
+    liste.push(M.alan.passes + ': ' + yaz(durum.passes) + ' → ' + yaz(taslak.passes));
+  }
+  if (!ayniDizi(taslak.anneals, durum.anneals)) {
+    const yaz = (a) => a.length ? a.join(', ') : M.uyariYok;
+    liste.push(M.tavlamaBekliyor + ': ' + yaz(durum.anneals) + ' → ' + yaz(taslak.anneals));
+  }
+  const manuelA = durum.manuelCaplar, manuelB = taslak.manuelCaplar;
+  if (Boolean(manuelA) !== Boolean(manuelB) || (manuelA && manuelB && !ayniDizi(manuelA, manuelB))) {
+    const yaz = (c) => c ? doldur(M.ozetPas, { n: c.length - 1 }) : M.uyariYok;
+    liste.push(M.manuelBekliyor + ': ' + yaz(manuelA) + ' → ' + yaz(manuelB));
+  }
+  if (taslak.bant.acik !== durum.bant.acik) {
+    const ak = (v) => v ? M.acikKapali.acik : M.acikKapali.kapali;
+    liste.push(M.bantBekliyor + ': ' + ak(durum.bant.acik) + ' → ' + ak(taslak.bant.acik));
+  } else if (taslak.bant.acik) {
+    // Bant kapalıyken sınır değerleri hesaba girmez; fark sayılmaz.
+    for (const k of ['K', 'n', 'mu']) {
+      if (ayniDizi(taslak.bant[k], durum.bant[k])) continue;
+      const b = { K: 0, n: 2, mu: 3 }[k];
+      liste.push(M.bantBekliyor + ' · ' + M.bantAlan[k] + ': ' +
+        durum.bant[k].map(v => fmt(v, b)).join('–') + ' → ' +
+        taslak.bant[k].map(v => fmt(v, b)).join('–'));
+    }
+  }
+  return liste;
+}
 
 // Girdi alanları: anahtar, birim ve giriş adımı. Sıra panelde göründüğü sıradır.
 const ALANLAR = [
@@ -1959,6 +2363,11 @@ const SUTUNLAR = [
 // Toplam gerinim bu seviyeyi aşınca ara tavlama bilgi notu gösterilir.
 const TAVLAMA_NOTU_ESIGI = 5.0;
 
+// 70 MPa tabanının çekme gerilmesine katkısı bu payı aşarsa arayüz uyarı gösterir.
+// Eşik projenin kendi sayısal toleransıdır (%0,5): tabanın etkisi tolerans kadar
+// büyüdüğünde sayı artık bir modelleme tercihini taşıyor demektir.
+const TABAN_UYARI_PAYI = 0.005;
+
 /* ==== BİÇİMLENDİRME ==== */
 
 const S = () => METIN[durum.dil];
@@ -1978,6 +2387,20 @@ function sayiOku(metin) {
   return parseFloat(t);
 }
 
+/* Girdi kutusuna yazılacak metin. Değer, alanın gösterim basamağıyla tam olarak
+   geri okunabiliyorsa biçimli yazılır (8 -> "8,00"); okunamıyorsa ham değer
+   korunur (0,0523 -> "0,0523"). Böylece panel hizalı kalır ama paylaşılan
+   bağlantıdaki hassasiyet sessizce yuvarlanmaz. */
+const GIRDI_BASAMAK = { d0: 2, dTarget: 2, alphaDeg: 1, mu: 3, K: 0, n: 2, v0: 1 };
+function girdiMetni(v, anahtar) {
+  const basamak = GIRDI_BASAMAK[anahtar];
+  const ham = String(v);
+  const metin = (basamak !== undefined && Number(v.toFixed(basamak)) === v)
+    ? v.toFixed(basamak)
+    : ham;
+  return durum.dil === 'tr' ? metin.replace('.', ',') : metin;
+}
+
 /* Şablondaki {anahtar} yerlerini doldurur. */
 function doldur(sablon, degerler) {
   return String(sablon).replace(/\{(\w+)\}/g, (_, k) => (k in degerler ? degerler[k] : '{' + k + '}'));
@@ -1993,6 +2416,7 @@ function hataMetni(err) {
       return doldur(i.pas ? H.R_TEORIK_ASIM : H.R_TEORIK_ASIM_TEK,
         { pas: i.pas, r: fmt(i.r * 100, 1), sinir: fmt(R_THEORETICAL_MAX * 100, 1) });
     case 'PAS_SAYISI_YAKINSAMADI': return doldur(H.PAS_SAYISI_YAKINSAMADI, { maks: MAX_PASSES });
+    case 'BANT_ARALIK': return doldur(H.BANT_ARALIK, { alan: i.alan || '—' });
     case 'MANUEL_ARALIK_DISI': return doldur(H.MANUEL_ARALIK_DISI,
       { min: fmt(MANUAL_D_MIN, 2), maks: fmt(MANUAL_D_MAX, 0) });
     case 'MANUEL_SIRA': return doldur(H.MANUEL_SIRA,
@@ -2034,6 +2458,9 @@ function belirginTepe(paslar) {
 function esitBolge(paslar) {
   const enBuyuk = Math.max(...paslar.map(x => x.safety));
   const bolge = paslar.filter(x => x.safety >= enBuyuk * (1 - TEPE_ESIGI));
+  // enBuyuk negatifse eşik ondan büyük çıkar ve bölge boş kalır. Girdi denetimi
+  // bunu zaten engelliyor; yine de burada çökmek yerine "bölge yok" denir.
+  if (bolge.length === 0) return null;
   return { ilk: bolge[0].no, son: bolge[bolge.length - 1].no, adet: bolge.length, emniyet: enBuyuk };
 }
 
@@ -2057,10 +2484,10 @@ function oneriCumleleri(prog) {
 
   // Tek bir tepe yoksa bunu söyle: "en riskli pas" demek yanıltıcı olur (V3).
   const tepeBelirgin = belirginTepe(prog.passes) || prog.passes.length === 1;
-  if (!tepeBelirgin) {
-    const b = esitBolge(prog.passes);
+  const bolge = tepeBelirgin ? null : esitBolge(prog.passes);
+  if (bolge) {
     cumleler.push(doldur(M.oneriEsitBolge,
-      { ilk: b.ilk, son: b.son, emniyet: fmt(b.emniyet, 3) }));
+      { ilk: bolge.ilk, son: bolge.son, adet: bolge.adet, emniyet: fmt(bolge.emniyet, 3) }));
   }
 
   if (riskli.safety > SAFETY_WARNING) {
@@ -2073,7 +2500,7 @@ function oneriCumleleri(prog) {
     // Sınırın hemen altındaysa cümlenin tonu da bunu söylesin (C3).
     // Tepe belirgin değilse pas numarası tekrar edilmez, seviye zaten yukarıda yazıyor.
     const dar = riskli.safety >= SAFETY_WARNING * DAR_PAY_ORANI;
-    cumleler.push(!tepeBelirgin && !dar
+    cumleler.push(bolge && !dar
       ? M.oneriGuvenliBolge
       : doldur(dar ? M.oneriGuvenliDar : M.oneriGuvenli,
           { pas: riskli.no, emniyet: fmt(riskli.safety, 3) }));
@@ -2149,7 +2576,103 @@ function programOzeti(prog) {
 
 const $ = (id) => document.getElementById(id);
 const alanGirdileri = {};   // anahtar -> input elemanı
+const alanHataSatirlari = {};   // anahtar -> hata metni elemanı
 let yontemSecimi, pasSayisiGirdisi, pasSayisiIpucu;
+
+/* Program değişti: kalıp kesiti kaydırıcıları pasın kendi değerlerine döner.
+   Kaydırıcı yalnızca kullanıcı ona dokunduğu sürece geçerlidir; aksi hâlde
+   ekranda tabloya ait olmayan bir kesit kalır. Programı değiştiren HER yol
+   buradan geçer. */
+function programDegisti() {
+  durum.kalipAlpha = null;
+  durum.kalipR = null;
+}
+
+/* ==== GİRDİ DENETİMİ ====
+   Kural çekirdekte (GIRDI_SINIRLARI); burası yalnızca kutuyu okur ve sonucu
+   durum.alanHatalari'na yazar. Geçersiz değer durum'a HİÇ girmez: ekranda son
+   geçerli hesap, üstünde "güncel değil" uyarısıyla durur. */
+
+/* Manuel modda çap kutuları devre dışıdır ve program çap dizisinden gelir;
+   o iki alan denetlenmez. */
+function denetlenenAlanlar() {
+  return taslak.manuelCaplar
+    ? ALANLAR.filter(a => a.k !== 'd0' && a.k !== 'dTarget')
+    : ALANLAR;
+}
+
+/* d0 ile dTarget birbirine bağlıdır: d0 değişince hedef çapın üst sınırı da
+   değişir, bu yüzden çift birlikte denetlenir. */
+function ciftCapDenetimi() {
+  if (taslak.manuelCaplar) return;
+  const hedef = sayiOku(alanGirdileri.dTarget.value);
+  const s = girdiSiniri('dTarget', taslak.d0);
+  if (!Number.isFinite(hedef)) durum.alanHatalari.dTarget = 'sayi';
+  else if (hedef < s.alt || hedef >= s.ust) durum.alanHatalari.dTarget = 'aralik';
+  else { taslak.dTarget = hedef; delete durum.alanHatalari.dTarget; }
+}
+
+/* Bir alanın kutusundaki metni okur ve geçerliyse durum'a yazar.
+   Dönüş: kabul edilen değer, ya da geçersizse null. */
+function alanDegeriniAl(anahtar) {
+  const v = sayiOku(alanGirdileri[anahtar].value);
+  if (!Number.isFinite(v)) { durum.alanHatalari[anahtar] = 'sayi'; return null; }
+  const s = girdiSiniri(anahtar, anahtar === 'd0' ? v : taslak.d0);
+  if (v < s.alt || v > s.ust || (anahtar === 'dTarget' && v === s.ust)) { durum.alanHatalari[anahtar] = 'aralik'; return null; }
+  delete durum.alanHatalari[anahtar];
+  taslak[anahtar] = v;
+  if (anahtar === 'd0' || anahtar === 'dTarget') ciftCapDenetimi();
+  return v;
+}
+
+/* Bütün alanları baştan denetler. Senaryo yükleme, dil değişimi ve manuel moda
+   giriş gibi alanların topluca değiştiği yollarda çağrılır.
+   Sınır denetimi kutudan değil DURUMDAN okunur: durum, kutunun yazdırma
+   biçiminden hassastır (μ kutuda 3 hane, adreste 4), geri okumak paylaşılan
+   bağlantıdaki değeri sessizce yuvarlardı. Kutuya yalnızca "okunabiliyor mu"
+   diye bakılır. */
+function butunAlanlariDenetle() {
+  durum.alanHatalari = {};
+  for (const a of denetlenenAlanlar()) {
+    if (!Number.isFinite(sayiOku(alanGirdileri[a.k].value))) {
+      durum.alanHatalari[a.k] = 'sayi';
+      continue;
+    }
+    const s = girdiSiniri(a.k, taslak.d0);
+    if (taslak[a.k] < s.alt || taslak[a.k] > s.ust || (a.k === 'dTarget' && taslak[a.k] === s.ust)) durum.alanHatalari[a.k] = 'aralik';
+  }
+}
+
+function gecersizAlanVar() {
+  return Object.keys(durum.alanHatalari).length > 0;
+}
+
+/* Alan hatalarını kutuların altına yazar ve bayat uyarısını yönetir.
+   Renk tek başına bilgi taşımasın diye kutunun kenarlığı da değişir ve mesaj
+   aria-describedby ile kutuya bağlıdır. */
+function alanHatalariniYaz() {
+  const M = S();
+  const basamak = { d0: 2, dTarget: 2, alphaDeg: 1, mu: 3, K: 0, n: 2, v0: 1 };
+  for (const a of ALANLAR) {
+    const tur = durum.alanHatalari[a.k];
+    const satir = alanHataSatirlari[a.k];
+    const inp = alanGirdileri[a.k];
+    inp.classList.toggle('gecersiz', Boolean(tur));
+    inp.setAttribute('aria-invalid', String(Boolean(tur)));
+    if (!tur) { satir.hidden = true; satir.textContent = ''; continue; }
+    const s = girdiSiniri(a.k, taslak.d0);
+    // Birim bir kez, üst uçta: "0,01 – 8,00 mm".
+    satir.textContent = tur === 'sayi'
+      ? M.hata.ALAN_SAYI
+      : doldur(M.hata.ALAN_ARALIK, {
+          alt: fmt(s.alt, basamak[a.k]),
+          ust: fmt(s.ust, basamak[a.k]) + (a.birim ? ' ' + a.birim : '')
+        });
+    satir.hidden = false;
+  }
+  // Bayat kutusunu hesaplaDurumunuYaz() yazar: alan hatası ve bant hatası
+  // aynı kutuyu paylaşır, iki yerden yazılırsa biri diğerini siler.
+}
 
 /* Küçük inline SVG ikonlar — emoji yok, 1,5 px kontur, currentColor. */
 function ikon(tip) {
@@ -2202,18 +2725,30 @@ function kurPanel() {
     inp.inputMode = 'decimal';
     inp.id = 'girdi-' + a.k;
     inp.autocomplete = 'off';
+    const hataSatiri = document.createElement('p');
+    hataSatiri.className = 'alan-hatasi';
+    hataSatiri.id = 'hata-' + a.k;
+    hataSatiri.hidden = true;
+    inp.setAttribute('aria-describedby', hataSatiri.id);
     inp.addEventListener('input', () => {
-      const v = sayiOku(inp.value);
-      if (Number.isFinite(v)) {
-        durum[a.k] = v;
-        // K-01: başlangıç veya hedef çap elle değişince pas sayısı otomatiğe döner.
-        if (a.k === 'd0' || a.k === 'dTarget') durum.passes = null;
-        durum.anneals = [];
+      // Değeri yalnızca okunabilir VE modelin geçerli olduğu aralıktaysa kabul et.
+      // Aralık dışında hesap yapılmaz: sınırını bilen model, sessizce saçmalayandan iyidir.
+      if (alanDegeriniAl(a.k) === null) { girdiDegisti(); return; }
+      // K-01: başlangıç veya hedef çap elle değişince pas sayısı otomatiğe döner.
+      if (a.k === 'd0' || a.k === 'dTarget') {
+        taslak.passes = null;
+        pasSayisiGirdisi.value = '';
+        taslak.anneals = [];
       }
-      ciz();
+      girdiDegisti();
+    });
+    // Kutuda Enter: hesapla. Elle girip hemen sonucu görmenin en kısa yolu.
+    inp.addEventListener('keydown', (olay) => {
+      if (olay.key === 'Enter') { olay.preventDefault(); hesapla(); }
     });
     alanGirdileri[a.k] = inp;
-    sar.append(lab, inp);
+    alanHataSatirlari[a.k] = hataSatiri;
+    sar.append(lab, inp, hataSatiri);
     panel.appendChild(sar);
   }
 
@@ -2234,8 +2769,8 @@ function kurPanel() {
   }
   yontemSecimi.addEventListener('change', () => {
     // K-01: yöntem değişiminde pas sayısı KORUNUR.
-    durum.method = yontemSecimi.value;
-    ciz();
+    taslak.method = yontemSecimi.value;
+    girdiDegisti();
   });
   secimKabi.append(yontemSecimi, ikon('ok'));
   sarY.append(labY, secimKabi);
@@ -2256,19 +2791,22 @@ function kurPanel() {
   pasSayisiGirdisi.autocomplete = 'off';
   pasSayisiGirdisi.addEventListener('input', () => {
     const t = pasSayisiGirdisi.value.trim();
-    durum.passes = t === '' ? null : sayiOku(t);
-    durum.anneals = [];
-    ciz();
+    taslak.passes = t === '' ? null : sayiOku(t);
+    taslak.anneals = [];
+    girdiDegisti();
+  });
+  pasSayisiGirdisi.addEventListener('keydown', (olay) => {
+    if (olay.key === 'Enter') { olay.preventDefault(); hesapla(); }
   });
   const otoDugme = document.createElement('button');
   otoDugme.type = 'button';
   otoDugme.className = 'dugme sessiz';
   otoDugme.id = 'otomatigeDon';
   otoDugme.addEventListener('click', () => {
-    durum.passes = null;
-    durum.anneals = [];
+    taslak.passes = null;
+    taslak.anneals = [];
     pasSayisiGirdisi.value = '';
-    ciz();
+    girdiDegisti();
   });
   satir.append(pasSayisiGirdisi, otoDugme);
   pasSayisiIpucu = document.createElement('p');
@@ -2295,36 +2833,57 @@ function kurTabloBasligi() {
 
 /* ==== OLAYLAR ==== */
 
+/* Senaryo düğmesi girdileri doldurur, hesaplamaz. Kural istisnasızdır:
+   ekrandaki sayılar yalnızca HESAPLA ile değişir. */
 function senaryoYukle(s) {
-  durum.d0 = s.d0; durum.dTarget = s.dTarget; durum.alphaDeg = s.alphaDeg;
-  durum.mu = s.mu; durum.K = s.K; durum.n = s.n; durum.v0 = s.v0;
-  durum.passes = null;          // K-01: senaryo düğmesi pas sayısını otomatiğe döndürür
-  durum.anneals = [];
-  durum.manuelCaplar = null;
+  taslak.d0 = s.d0; taslak.dTarget = s.dTarget; taslak.alphaDeg = s.alphaDeg;
+  taslak.mu = s.mu; taslak.K = s.K; taslak.n = s.n; taslak.v0 = s.v0;
+  taslak.passes = null;          // K-01: senaryo düğmesi pas sayısını otomatiğe döndürür
+  taslak.anneals = [];
+  taslak.manuelCaplar = null;
   $('manuelMetin').value = '';
+  manuelHatasiniYaz(null);
   alanlariYaz();
-  ciz();
+  butunAlanlariDenetle();
+  girdiDegisti();
 }
 
+/* Manuel bölümün kendi hata satırı. Boş metin satırı temizler. */
+function manuelHatasiniYaz(mesaj) {
+  const k = $('manuelIpucu');
+  k.textContent = mesaj || '';
+  k.classList.toggle('alan-hatasi', Boolean(mesaj));
+}
+
+/* Manuel liste yalnızca girdilere alınır; hesap yine tek düğmeden yapılır.
+   Sayfada "hesapla" anlamına gelen tek bir düğme vardır. */
 function manuelHesapla() {
   try {
-    durum.manuelCaplar = parseManualSchedule($('manuelMetin').value);
-    durum.anneals = [];
-    durum.d0 = durum.manuelCaplar[0];
-    durum.dTarget = durum.manuelCaplar[durum.manuelCaplar.length - 1];
+    manuelHatasiniYaz(null);
+    taslak.manuelCaplar = parseManualSchedule($('manuelMetin').value);
+    taslak.anneals = [];
+    taslak.d0 = taslak.manuelCaplar[0];
+    taslak.dTarget = taslak.manuelCaplar[taslak.manuelCaplar.length - 1];
     alanlariYaz();
-    ciz();
+    butunAlanlariDenetle();
+    girdiDegisti();
+    manuelHatasiniYaz(doldur(S().manuelAlindi, { n: taslak.manuelCaplar.length }));
+    $('manuelIpucu').classList.remove('alan-hatasi');
   } catch (err) {
-    durum.manuelCaplar = null;
-    hataGoster(hataMetni(err));
+    // Liste okunamadı: ekrandaki program hâlâ geçerli ve tutarlı, ona dokunulmaz.
+    // Hata kendi bölümünde durur; ana hata kutusu yalnızca hesap düşünce yanar.
+    manuelHatasiniYaz(hataMetni(err));
   }
 }
 
 function manuelTemizle() {
-  durum.manuelCaplar = null;
-  durum.anneals = [];
+  taslak.manuelCaplar = null;
+  taslak.anneals = [];
   $('manuelMetin').value = '';
-  ciz();
+  manuelHatasiniYaz(null);
+  alanlariYaz();
+  butunAlanlariDenetle();
+  girdiDegisti();
 }
 
 function dilDegistir(dil) {
@@ -2336,6 +2895,8 @@ function dilDegistir(dil) {
   metinleriYaz();
   kurBantAlanlari();
   alanlariYaz();
+  butunAlanlariDenetle();
+  manuelHatasiniYaz(null);   // eski dildeki hata satırı kalmasın
   temaUygula();
   ciz();
 }
@@ -2415,22 +2976,16 @@ function metinleriYaz() {
 
 /* Girdi kutularına durumu yazar; kullanıcının yazmakta olduğu kutuya dokunmaz. */
 function alanlariYaz() {
-  const basamak = { d0: 2, dTarget: 2, alphaDeg: 1, mu: 3, K: 0, n: 2, v0: 1 };
   for (const a of ALANLAR) {
     const inp = alanGirdileri[a.k];
     if (document.activeElement === inp) continue;
-    inp.value = fmt(durum[a.k], basamak[a.k]);
+    inp.value = girdiMetni(taslak[a.k], a.k);
   }
-  yontemSecimi.value = durum.method;
+  yontemSecimi.value = taslak.method;
   if (document.activeElement !== pasSayisiGirdisi) {
-    pasSayisiGirdisi.value = durum.passes === null ? '' : String(durum.passes);
+    pasSayisiGirdisi.value = taslak.passes === null ? '' : String(taslak.passes);
   }
-}
-
-function hataGoster(mesaj) {
-  const k = $('hataKutusu');
-  k.textContent = S().hata.baslik + ' ' + mesaj;
-  k.hidden = false;
+  $('bantAnahtari').checked = taslak.bant.acik;
 }
 
 function bilgiGoster(mesaj) {
@@ -2448,12 +3003,12 @@ function satirDegerleri(p) {
 }
 
 /* Özet şeridi: beş büyüklük + hattın çıkış hızı. */
-function ozetSeridiniCiz(prog) {
+function ozetSeridiniCiz(g) {
   const M = S();
   const kap = $('ozetSeridi');
   kap.textContent = '';
-  if (!prog) return;
-  const o = programOzeti(prog);
+  if (!g) return;
+  const o = g.ozet;
 
   const hucre = (anahtar, deger, birim, not, sinif) => {
     const el = document.createElement('div');
@@ -2494,15 +3049,49 @@ function ozetSeridiniCiz(prog) {
   hucre('enerji', sonBant ? aralik(sonBant.enerji, 1) : fmt(o.enerji, 1), 'kWh/t', '');
   hucre('uzama', fmt(o.uzama, 1), '×', '');
   hucre('cikisHizi', fmt(o.cikisHizi, 1), 'm/s', '');
+  if (sonBant) {
+    const note = document.createElement('p');
+    note.className = 'ipucu';
+    note.style.gridColumn = '1 / -1';
+    note.textContent = durum.dil === 'tr'
+      ? 'Nominal sonuç: oran ' + fmt(o.enYuksekEmniyet, 3) + ' · ' + fmt(o.guc, 1) + ' kW · ' + fmt(o.enerji, 1) + ' kWh/t. Yukarıdaki bant ayrı alt/üst girdilerden hesaplanır; nominal K, n veya μ değişimi sabit çap dizisinde bandı değiştirmez.'
+      : 'Nominal result: ratio ' + fmt(o.enYuksekEmniyet, 3) + ' · ' + fmt(o.guc, 1) + ' kW · ' + fmt(o.enerji, 1) + ' kWh/t. The band uses separate bounds; nominal K, n or μ changes do not change the band for a fixed diameter schedule.';
+    kap.appendChild(note);
+  }
 }
 
 /* Öneri: gerçek sayı taşıyan cümleler. */
-function oneriyiCiz(prog) {
+function oneriyiCiz(g) {
   const kap = $('oneriKutusu');
   kap.textContent = '';
-  kap.hidden = !prog;
-  if (!prog) return;
-  for (const c of oneriCumleleri(prog)) {
+  kap.hidden = !g;
+  if (!g) return;
+  const scope = document.createElement('span');
+  scope.textContent = durum.dil === 'tr'
+    ? 'Oran = çekme gerilmesi / çıkış akma gerilmesi; düşük olması daha iyidir. 0,50 / 0,60, Δ 1,5–3 ve ΔT 100 °C bu aracın tarama eşikleridir; kopma olasılığı veya üretim onayı değildir. ΔT, mutlak tel sıcaklığı değildir.'
+    : 'Ratio = drawing stress / exit flow stress; lower is better. 0.50 / 0.60, Δ 1.5–3 and ΔT 100 °C are screening thresholds, not a fracture probability or production approval. ΔT is not the absolute wire temperature.';
+  kap.appendChild(scope);
+  /* Taban uyarısı. Eşik pasın ÇIKIŞINA değil, tabanın sonuca KATKISINA bakar:
+     belirleyici olan integral aralığının eps* eşiğini kesip kesmediğidir, çıkışın
+     nerede olduğu değil. Çıkışa bakan bir koşul, hatanın projenin kendi %0,5
+     toleransını aştığı r ≈ %10–0,25 bandını tamamen kaçırır. */
+  const enBuyukTabanPayi = Math.max(...g.prog.passes.map(p => p.tabanPayi));
+  if (enBuyukTabanPayi > TABAN_UYARI_PAYI) {
+    const note = document.createElement('span');
+    const yuzde = fmt(enBuyukTabanPayi * 100, 1);
+    note.textContent = durum.dil === 'tr'
+      ? 'Düşük gerinim uyarısı: bu programda çekme gerilmesinin %' + yuzde + ' kadarı 70 MPa tabanından geliyor, Hollomon pekleşmesinden değil. Taban bir modelleme tercihidir; bu bölgede sayılar malzeme deneyiyle kalibre edilmeden kullanılmamalı ve K değişmezliği geçerli değildir.'
+      : 'Low-strain warning: ' + yuzde + '% of the drawing stress in this schedule comes from the 70 MPa floor rather than Hollomon hardening. The floor is a modelling choice; calibrate against a material test before relying on these numbers here, and K invariance does not hold.';
+    kap.appendChild(note);
+  }
+  if (g.bant) {
+    const bandNote = document.createElement('span');
+    bandNote.textContent = durum.dil === 'tr'
+      ? 'Aşağıdaki pas önerileri nominal program içindir. Köşe taramasındaki en yüksek oran: ' + fmt(g.bant.enYuksekEmniyet[1], 3) + '.'
+      : 'Pass suggestions below apply to the nominal schedule. Highest corner-scan ratio: ' + fmt(g.bant.enYuksekEmniyet[1], 3) + '.';
+    kap.appendChild(bandNote);
+  }
+  for (const c of g.oneriler) {
     const satir = document.createElement('span');
     satir.textContent = c;
     kap.appendChild(satir);
@@ -2510,17 +3099,17 @@ function oneriyiCiz(prog) {
 }
 
 /* Karşılaştırma: A sabitlenmişse B ile yan yana ve fark satırı. */
-function karsilastirmayiCiz(prog) {
+function karsilastirmayiCiz(g) {
   const M = S();
   const A = durum.karsilastirmaA;
   $('karsilastirSabitle').textContent = M.karsilastirSabitle;
-  $('karsilastirSabitle').disabled = !prog;
+  $('karsilastirSabitle').disabled = !g;
   $('karsilastirKapat').hidden = !A;
-  $('karsilastirmaKabi').hidden = !(A && prog);
-  $('degisenGirdiler').hidden = !(A && prog);
-  if (!A || !prog) return;
+  $('karsilastirmaKabi').hidden = !(A && g);
+  $('degisenGirdiler').hidden = !(A && g);
+  if (!A || !g) return;
 
-  const B = programOzeti(prog);
+  const B = g.karsilastirmaB;
   const basSatir = $('karsilastirmaBaslik');
   basSatir.textContent = '';
   for (const b of ['', M.karsilastirA, M.karsilastirB, M.karsilastirFark]) {
@@ -2636,68 +3225,268 @@ function degisenGirdileriYaz(a, b) {
 }
 
 /* Ana çizim: hesabı yapar, tabloyu ve ipuçlarını yeniler. */
-function ciz() {
-  const M = S();
+/* Görünüm modeli: ekranda görünecek HER ŞEYİ hesaplar ve DOM'a hiç dokunmaz.
+   Buradan bir istisna çıkarsa tek bir panel bile yazılmaz. Ekranda birbirine ait
+   olmayan sayıların yan yana durması bu ayrımla imkânsız hâle gelir. */
+function gorunumHesapla() {
   const manuel = durum.manuelCaplar !== null;
+  const prog = manuel
+    ? buildSchedule({ method: 'manual', diameters: durum.manuelCaplar,
+        alphaDeg: durum.alphaDeg, mu: durum.mu, K: durum.K, n: durum.n,
+        v0: durum.v0, anneals: durum.anneals })
+    : buildSchedule({ d0: durum.d0, dTarget: durum.dTarget, method: durum.method,
+        passes: durum.passes, alphaDeg: durum.alphaDeg, mu: durum.mu, K: durum.K,
+        n: durum.n, v0: durum.v0, anneals: durum.anneals });
 
-  // Manuel modda dağıtım yöntemi ve pas sayısı devre dışı.
-  yontemSecimi.disabled = manuel;
-  pasSayisiGirdisi.disabled = manuel;
-  // Zaten otomatik moddayken "Otomatik'e dön" işlevsizdir — pasif olsun.
-  $('otomatigeDon').disabled = manuel || durum.passes === null;
-  alanGirdileri.d0.disabled = manuel;
-  alanGirdileri.dTarget.disabled = manuel;
-  $('yontemGerekcesi').textContent = manuel ? '' : M.yontemGerekcesi[durum.method];
+  // Seçili pas artık yoksa (pas sayısı düştüyse) ilk pasa dönülür.
+  const secilenPas = prog.passes.find(x => x.no === durum.secilenPas) || prog.passes[0];
 
-  // Program değişmişse kalıp kesitindeki kaydırıcılar pasın kendi değerlerine döner.
-  let prog = null, hata = null;
-  try {
-    prog = manuel
-      ? buildSchedule({ method: 'manual', diameters: durum.manuelCaplar,
-          alphaDeg: durum.alphaDeg, mu: durum.mu, K: durum.K, n: durum.n,
-          v0: durum.v0, anneals: durum.anneals })
-      : buildSchedule({ d0: durum.d0, dTarget: durum.dTarget, method: durum.method,
-          passes: durum.passes, alphaDeg: durum.alphaDeg, mu: durum.mu, K: durum.K,
-          n: durum.n, v0: durum.v0, anneals: durum.anneals });
-  } catch (err) {
-    hata = err;
-  }
+  return {
+    manuel, prog, secilenPas,
+    // Belirsizlik bandı: açıksa köşe taraması burada bir kez yapılır.
+    bant: durum.bant.acik ? bandHesapla(prog) : null,
+    ozet: programOzeti(prog),
+    oneriler: oneriCumleleri(prog),
+    karsilastirmaB: durum.karsilastirmaA ? programOzeti(prog) : null,
+    tornadoEmniyet: duyarlilikEmniyet(secilenPas),
+    tornadoEnerji: duyarlilikEnerji(prog)
+  };
+}
 
-  $('hataKutusu').hidden = !hata;
-  if (hata) $('hataKutusu').textContent = M.hata.baslik + ' ' + hataMetni(hata);
+/* Hesaplanmış görünümü tek seferde yazar. Buradaki her satır saf DOM yazımıdır;
+   hesap yoktur, dolayısıyla yarıda kesilecek bir şey de yoktur. */
+function gorunumuYaz(g) {
+  const M = S();
+  sonGorunum = g;
+  sonProgram = g.prog;
+  sonBant = g.bant;
+  durum.secilenPas = g.secilenPas.no;
+
+  $('hataKutusu').hidden = true;
+  $('hataKutusu').textContent = '';
 
   // Pas sayısı ipucu: seçili yöntemin kendi otomatik değeri (K-07).
-  pasSayisiIpucu.textContent = prog
-    ? doldur(M.otomatikIpucu, { n: prog.autoPassCount })
-    : '';
+  pasSayisiIpucu.textContent = g.prog.autoPassCount === null
+    ? (durum.dil === 'tr' ? 'Otomatik hedefe 60 pasta ulaşılamıyor; elle seçilen program gösteriliyor.' : 'Automatic target not reached within 60 passes; showing the specified schedule.')
+    : doldur(M.otomatikIpucu, { n: g.prog.autoPassCount });
 
   // Bilgi notu: manuel mod veya yüksek toplam gerinimde ara tavlama hatırlatması.
-  if (manuel && prog) {
-    bilgiGoster(doldur(M.manuelAktif, { n: prog.passCount }));
-  } else if (prog && prog.epsTotal >= TAVLAMA_NOTU_ESIGI && durum.anneals.length === 0) {
-    bilgiGoster(doldur(M.tavlamaNotu, { eps: fmt(prog.epsTotal, 2) }));
+  if (g.manuel) {
+    bilgiGoster(doldur(M.manuelAktif, { n: g.prog.passCount }));
+  } else if (g.prog.epsTotal >= TAVLAMA_NOTU_ESIGI && durum.anneals.length === 0) {
+    bilgiGoster(doldur(M.tavlamaNotu, { eps: fmt(g.prog.epsTotal, 2) }));
   } else {
     bilgiGoster(null);
   }
 
-  ozetiYaz(prog);
-  paneliUygula();
-  $('ozetSeridi').hidden = !prog;
-  // Belirsizlik bandı: açıksa köşe taraması burada bir kez yapılır.
-  sonBant = (prog && durum.bant.acik) ? bandHesapla(prog) : null;
-  $('bantAlanlari').hidden = !durum.bant.acik;
+  ozetiYaz(g.prog);
+  $('ozetSeridi').hidden = false;
 
   bantKoselerCiz();
-  ozetSeridiniCiz(prog);
-  oneriyiCiz(prog);
-  karsilastirmayiCiz(prog);
-  tabloyuCiz(prog);
-  gorselleriCiz(prog);
-  duyarlilikCiz(prog);
-  if (prog) adresYaz();
-  dogrulamaPaneliCiz();
-  formulPaneliCiz();
-  kabullerPaneliCiz();
+  ozetSeridiniCiz(g);
+  oneriyiCiz(g);
+  karsilastirmayiCiz(g);
+  tabloyuCiz(g.prog);
+  gorselleriCiz(g);
+  duyarlilikCiz(g);
+  sonucDugmeleri(true);
+  adresYaz();
+}
+
+/* Sonucu dışa aktaran düğmeler. Program yokken hepsi kapanır: indirilecek,
+   yazdırılacak ya da paylaşılacak tutarlı bir hesap yok. */
+function sonucDugmeleri(etkin) {
+  for (const id of ['csvIndir', 'yazdir', 'baglantiKopyala']) $(id).disabled = !etkin;
+  $('karsilastirSabitle').disabled = !etkin;
+  if (!etkin) $('paylasimDurumu').hidden = true;
+}
+
+/* Tutarlı "hesaplanamadı" durumu: bütün paneller aynı anda boşalır.
+   Hiçbir etiket bir önceki hesaptan kalmaz — bayat sayı göstermektense hiçbir şey
+   göstermemek doğrudur. */
+function hesaplanamadiDurumu(hata) {
+  const M = S();
+  sonGorunum = null;
+  sonProgram = null;
+  sonBant = null;
+
+  $('hataKutusu').textContent = M.hata.baslik + ' ' + hataMetni(hata);
+  $('hataKutusu').hidden = false;
+  bilgiGoster(null);
+  pasSayisiIpucu.textContent = '';
+
+  ozetiYaz(null);
+  $('ozetSeridi').hidden = true;
+
+  bantKoselerCiz();
+  ozetSeridiniCiz(null);
+  oneriyiCiz(null);
+  karsilastirmayiCiz(null);
+  tabloyuCiz(null);
+  gorselleriCiz(null);
+  duyarlilikCiz(null);
+  sonucDugmeleri(false);
+}
+
+/* ==== GİRDİ KABUĞU / HESAP AYRIMI ====
+
+   kabuguTazele()  girdi tarafını yeniler: kutuların etkin-pasif durumu, alan
+                   hataları, bekleyen değişiklik göstergeleri. Sonuç panellerine
+                   HİÇ dokunmaz — bir tuş vuruşu buradan öteye geçemez.
+   girdiDegisti()  kullanıcı bir girdiyi değiştirdi. Tek yaptığı kabuğu tazelemek.
+   hesapla()       HESAPLA düğmesi. Taslağı durum'a geçirir ve ciz() ile ekranın
+                   tamamını bir kerede yeniler. Ekrandaki sayıları değiştiren
+                   TEK yol budur.
+   ciz()           durum'daki hesabı ekrana yazar. Girdi okumaz, taslağa bakmaz;
+                   dil, tema, seçili pas gibi görünüm değişimlerinde de çağrılır
+                   ve aynı sayıları üretir. */
+
+/* Girdi tarafı. Sonuç panelleri bu fonksiyonun görüş alanında değildir. */
+function kabuguTazele() {
+  const M = S();
+  // Kutular TASLAĞA göre kilitlenir: manuel listeyi alır almaz çap kutuları kapanır,
+  // hesap henüz yapılmamış olsa bile.
+  const manuel = taslak.manuelCaplar !== null;
+
+  yontemSecimi.disabled = manuel;
+  pasSayisiGirdisi.disabled = manuel;
+  // Zaten otomatik moddayken "Otomatik'e dön" işlevsizdir — pasif olsun.
+  $('otomatigeDon').disabled = manuel || taslak.passes === null;
+  alanGirdileri.d0.disabled = manuel;
+  alanGirdileri.dTarget.disabled = manuel;
+  $('yontemGerekcesi').textContent = manuel ? '' : M.yontemGerekcesi[taslak.method];
+  $('bantAlanlari').hidden = !taslak.bant.acik;
+  paneliUygula();
+  alanHatalariniYaz();
+  guvenPaneliniYaz();
+  hesaplaDurumunuYaz();
+}
+
+/* Bir girdi değişti. Ekranda tek bir sayı bile değişmez; yalnızca
+   "hesaplanmayı bekliyor" göstergeleri güncellenir. */
+function girdiDegisti() {
+  kabuguTazele();
+}
+
+/* HESAPLA. Taslak geçerliyse ekrana geçirilir ve her şey bir kerede yenilenir.
+   Dönüş: hesap çalıştırıldı mı. */
+function hesapla() {
+  bantGirdileriniDenetle();
+  if (gecersizAlanVar() || !bantGecerli) { kabuguTazele(); return false; }
+  taslagiDuruma();
+  programDegisti();          // kalıp kesiti kaydırıcıları pasın kendi değerine döner
+  sonHesapSaati = new Date();
+  ciz();
+  return true;
+}
+
+/* Bekleyen değişiklikleri atar: taslağı ekranda duran hesaba geri döndürür. */
+function degisiklikleriGeriAl() {
+  taslagiDurumdanAl();
+  alanlariYaz();
+  kurBantAlanlari();
+  manuelHatasiniYaz(null);
+  butunAlanlariDenetle();
+  bantGecerli = true;
+  ciz();                     // tavlama kutuları ve tablo taslaktan okur, yeniden çizilmeli
+}
+
+/* Saat damgası — "ekrandaki sayılar ne zaman üretildi". */
+function saatMetni(t) {
+  try {
+    return t.toLocaleTimeString(durum.dil === 'tr' ? 'tr-TR' : 'en-GB',
+      { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  } catch (err) {
+    return [t.getHours(), t.getMinutes(), t.getSeconds()]
+      .map(x => String(x).padStart(2, '0')).join(':');
+  }
+}
+
+/* Hesapla düğmesi, bekleyen şeridi ve yapışkan çubuk tek yerden yazılır:
+   üç göstergede farklı sayı görünmesi böylece imkânsızdır. */
+function hesaplaDurumunuYaz() {
+  const M = S();
+  const gecersiz = gecersizAlanVar() || !bantGecerli;
+  const degisenler = gecersiz ? [] : bekleyenDegisiklikler();
+  const bekliyor = degisenler.length > 0;
+
+  const dugme = $('hesaplaDugmesi');
+  dugme.textContent = M.hesaplaDugmesi;
+  dugme.disabled = gecersiz;
+  dugme.classList.toggle('bekliyor', bekliyor);
+
+  const satir = $('hesaplaDurumu');
+  satir.classList.remove('guncel', 'bekliyor', 'gecersiz');
+  if (gecersiz) {
+    satir.textContent = M.hesaplaGecersiz;
+    satir.classList.add('gecersiz');
+  } else if (bekliyor) {
+    satir.textContent = degisenler.length === 1
+      ? M.hesaplaBekliyorTek
+      : doldur(M.hesaplaBekliyor, { n: degisenler.length });
+    satir.classList.add('bekliyor');
+  } else {
+    satir.textContent = M.hesaplaGuncel + (sonHesapSaati
+      ? ' ' + doldur(M.hesapDamgasi, { saat: saatMetni(sonHesapSaati) }) : '');
+    satir.classList.add('guncel');
+  }
+  $('hesaplaKisayol').textContent = M.hesaplaIpucu;
+  $('hesaplaAciklama').textContent = M.hesaplaAciklama;
+
+  // Bekleyen değişiklik şeridi — hangi girdinin neye gittiği tek tek yazılır.
+  const kutu = $('bekleyenKutusu');
+  kutu.hidden = !bekliyor;
+  if (bekliyor) {
+    $('bekleyenBaslik').textContent = M.bekleyenBaslik;
+    $('bekleyenGovde').textContent = M.bekleyenGovde;
+    const liste = $('bekleyenListe');
+    liste.textContent = '';
+    for (const d of degisenler) {
+      const li = document.createElement('li');
+      li.textContent = d;
+      liste.appendChild(li);
+    }
+    $('bekleyenHesapla').textContent = M.bekleyenDugme;
+    $('bekleyenGeriAl').textContent = M.bekleyenGeriAl;
+  }
+
+  // Geçersiz girdi kutusu: alan hatası ya da bant sınırı.
+  const bayat = $('bayatKutusu');
+  if (!bantGecerli) { bayat.textContent = bantHataMetni(); bayat.hidden = false; }
+  else if (gecersizAlanVar()) { bayat.textContent = M.bayatUyarisi; bayat.hidden = false; }
+  else bayat.hidden = true;
+
+  // Sonuçlar girdiyle ayrıştığı sürece soluk durur: "bu sayılar yazdığın
+  // girdiye ait değil" rengin kendisiyle de söylenir.
+  for (const id of ['ozetBolumu', 'gorselBolumu', 'pasBolumu', 'bantBolumu', 'duyarlilikBolumu']) {
+    $(id).classList.toggle('bayat-sonuc', bekliyor || gecersiz);
+  }
+
+  // Yapışkan çubuk: sayfa uzun, girdi yukarıda. Yalnızca bekleyen varken görünür.
+  const cubuk = $('yapiskanCubuk');
+  cubuk.hidden = !bekliyor;
+  document.body.classList.toggle('cubuk-acik', bekliyor);
+  if (bekliyor) {
+    $('yapiskanMetin').textContent = degisenler.length === 1
+      ? M.yapiskanBekliyorTek
+      : doldur(M.yapiskanBekliyor, { n: degisenler.length });
+    $('yapiskanHesapla').textContent = M.hesaplaDugmesi;
+  }
+}
+
+/* Ekrandaki hesabı (durum) yazar. Sıra değişmez: DOM'a dokunmayan hesap, sonra
+   tek seferde yazım. Biri düşerse ekran tutarlı bir bütün olarak kalır;
+   yarısı yeni yarısı eski bir görünüm oluşamaz. */
+function ciz() {
+  kabuguTazele();
+
+  // 1) Hesap — DOM'a dokunmadan.
+  let g = null, hata = null;
+  try { g = gorunumHesapla(); } catch (err) { hata = err; }
+  if (!g) { hesaplanamadiDurumu(hata); return; }
+
+  // 2) Yazım. Beklenmedik bir çizim hatasında bile yarım görünüm bırakılmaz.
+  try { gorunumuYaz(g); } catch (err) { hesaplanamadiDurumu(err); }
 }
 
 /* Dar ekranda (< 720 px) pas tablosu karta dönüşür: 12 sütunlu yatay kaydırma
@@ -2730,13 +3519,15 @@ function kartlariCiz(prog) {
     kutu.className = 'kutu';
     const giris = document.createElement('input');
     giris.type = 'checkbox';
-    giris.checked = p.anneal;
+    // Kutu TASLAĞI gösterir: işaretlemek hesabı değil, bekleyen girdiyi değiştirir.
+    // Satırın "tavlandı" stili ise hesaplanmış programdan gelir (p.anneal).
+    giris.checked = taslak.anneals.includes(p.no);
     giris.setAttribute('aria-label', M.sutun.anneal + ' — ' + M.sutun.no + ' ' + p.no);
     giris.addEventListener('change', () => {
-      durum.anneals = giris.checked
-        ? durum.anneals.concat(p.no).sort((a, b) => a - b)
-        : durum.anneals.filter(x => x !== p.no);
-      ciz();
+      taslak.anneals = giris.checked
+        ? taslak.anneals.concat(p.no).sort((a, b) => a - b)
+        : taslak.anneals.filter(x => x !== p.no);
+      girdiDegisti();
     });
     const gorsel = document.createElement('span');
     gorsel.className = 'gorsel';
@@ -2847,18 +3638,19 @@ function tabloyuCiz(prog) {
 
       if (sinif) {
         td.className = sinif;
-        const durum = document.createElement('span');
-        durum.className = 'durum';
+        // Adı `durum` OLMAMALI: global durum nesnesini gölgeler.
+        const durumSarmali = document.createElement('span');
+        durumSarmali.className = 'durum';
         // Renk tek başına bilgi taşımaz: uyarı/tehlike hücrelerinde simge ve
         // ekran okuyucu için durum metni de var.
         if (sinif !== 'ok') {
           const sim = ikon(sinif === 'crit' ? 'kritik' : 'uyari');
           sim.setAttribute('aria-hidden', 'true');
-          durum.appendChild(sim);
+          durumSarmali.appendChild(sim);
         }
         const sayi = document.createElement('span');
         sayi.textContent = metin;
-        durum.appendChild(sayi);
+        durumSarmali.appendChild(sayi);
         const aciklama = durumMetni(s.k, s.k === 'safety' ? emniyetDegeri
                           : s.k === 'dT' ? dTDegeri : deger[s.k]);
         if (aciklama) {
@@ -2866,9 +3658,9 @@ function tabloyuCiz(prog) {
           const gizli = document.createElement('span');
           gizli.className = 'gorsel-gizli';
           gizli.textContent = ' — ' + aciklama;
-          durum.appendChild(gizli);
+          durumSarmali.appendChild(gizli);
         }
-        td.appendChild(durum);
+        td.appendChild(durumSarmali);
       } else {
         td.textContent = metin;
         if (s.k !== 'no' && s.k !== 'd1') td.className = 'ikincil';
@@ -2882,7 +3674,7 @@ function tabloyuCiz(prog) {
     lab.className = 'kutu';
     const kutu = document.createElement('input');
     kutu.type = 'checkbox';
-    kutu.checked = p.anneal;
+    kutu.checked = taslak.anneals.includes(p.no);   // taslak: işaret HESAPLA'yı bekler
     kutu.setAttribute('aria-label', S().sutun.anneal + ' — ' + S().sutun.no + ' ' + p.no);
     // Satıra dokununca kalıp kesiti o pası gösterir.
     tr.addEventListener('click', (olay) => {
@@ -2895,10 +3687,10 @@ function tabloyuCiz(prog) {
     if (p.no === durum.secilenPas) tr.classList.add('secili');
 
     kutu.addEventListener('change', () => {
-      durum.anneals = kutu.checked
-        ? durum.anneals.concat(p.no).sort((a, b) => a - b)
-        : durum.anneals.filter(x => x !== p.no);
-      ciz();
+      taslak.anneals = kutu.checked
+        ? taslak.anneals.concat(p.no).sort((a, b) => a - b)
+        : taslak.anneals.filter(x => x !== p.no);
+      girdiDegisti();
     });
     const gorsel = document.createElement('span');
     gorsel.className = 'gorsel';
@@ -2968,7 +3760,8 @@ function anaGrafikCiz(prog) {
   if (!prog) { kap.textContent = ''; return; }
 
   const p = prog.passes;
-  const enBuyuk = Math.max(...p.map(x => x.sigmaFOut));
+  const enBuyuk = Math.max(...p.flatMap(x => [x.sigmaFOut, x.sigmaD]),
+    ...(sonBant ? sonBant.paslar.map(x => x.sigmaD[1]) : []));
   const ust = Math.ceil(enBuyuk / 100) * 100;
   const { s, g, y } = svgKur(kap, 300, doldur(M.gorsel.anaAria, {
     n: p.length, sd0: fmt(p[0].sigmaD, 0), sd1: fmt(p[p.length - 1].sigmaD, 0),
@@ -3183,15 +3976,27 @@ function capProfiliCiz(prog) {
 /* ---- 4.4 Canlı kalıp kesiti ----
    Seçili pasın kalıbı. α ve r kaydırıcıları yalnızca bu görseli değiştirir:
    program etkilenmez, amaç geometrinin sezgisini vermek. */
-function kalipKesitiCiz(prog) {
+/* Parametre adı `g` OLAMAZ: svgKur'un döndürdüğü genişlik değişkeniyle çakışır. */
+function kalipKesitiCiz(gorunum) {
   const M = S();
   const kap = $('gorselKalip');
-  if (!prog) { kap.textContent = ''; return; }
+  // Program yoksa kesitin yanındaki etiketler de boşalır: kaydırıcı değerleri,
+  // pas etiketi ve özet cümlesi bir önceki hesaptan kalmaz.
+  if (!gorunum) {
+    kap.textContent = '';
+    $('kalipOzet').textContent = '';
+    $('kalipPasEtiketi').textContent = '';
+    $('kalipAlphaDeger').textContent = '';
+    $('kalipRDeger').textContent = '';
+    $('kalipAlpha').disabled = true;
+    $('kalipR').disabled = true;
+    return;
+  }
+  $('kalipAlpha').disabled = false;
+  $('kalipR').disabled = false;
 
-  const p = prog.passes;
   // Varsayılan: 1. pas — hem hattın başı hem de görünür bir çap değişimi (V5).
-  const secili = p.find(x => x.no === durum.secilenPas) || p[0];
-  durum.secilenPas = secili.no;
+  const secili = gorunum.secilenPas;
 
   const alpha = durum.kalipAlpha === null ? secili.alphaDeg : durum.kalipAlpha;
   const r = durum.kalipR === null ? secili.r : durum.kalipR;
@@ -3318,22 +4123,22 @@ function kalipKontrolleriYaz(secili, alpha, r) {
 
 /* Bütün görselleri çizer. Kaydırma/yeniden boyutlamada tekrar çağrılır. */
 let cizimBekliyor = false;
-function gorselleriCiz(prog) {
-  sonProgram = prog;
-  anaGrafikCiz(prog);
-  emniyetGrafigiCiz(prog);
-  capProfiliCiz(prog);
-  kalipKesitiCiz(prog);
+function gorselleriCiz(g) {
+  anaGrafikCiz(g && g.prog);
+  emniyetGrafigiCiz(g && g.prog);
+  capProfiliCiz(g && g.prog);
+  kalipKesitiCiz(g);
 }
 
-let sonProgram = null;
+let sonProgram = null;   // son YAZILAN programın kendisi; hesaplanan değil
+let sonGorunum = null;   // son yazılan görünüm modeli — yeniden çizim bundan
 let sonBant = null;
 function gorselleriYenidenCiz() {
   if (cizimBekliyor) return;
   cizimBekliyor = true;
   requestAnimationFrame(() => {
     cizimBekliyor = false;
-    if (sonProgram) gorselleriCiz(sonProgram);
+    if (sonGorunum) gorselleriCiz(sonGorunum);
   });
 }
 
@@ -3349,8 +4154,8 @@ function gorselleriYenidenCiz() {
 function programKopyasi(prog, K, n, mu) {
   const caplar = [prog.passes[0].d0].concat(prog.passes.map(x => x.d1));
   return buildSchedule({
-    method: 'manual', diameters: caplar, alphaDeg: durum.alphaDeg,
-    mu, K, n, v0: durum.v0, anneals: durum.anneals
+    method: 'manual', diameters: caplar, alphaDeg: prog.passes[0].alphaDeg,
+    mu, K, n, v0: prog.v0Line, anneals: prog.anneals
   });
 }
 
@@ -3358,9 +4163,15 @@ function programKopyasi(prog, K, n, mu) {
    her büyüklük için en küçük/en büyük alınır. Monte Carlo kullanılmaz. */
 function bandHesapla(prog) {
   const b = durum.bant;
+  for (const key of ['K', 'n', 'mu']) {
+    if (!bantAraligiGecerli(key, b[key])) {
+      throw new DrawingError('BANT_ARALIK', 'Belirsizlik sınırları geçersiz.', { alan: key });
+    }
+  }
+  // Köşe hesabı düşerse bant sessizce eksik kalmaz; hata yukarı çıkar ve
+  // "hesaplanamadı" durumu bütün panellere birlikte uygulanır (K-14).
   const koseler = [], koseBilgisi = [];
   for (const K of b.K) for (const n of b.n) for (const mu of b.mu) {
-    try {
       const o = programKopyasi(prog, K, n, mu);
       koseler.push(o);
       koseBilgisi.push({
@@ -3369,7 +4180,6 @@ function bandHesapla(prog) {
         guc: o.totalPower / 1000,
         enYuksekEmniyet: Math.max(...o.passes.map(x => x.safety))
       });
-    } catch (err) { /* köşe geçersizse atlanır */ }
   }
   if (koseler.length === 0) return null;
 
@@ -3433,9 +4243,11 @@ function duyarlilikEnerji(prog) {
   const enerjiOf = (o) => o.totalPower / o.massFlow / 3600;
   const kur = (degisim) => {
     const temel = {
-      d0: durum.d0, dTarget: durum.dTarget, method: durum.method, passes: prog.passCount,
-      alphaDeg: durum.alphaDeg, mu: durum.mu, K: durum.K, n: durum.n, v0: durum.v0,
-      anneals: durum.anneals
+      d0: prog.passes[0].d0, dTarget: prog.passes[prog.passCount - 1].d1,
+      method: prog.method, passes: prog.passCount,
+      diameters: prog.method === 'manual' ? [prog.passes[0].d0, ...prog.passes.map(p => p.d1)] : null,
+      alphaDeg: prog.passes[0].alphaDeg, mu: prog.passes[0].mu, K: prog.passes[0].K,
+      n: prog.passes[0].n, v0: prog.v0Line, anneals: prog.anneals
     };
     return enerjiOf(buildSchedule(Object.assign(temel, degisim)));
   };
@@ -3449,8 +4261,8 @@ function duyarlilikEnerji(prog) {
   return [
     olc('K', durum.bant.K[0], durum.bant.K[1], (v) => kur({ K: v })),
     olc('mu', durum.bant.mu[0], durum.bant.mu[1], (v) => kur({ mu: v })),
-    olc('alphaDeg', Math.max(2, durum.alphaDeg - 4), durum.alphaDeg + 4, (v) => kur({ alphaDeg: v })),
-    olc('passes', Math.max(2, prog.passCount - 3), prog.passCount + 3, (v) => kur({ passes: v }))
+    olc('alphaDeg', Math.max(1, prog.passes[0].alphaDeg - 4), Math.min(20, prog.passes[0].alphaDeg + 4), (v) => kur({ alphaDeg: v })),
+    prog.method === 'manual' ? null : olc('passes', Math.max(1, prog.passCount - 3), Math.min(MAX_PASSES, prog.passCount + 3), (v) => kur({ passes: v }))
   ].filter(Boolean).sort((x, y) => y.etki - x.etki);
 }
 
@@ -3473,17 +4285,52 @@ function kurBantAlanlari() {
       inp.type = 'text';
       inp.inputMode = 'decimal';
       inp.id = 'bant-' + anahtar + '-' + uc;
-      inp.value = fmt(durum.bant[anahtar][uc], basamak[anahtar]);
+      inp.value = girdiMetni(taslak.bant[anahtar][uc]);
       inp.setAttribute('aria-label', M.bantAlan[anahtar] + ' — ' + (uc === 0 ? M.bantAlt : M.bantUst));
       inp.addEventListener('input', () => {
-        const v = sayiOku(inp.value);
-        if (Number.isFinite(v)) { durum.bant[anahtar][uc] = v; ciz(); }
+        bantGirdileriniDenetle();
+        girdiDegisti();
+      });
+      inp.addEventListener('keydown', (olay) => {
+        if (olay.key === 'Enter') { olay.preventDefault(); hesapla(); }
       });
       ikili.appendChild(inp);
     });
     alan.append(etiket, ikili);
     kap.appendChild(alan);
   }
+}
+
+function bantAraligiGecerli(key, values) {
+  const s = GIRDI_SINIRLARI[key];
+  return Array.isArray(values) && values.length === 2 &&
+    values.every(v => Number.isFinite(v) && v >= s.alt && v <= s.ust) && values[0] <= values[1];
+}
+
+/* Bant sınırları geçerli mi — hesapla() bunu okuyup düğmeyi kapatır. */
+let bantGecerli = true;
+
+function bantGirdileriniDenetle() {
+  if (!durum.bant.acik) return true;
+  let valid = true;
+  const next = {};
+  for (const key of ['K', 'n', 'mu']) {
+    const fields = [$( 'bant-' + key + '-0'), $( 'bant-' + key + '-1')];
+    next[key] = fields.map(el => sayiOku(el.value));
+    const ok = bantAraligiGecerli(key, next[key]);
+    fields.forEach(el => { el.classList.toggle('gecersiz', !ok); el.setAttribute('aria-invalid', String(!ok)); });
+    valid = valid && ok;
+  }
+  // Geçerli sınırlar TASLAĞA yazılır; hesaba ancak HESAPLA ile girer.
+  if (valid) Object.assign(taslak.bant, next);
+  bantGecerli = valid;
+  return valid;
+}
+
+function bantHataMetni() {
+  return durum.dil === 'tr'
+    ? 'Belirsizlik sınırları geçersiz. Alt ≤ üst olmalı: K 100–1000 MPa, n 0,05–0,80, μ 0,005–0,30. Hesap yapılamaz.'
+    : 'Invalid uncertainty bounds. Lower ≤ upper: K 100–1000 MPa, n 0.05–0.80, μ 0.005–0.30. Cannot calculate.';
 }
 
 /* Köşe tablosu: sekiz köşenin hepsi parametreleriyle birlikte. Bandın hangi
@@ -3549,6 +4396,30 @@ function sekmeSec(ad) {
   }
 }
 
+/* ==== GÜVEN KATMANI ====
+   Doğrulama testleri sabit girdilerle (REFERANS_GIRDI, SENARYOLAR) çalışır;
+   sonuçları kullanıcı girdisine bağlı DEĞİLDİR. Formüller ve kabuller de
+   sabittir. Bu yüzden testler bir kez koşar, paneller yalnızca dil değişince
+   yeniden yazılır — her tuş vuruşunda değil. */
+let dogrulamaSonucu = null;   // runValidation() çıktısı; bir kez hesaplanır
+let guvenPaneliDili = null;   // panellerin hâlihazırda yazılı olduğu dil
+
+function dogrulamaSonucunuAl() {
+  if (dogrulamaSonucu === null) {
+    try { dogrulamaSonucu = runValidation(); }
+    catch (err) { dogrulamaSonucu = []; }   // çekirdek hatası hata kutusunda görünür
+  }
+  return dogrulamaSonucu;
+}
+
+function guvenPaneliniYaz() {
+  if (guvenPaneliDili === durum.dil) return;
+  guvenPaneliDili = durum.dil;
+  dogrulamaPaneliCiz();
+  formulPaneliCiz();
+  kabullerPaneliCiz();
+}
+
 /* Doğrulama paneli: testler + referans pas karşılaştırması. */
 function dogrulamaPaneliCiz() {
   const M = S();
@@ -3567,8 +4438,7 @@ function dogrulamaPaneliCiz() {
 
   const govde = $('testGovde');
   govde.textContent = '';
-  let testler = [];
-  try { testler = runValidation(); } catch (err) { /* çekirdek hatası hata kutusunda görünür */ }
+  const testler = dogrulamaSonucunuAl();
 
   for (const t of testler) {
     const tr = document.createElement('tr');
@@ -3584,6 +4454,9 @@ function dogrulamaPaneliCiz() {
       return td;
     };
     rozet.className = 'durum-hucresi';
+    // Beklenen/bulunan sütunları dilden bağımsızdır: yalnız kod, sayı ve simge
+    // taşırlar. Testin adı ve açıklaması sözlükten gelir; çevrilecek metin
+    // burada dize değiştirmeyle üretilmez.
     tr.append(hucre(t.id, 'mono'), hucre(M.test[t.id] ? M.test[t.id].ad : t.ad),
       hucre(M.test[t.id] ? M.test[t.id].aciklama : t.aciklama, 'aciklama'),
       hucre(t.beklenen, 'mono'), hucre(t.bulunan, 'mono'), rozet);
@@ -3594,13 +4467,16 @@ function dogrulamaPaneliCiz() {
   });
 
   // Referans pas: beklenen, hesaplanan, sapma
+  // Beklenen değerler kayıtlı referanslardır (regresyon koruması). 70 MPa tabanı
+  // ortalama akmaya da uygulandığında gerilme kaynaklı büyüklükler %0,20 yukarı
+  // taşındı; aşağıdaki sayılar o düzeltmeden sonrasını gösterir.
   const ref = calcPass(REFERANS_GIRDI);
   const satirlar = [
-    ['r', 0.1990, ref.r, 4], ['epsPas', 0.2218, ref.epsPas, 4],
-    ['sigmaBar', 196.7, ref.sigmaBar, 1], ['sigmaFOut', 265.5, ref.sigmaFOut, 1],
-    ['sigmaD', 77.6, ref.sigmaD, 1], ['safety', 0.292, ref.safety, 3],
+    ['r', 0.1990, ref.r, 4], ['epsPas', 0.2219, ref.epsPas, 4],
+    ['sigmaBar', 197.2, ref.sigmaBar, 1], ['sigmaFOut', 265.7, ref.sigmaFOut, 1],
+    ['sigmaD', 77.8, ref.sigmaD, 1], ['safety', 0.293, ref.safety, 3],
     ['delta', 2.52, ref.delta, 2], ['dT', 22.5, ref.dT, 1],
-    ['A1', 40.26, ref.A1, 2], ['F', 3123, ref.F, 0], ['v1', 4.99, ref.v1, 2]
+    ['A1', 40.26, ref.A1, 2], ['F', 3131, ref.F, 0], ['v1', 4.99, ref.v1, 2]
   ];
   const refGovde = $('referansGovde');
   refGovde.textContent = '';
@@ -3686,14 +4562,19 @@ function tornadoCiz(kapId, veri, birim, basamak, ariaEtiket) {
   });
 }
 
-function duyarlilikCiz(prog) {
+function duyarlilikCiz(g) {
   const M = S();
-  if (!prog) { $('tornadoEmniyet').textContent = ''; $('tornadoEnerji').textContent = ''; return; }
-  const pas = prog.passes.find(x => x.no === durum.secilenPas) || prog.passes[0];
+  if (!g) {
+    $('tornadoEmniyet').textContent = '';
+    $('tornadoEnerji').textContent = '';
+    $('tornadoEmniyetBaslik').textContent = '';   // başlık da bayat kalmasın
+    return;
+  }
+  const pas = g.secilenPas;
   $('tornadoEmniyetBaslik').textContent = doldur(M.duyarlilik.emniyetBaslik, { pas: pas.no });
-  tornadoCiz('tornadoEmniyet', duyarlilikEmniyet(pas), '', 3,
+  tornadoCiz('tornadoEmniyet', g.tornadoEmniyet, '', 3,
     doldur(M.duyarlilik.emniyetAria, { pas: pas.no }));
-  tornadoCiz('tornadoEnerji', duyarlilikEnerji(prog), ' kWh/t', 1, M.duyarlilik.enerjiAria);
+  tornadoCiz('tornadoEnerji', g.tornadoEnerji, ' kWh/t', 1, M.duyarlilik.enerjiAria);
 }
 
 /* ==== TEMA VE TERCİHLER ====
@@ -3734,10 +4615,11 @@ function temaDegistir() {
 
 function adresYaz() {
   const p = new URLSearchParams();
-  const s = (x, b) => String(Number(x.toFixed(b)));
-  p.set('d0', s(durum.d0, 3)); p.set('d1', s(durum.dTarget, 3));
-  p.set('a', s(durum.alphaDeg, 2)); p.set('mu', s(durum.mu, 4));
-  p.set('K', s(durum.K, 1)); p.set('n', s(durum.n, 3)); p.set('v0', s(durum.v0, 2));
+  // Yuvarlama yok: paylaşılan bağlantı girilen değeri aynen taşır.
+  const s = String;
+  p.set('d0', s(durum.d0)); p.set('d1', s(durum.dTarget));
+  p.set('a', s(durum.alphaDeg)); p.set('mu', s(durum.mu));
+  p.set('K', s(durum.K)); p.set('n', s(durum.n)); p.set('v0', s(durum.v0));
   p.set('m', durum.method);
   if (durum.passes !== null) p.set('N', String(durum.passes));
   // Liste ayırıcısı '_': ondalık noktayla çakışmaz.
@@ -3751,7 +4633,9 @@ function adresYaz() {
     p.set('bn', durum.bant.n.join('_'));
     p.set('bmu', durum.bant.mu.join('_'));
   }
-  const adres = location.origin + location.pathname + '?' + p.toString();
+  const url = new URL(location.href);
+  url.search = p.toString();
+  const adres = url.href;
   try { history.replaceState(null, '', adres); } catch (err) { /* file:// altında yok sayılır */ }
   return adres;
 }
@@ -3760,22 +4644,31 @@ function adresYaz() {
 function adrestenOku() {
   const p = new URLSearchParams(location.search);
   if ([...p.keys()].length === 0) return false;
+  // Adresten gelen değer de sınırlara tabidir: elle kurulmuş bir bağlantı
+  // sayfayı geçersiz bir durumla açamaz, sınır dışı değer sessizce yok sayılır
+  // ve varsayılan yerinde kalır.
   const sayi = (anahtar, alan) => {
-    const v = parseFloat(p.get(anahtar));
-    if (Number.isFinite(v) && v > 0) durum[alan] = v;
+    const v = sayiOku(p.get(anahtar));
+    if (!Number.isFinite(v)) return;
+    const s = girdiSiniri(alan, durum.d0);
+    if (v >= s.alt && v <= s.ust) durum[alan] = v;
   };
   sayi('d0', 'd0'); sayi('d1', 'dTarget'); sayi('a', 'alphaDeg'); sayi('mu', 'mu');
   sayi('K', 'K'); sayi('n', 'n'); sayi('v0', 'v0');
   const yontem = p.get('m');
   if (['equalStrain', 'tapered', 'equalSafety'].includes(yontem)) durum.method = yontem;
-  const N = parseInt(p.get('N'), 10);
-  durum.passes = Number.isInteger(N) && N > 0 ? N : null;
+  const N = sayiOku(p.get('N'));
+  durum.passes = Number.isInteger(N) && N > 0 && N <= MAX_PASSES ? N : null;
   const an = p.get('an');
   durum.anneals = an ? an.split('_').map(Number).filter(Number.isInteger) : [];
   const dia = p.get('dia');
   if (dia) {
-    const caplar = dia.split('_').map(Number).filter(x => Number.isFinite(x) && x > 0);
-    if (caplar.length >= 2) durum.manuelCaplar = caplar;
+    try {
+      const caplar = parseManualSchedule(dia.split('_').join(' '));
+      if (caplar.length > MAX_PASSES + 1) throw new Error('pass limit');
+      durum.manuelCaplar = caplar;
+      durum.d0 = caplar[0]; durum.dTarget = caplar[caplar.length - 1];
+    } catch (err) { durum.manuelCaplar = null; }
   }
   const dil = p.get('lang');
   if (dil === 'tr' || dil === 'en') durum.dil = dil;
@@ -3785,7 +4678,7 @@ function adrestenOku() {
     durum.bant.acik = true;
     for (const [anahtar, param] of [['K', 'bK'], ['n', 'bn'], ['mu', 'bmu']]) {
       const uc = (p.get(param) || '').split('_').map(Number);
-      if (uc.length === 2 && uc.every(Number.isFinite)) durum.bant[anahtar] = uc;
+      if (bantAraligiGecerli(anahtar, uc)) durum.bant[anahtar] = uc;
     }
   }
   return true;
@@ -3820,13 +4713,18 @@ function csvUret(prog) {
   };
 
   satirlar.push([M.baslik].map(alan).join(ayirici));
-  satirlar.push([M.alan.d0, fmt(durum.d0, 2) + ' mm', M.alan.dTarget, fmt(durum.dTarget, 2) + ' mm',
-                 M.alan.method, durum.manuelCaplar ? M.ozetManuel : M.ozetYontem[durum.method],
+  const first = prog.passes[0], last = prog.passes[prog.passCount - 1];
+  satirlar.push([M.alan.d0, girdiMetni(first.d0) + ' mm', M.alan.dTarget, girdiMetni(last.d1) + ' mm',
+                 M.alan.method, prog.method === 'manual' ? M.ozetManuel : M.ozetYontem[prog.method],
                  M.alan.passes, fmt(prog.passCount, 0)].map(alan).join(ayirici));
-  satirlar.push([M.alan.alphaDeg, fmt(durum.alphaDeg, 1) + '°', M.alan.mu, fmt(durum.mu, 3),
-                 M.alan.K, fmt(durum.K, 0) + ' MPa', M.alan.n, fmt(durum.n, 2),
-                 M.alan.v0, fmt(durum.v0, 1) + ' m/s'].map(alan).join(ayirici));
+  satirlar.push([M.alan.alphaDeg, girdiMetni(first.alphaDeg) + '°', M.alan.mu, girdiMetni(first.mu),
+                 M.alan.K, girdiMetni(first.K) + ' MPa', M.alan.n, girdiMetni(first.n),
+                 M.alan.v0, girdiMetni(prog.v0Line) + ' m/s'].map(alan).join(ayirici));
   satirlar.push(alan(sonBant ? M.csvBant : M.csvMerkez));
+  if (sonBant) {
+    for (const key of ['K', 'n', 'mu']) satirlar.push([key, ...durum.bant[key].map(girdiMetni)].map(alan).join(ayirici));
+  }
+  satirlar.push(alan(durum.dil === 'tr' ? 'Ön tasarım: üretim onayı değildir. Oran = çekme / çıkış akma gerilmesi; düşük olması daha iyidir.' : 'Preliminary design, not production approval. Ratio = drawing / exit flow stress; lower is better.'));
   satirlar.push('');
 
   const basliklar = SUTUNLAR.map(c => M.sutun[c.k] + (c.birim ? ' (' + c.birim + ')' : ''))
@@ -3875,20 +4773,24 @@ function baslat() {
   kurTabloBasligi();
   $('dilTR').addEventListener('click', () => dilDegistir('tr'));
   $('dilEN').addEventListener('click', () => dilDegistir('en'));
+  // Hesabı başlatan üç düğme de aynı fonksiyonu çağırır.
+  $('hesaplaDugmesi').addEventListener('click', hesapla);
+  $('bekleyenHesapla').addEventListener('click', hesapla);
+  $('yapiskanHesapla').addEventListener('click', hesapla);
+  $('bekleyenGeriAl').addEventListener('click', degisiklikleriGeriAl);
+  // Ctrl/Cmd+Enter: sayfanın her yerinden hesaplar.
+  document.addEventListener('keydown', (olay) => {
+    if (olay.key === 'Enter' && (olay.ctrlKey || olay.metaKey)) { olay.preventDefault(); hesapla(); }
+  });
   $('manuelHesapla').addEventListener('click', manuelHesapla);
   $('manuelTemizle').addEventListener('click', manuelTemizle);
   $('panelKatla').addEventListener('click', panelKatlaDegistir);
+  // A olarak sabitlenen, ekranda o an YAZILI olan programın özetidir. Yeniden
+  // hesaplanmaz: kullanıcının gördüğü sayı ile sabitlenen sayı aynı olmalı.
   $('karsilastirSabitle').addEventListener('click', () => {
-    try {
-      const prog = durum.manuelCaplar
-        ? buildSchedule({ method: 'manual', diameters: durum.manuelCaplar, alphaDeg: durum.alphaDeg,
-            mu: durum.mu, K: durum.K, n: durum.n, v0: durum.v0, anneals: durum.anneals })
-        : buildSchedule({ d0: durum.d0, dTarget: durum.dTarget, method: durum.method,
-            passes: durum.passes, alphaDeg: durum.alphaDeg, mu: durum.mu, K: durum.K,
-            n: durum.n, v0: durum.v0, anneals: durum.anneals });
-      durum.karsilastirmaA = programOzeti(prog);
-      ciz();
-    } catch (err) { hataGoster(hataMetni(err)); }
+    if (!sonGorunum) return;
+    durum.karsilastirmaA = sonGorunum.ozet;
+    ciz();
   });
   $('karsilastirKapat').addEventListener('click', () => {
     durum.karsilastirmaA = null;
@@ -3906,8 +4808,8 @@ function baslat() {
   window.addEventListener('resize', gorselleriYenidenCiz);
   DAR_EKRAN.addEventListener('change', () => ciz());
   $('bantAnahtari').addEventListener('change', () => {
-    durum.bant.acik = $('bantAnahtari').checked;
-    ciz();
+    taslak.bant.acik = $('bantAnahtari').checked;
+    girdiDegisti();
   });
   for (const d of document.querySelectorAll('[data-sekme]')) {
     d.addEventListener('click', () => sekmeSec(d.dataset.sekme));
@@ -3939,7 +4841,10 @@ function baslat() {
   temaUygula();
 
   // Sayfa boş açılmaz: adreste bir şey yoksa "Otomotiv ince" yüklenir.
-  if (adresten) { alanlariYaz(); ciz(); } else { senaryoYukle(SENARYOLAR[0]); }
+  // Açılıştaki tek hesap buradadır; bundan sonrası kullanıcının düğmesine bağlıdır.
+  if (adresten) { taslagiDurumdanAl(); alanlariYaz(); butunAlanlariDenetle(); }
+  else { senaryoYukle(SENARYOLAR[0]); }
+  hesapla();
 }
 
 baslat();

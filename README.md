@@ -1,14 +1,14 @@
 # Tel Çekme Pas Programı Hesaplayıcısı
 
-Bakır tel çekmede kopma riskini belirleyen şeyin pekleşme katsayısı değil **sürtünme**
-olduğunu gösteren; pas programını kuran ve sonucun belirsizliğini onunla birlikte
-raporlayan bir ön tasarım aracı.
+Bakır tel çekme pas programını, çekme gerilmesini, mekanik gücü ve parametre
+belirsizliğini hesaplayan bir **ön tasarım aracı**. Deneysel olarak kalibre edilmiş
+bir kırılma veya üretim onay sistemi değildir.
 
 Bulgu şu: emniyet oranı `σ_d / σ_f` ifadesinde pekleşme katsayısı `K` sadeleşir
 (iki terim de `K` ile doğrusaldır). Literatürdeki en geniş belirsizlik ETP bakırın
 `K` değerindedir — 315–530 MPa, yani ±%26 — ama bu belirsizlik kopma riskini
-**hiç** etkilemez; yalnızca kuvveti, gücü ve sıcaklık artışını oranlı biçimde
-ölçekler. Riski belirleyen, çoğu hesapta sabit varsayılan sürtünme katsayısıdır.
+bu modelde, **70 MPa akma tabanı devre dışıyken**, gerilme/akma oranını etkilemez;
+kuvveti, gücü ve sıcaklık artışını oranlı biçimde ölçekler. Sürtünme de bu oranı etkiler.
 Araç bunu köşe taraması tablosunda doğrudan gösterir: `μ` 0,03'ten 0,08'e çıkınca
 aynı program 0,451'den 0,571'e, yani güvenli bölgeden sınırın üstüne geçer.
 
@@ -39,6 +39,26 @@ Bedeli de görünür: 11 pasta delta 1,32'ye (aşırı sürtünme sınırı) ve 
 100,3 °C'ye çıkar, araç ikisini de uyarı olarak gösterir ve gereken kalıp açısını
 (9,1°) söyler.
 
+## Hesap ne zaman çalışır
+
+Ekrandaki sayıları değiştiren tek şey **HESAPLA** düğmesidir. Girdi yazmak,
+hazır senaryo seçmek, pas sayısını veya yöntemi değiştirmek, ara tavlama
+işaretlemek, belirsizlik bandını açmak, manuel çap listesi yüklemek — hiçbiri
+tabloyu tek başına değiştirmez. Girdi ile ekrandaki hesap ayrıştığı anda araç
+bunu saklamaz: hangi girdinin hangi değerden hangi değere gittiğini tek tek
+yazar, sonuç bölümleri soluklaşır ve sayfanın altında bir "hesapla" çubuğu
+belirir. Kısayol: kutuda Enter, her yerde Ctrl+Enter.
+
+Bunun sebebi modelin kendisi. Bazı girdiler bazı sonuçları gerçekten hiç
+değiştirmez — `K` emniyet oranında sadeleşir, hız gerilmeyi değil gücü etkiler,
+bant uçları nominal girdilerden ayrıdır. Hesap kendiliğinden koşarken bu ikisi
+birbirine karışıyordu: sayının kıpırdamaması "bu girdi etkisiz" mi demekti,
+"arayüz almadı" mı? Artık ayrım net: ekrandaki her sayı, panelde yazılı olan ve
+adres çubuğunda taşınan girdilerle hesaplanmıştır. Gerekçesi: [`docs/kararlar.md`](docs/kararlar.md) K-16.
+
+Dil, tema, tabloda pas seçme ve A/B karşılaştırması bu kuralın dışındadır;
+sonucu değiştirmedikleri için düğme beklemezler.
+
 ## Yaklaşım
 
 - **Çekme gerilmesi:** Siebel yaklaşımı — şekil verme + sürtünme + fazlalık iş
@@ -51,7 +71,7 @@ Bedeli de görünür: 11 pasta delta 1,32'ye (aşırı sürtünme sınırı) ve 
 
 ## Doğrulama
 
-Sekiz test sayfa her açıldığında canlı çalışır:
+Dokuz test sayfa her açıldığında canlı çalışır:
 
 | # | Test | Beklenen |
 |---|---|---|
@@ -62,11 +82,23 @@ Sekiz test sayfa her açıldığında canlı çalışır:
 | T5 | Otomatik pas sayısı — eşit gerinim | 16 · 11 · 25 |
 | T6 | Otomatik pas sayısı — eşit emniyet | 11 · 8 · 17 |
 | T7 | Toplam iş / ideal iş | 1,30 – 2,50 (bulunan 1,78) |
-| T8 | K değişmezliği | emniyet oranı `K` ile değişmemeli |
+| T8 | K değişmezliğinin koşulu | oran, taban devre dışıyken ve tamamen taban üzerindeyken `K` ile değişmemeli; geçiş bölgesinde değişmeli |
+| T9 | Sınır denetimi | aralık dışı girdi (negatif `μ`, `K = 0`, `n = 1,5`, hedef > `d0`) reddedilmeli |
+
+Girdi yazmanın ekrandaki hesabı değiştirmediği, HESAPLA'nın taslağı eksiksiz
+geçirdiği ve her hesap girdisinin bekleyen değişiklik listesinde tam bir kez
+göründüğü `tests/audit.cjs` içinde ayrıca denetlenir.
 
 Referans pas (`d0 = 8,00` → `d1 = 7,16`, `α = 8°`, `μ = 0,05`, `K = 450`, `n = 0,35`):
-`σ_d = 77,6 MPa`, emniyet `0,292`, delta `2,52`, `ΔT = 22,5 °C`. En büyük sapma %0,07.
+`σ_d = 77,8 MPa`, emniyet `0,293`, delta `2,52`, `ΔT = 22,5 °C`. En büyük sapma %0,03.
 Ayrıntı: [`docs/dogrulama.md`](docs/dogrulama.md).
+
+Testler ve rapor, Node.js dışında bağımlılık olmadan yerelde koşar:
+
+```
+node tests/audit.cjs      # otomatik kontroller (yerleşik testleri de koşar)
+python tools/rapor.py     # teknik inceleme raporunu koddan üretir
+```
 
 ## Kabuller ve sınırlar
 
@@ -88,9 +120,26 @@ Technology*) · Avitzur (*Metal Forming*) · Wistreich (*The Fundamentals of Wir
 gerekmez; tek istisna yazı tiplerinin çevrimiçi yüklenmesidir, o da olmazsa sistem
 yazı tipleriyle açılır.
 
-Arayüz Türkçe ve İngilizce. Girdiler adres çubuğunda taşınır, yani bir senaryoyu
-bağlantı olarak paylaşabilirsiniz. Pas tablosu CSV olarak indirilir; yazdırma çıktısı
-iki sayfadır (mühendislik özeti + belirsizlik, doğrulama ve kabuller).
+Arayüz Türkçe ve İngilizce. Girdiler yuvarlanmadan adres çubuğunda taşınır, yani bir senaryoyu
+bağlantı olarak paylaşabilirsiniz; adres yalnızca hesaplandığında güncellendiği için
+paylaşılan bağlantı her zaman gerçekten hesaplanmış bir programı taşır. Pas tablosu CSV olarak indirilir; yazdırma çıktısı
+pas sayısına göre uzar (mühendislik özeti + belirsizlik, doğrulama ve kabuller).
+
+## 7 Eylül 2026 incelemesi
+
+Giriş/sonuç tutarlılığı, belirsizlik sınırları, manuel program duyarlılığı, URL
+hassasiyeti ve dışa aktarma düzeltildi. Kademeli azalan otomatik program artık
+her pasta %20 kesit azalma sınırını denetler (otomotiv örneği: 20 pas).
+
+Tekrarlanabilir test: `node tests/audit.cjs`. Testler bağımlılık veya ağ erişimi
+gerektirmez. Yerleşik 9 testin yanı sıra regresyon kontrolleri ve sabit tohumlu
+500 girdilik tarama çalışır. Rapor: `output/pdf/tel-cekme-inceleme.pdf`.
+
+**Girdi değiştiği hâlde oran neden sabit kalabilir?** K, taban devre dışıyken
+gerilme/akma oranında sadeleşir. Hız bu modelde gerilmeyi değil güç ve debiyi
+değiştirir. Belirsizlik bandının alt/üst girdileri nominal girdilerden ayrıdır;
+bant açıkken nominal sonuç ayrıca gösterilir. Bunlar güncellenmeyen giriş
+hatasıyla karıştırılmamalıdır.
 
 ## Depo yapısı
 

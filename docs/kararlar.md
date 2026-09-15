@@ -1,5 +1,15 @@
 # Karar Kaydı
 
+## 7 Eylül 2026 inceleme kararları
+
+Görünen girdi ile hesap girdisi aynı hassasiyette tutulur; URL sessizce yuvarlamaz.
+Geçersiz girişte son hesap uyarıyla korunur, dışa aktarma ve sabitleme kapanır.
+Belirsizlik alt/üst girdileri ayrı doğrulanır, nominal sonuç bantla birlikte gösterilir.
+K/μ/n/hız/açı değişikliği ara tavlamaları silmez; çap/pas sayısı değişikliği sıfırlar.
+Manuel programın duyarlılığı aynı çap dizisinde hesaplanır; pas sayısı çubuğu yoktur.
+0,50/0,60 eşikleri fiziksel kopma sınırı olarak sunulmaz; 70 MPa tabanı ve
+köşe taraması sınırları görünür biçimde belirtilir. Önceki kararlar aşağıda korunmuştur.
+
 Bu araçta, ilk şartnamede yazmayan ya da geliştirme sırasında değişen mühendislik
 kararları ve gerekçeleri. Kod bu kararlara uyar; bir karar değişirse burası da
 güncellenir.
@@ -24,6 +34,9 @@ Manuel çap dizisi girildiğinde alan devre dışı — N diziden gelir.
 | Hazır senaryo düğmesi | otomatiğe döner |
 | Başlangıç veya hedef çap elle değiştirildi | otomatiğe döner |
 | Pas dağıtım yöntemi değiştirildi | **korunur** |
+
+K-16'dan sonra bu kural taslak girdiye uygulanır: N burada sayılan olaylarda
+hemen değişir, ama yeni N'e göre hesap HESAPLA'ya basılınca yapılır.
 
 Yöntem değişiminde N korunur, çünkü manuel N'in varlık sebebi sabit kalıp sayısını
 sabit tutup yöntemleri karşılaştırmaktır. Kullanıcı 13 girip yöntem değiştirdiğinde
@@ -240,6 +253,149 @@ seçilen programın kötü sürtünmede 0,571'e çıktığı, yani 0,50 sınır�
 Ayrıca bandın **hangi köşeden geldiği** arayüzde yazılır: sekiz köşenin tamamı
 parametreleriyle listelenir, alt ve üst uç işaretlenir. Kullanıcı böylece önce hangi
 varsayımı netleştirmesi gerektiğini görür.
+
+## K-14 · Ekranda tek doğru kaynak — `ciz()` ya hep ya hiç
+**Tarih:** 2026-09-07
+
+Dört ayrı arayüz hatası bildirildi; dördü de aynı kökten geliyordu: **ekranda o an
+ne gösterildiğinin tek bir doğru kaynağı yoktu.** `ciz()` hesapla DOM yazımını iç
+içe yapıyordu, paneller birbirinden bağımsız yazılıyordu.
+
+| Belirti | Görünen |
+|---|---|
+| Kalıp kesiti kaydırıcıları | Bir kez dokununca donuyor; senaryo değişse bile kesit tabloya ait olmayan sayıyı gösteriyor |
+| `esitBolge` çökmesi | Negatif emniyette bölge boş kalıyor, istisna `ciz()`'i yarıda kesiyor: özet yeni, tablo ve grafikler eski |
+| Hata durumu | Kalıp özeti, pas etiketi, kaydırıcı değerleri, tornado başlığı bir önceki hesaptan kalıyor |
+| Geçersiz girdi | Sessizce yutuluyor, eski sonuç güncelmiş gibi duruyor |
+
+Bu, aracın en çok savunması gereken şeyi — **tutarlılığı** — vuruyordu.
+
+**Yapısal karar:** `ciz()` üç aşamaya ayrıldı ve aşamalar arasında sızıntı yok.
+
+1. **Girdi denetimi** — sınır dışı alan varsa hesap hiç yapılmaz
+2. **`gorunumHesapla()`** — ekranda görünecek her şeyi hesaplar, **DOM'a hiç dokunmaz**
+3. **`gorunumuYaz(g)`** — saf DOM yazımı, içinde hesap yok
+
+Herhangi bir aşama düşerse `hesaplanamadiDurumu()` bütün panelleri **birlikte**
+boşaltır. 3. aşama da `try/catch` içindedir: beklenmedik bir çizim hatasında bile
+ekran yarım kalmaz, tutarlı hata durumuna düşer. Yarısı yeni yarısı eski bir görünüm
+artık üretilemez.
+
+**Türev durum tek kapıdan:** kalıp kesiti kaydırıcılarını sıfırlayan `programDegisti()`
+eklendi ve programı değiştiren dokuz yolun hepsi oradan geçiyor (girdi, senaryo,
+yöntem, pas sayısı, otomatiğe dön, tavlama kutuları ×2, manuel hesapla, manuel
+temizle). Kaydırıcı yalnızca kullanıcı ona dokunduğu sürece geçerlidir.
+
+**Sınırını bilen model:** `GIRDI_SINIRLARI` çekirdeğe kondu (aralıklar
+`dogrulama.md`'de). Siebel yaklaşımı ve Hollomon pekleşmesi bu aralıkların dışında
+fiziksel anlamını yitirir — negatif sürtünme çekme gerilmesini eksiye düşürür ve
+`esitBolge`'yi çökerten şey de buydu. Kök çözüm `esitBolge`'yi yamamak değil, kapıyı
+girişte kapatmaktı; `esitBolge` yine de savunmacı hâle getirildi (bölge boşsa `null`).
+Kural tek yerde durur: arayüz ve **T9** aynı `girdiDenetimi`'ni çağırır.
+
+Geçersiz girdide **eski sonuçlar silinmez** — silinirse kullanıcı bir tuş hatasıyla
+bütün ekranı kaybeder. Korunur, ama üstüne "güncel değil" uyarısı konur. Sessizce
+eski değeri güncelmiş gibi göstermek en kötüsüdür.
+
+**Performans bir tutarlılık meselesi:** `runValidation()` sabit girdilerle çalışır,
+sonucu asla değişmez; her tuş vuruşunda koşuyordu ve çizimin %76'sını yiyordu.
+Bir kez koşuyor. Formül ve kabul panelleri yalnızca dil değişince yeniden yazılıyor.
+Tuş başına **38 ms → 11 ms**.
+
+**Kanonik kırmızı vaka (K-09) doğrulandı:** bu tur sonrası `μ = 0,15` + 12 pas ile
+12 pasın 11'i kırmızı, en yüksek emniyet **0,690**, ilk kırmızı pas 2, maks ΔT
+139,8 °C — altı satırın tamamı ve komşu değerler birebir aynı. Çekirdek değişmedi,
+değişmemeliydi de.
+
+## K-15 · 70 MPa tabanı ortalama akma integraline de uygulanır
+**Tarih:** 2026-09-08
+
+Araç iki farklı akma gerilmesi tanımını aynı orana koyuyordu. `sigmaFOut` tabana
+tabiydi (`max(K·εⁿ, 70)`), pas boyunca ortalama akma `sigmaBar` değildi. Yani payda
+"bakır 70 MPa'nın altında akamaz" derken, pay o işi sanki akabilirmiş gibi
+hesaplıyordu. Bu, aracın kendi M-1 kabulüyle çelişiyordu.
+
+**Ne kadar önemliydi:** normal kullanımda küçük, kenarda büyük.
+
+| Pas başına kesit azalma | `sigmaBar` eksik tahmini |
+|---|---|
+| %20 (varsayılan senaryolar) | %0,20 |
+| %10 | %0,55 — projenin kendi %0,5 toleransını aşıyor |
+| %5 | %1,45 |
+| %2 | %4,93 |
+| %0,5 | %25,4 |
+
+**Karar:** taban her iki yerde de geçerlidir. `ε* = (70/K)^(1/n)` kesişim gerinimi
+hesaplanır, integral parça parça alınır (kapalı form, iterasyon yok). Ayrıntı ve
+bölge tablosu `kabuller.md` M-1'de.
+
+**Bedeli — ve neden kabul edildi:** `K` değişmezliği artık koşulludur. `ε*` sınırının
+kendisi `K`'ya bağlı olduğu için geçiş bölgesinde oran `K` ile oynar (referans pasta
+`2,0 · 10⁻³`). Taban devre dışıyken ve pasın tamamı taban üzerindeyken tam olarak
+sadeleşmeye devam eder. **T8 bu üç bölgeyi birden sınayacak biçimde yeniden yazıldı**;
+eski hâli yalnız birinci bölgeye bakıyordu ve tutarsız çekirdeği de geçiriyordu.
+
+Değişen sayılar: referans pas gerilme kaynaklı büyüklüklerde %0,20 yukarı
+(`sigmaD` 77,61 → 77,77 MPa, `safety` 0,2921 → 0,2927, `F` 3125 → 3131 N).
+**Değişmeyenler:** kanonik kırmızı vaka K-09 (0,690 · 11/12 kırmızı), üç hazır
+senaryonun özet değerleri, otomatik pas sayıları, kütle korunumu.
+
+**Arayüz uyarısı doğru yere taşındı.** Önceki uyarı pasın *çıkışına* bakıyordu
+(`K·ε_çıkış^n < 70`); belirleyici olan ise integral aralığının `ε*` eşiğini kesip
+kesmediği, yani *girişidir*. Giriş gerinimi sıfır olan her pas — her 1. pas ve her
+tavlama sonrası pas — bu eşiği zaten keser. Çıkışa bakan koşul yalnızca `r < %0,25`
+altında ateşleniyor, hatanın toleransı aştığı `%10 → %0,25` bandını tamamen
+kaçırıyordu. Uyarı artık tabanın çekme gerilmesine katkısını (`tabanPayi`) doğrudan
+ölçüyor ve %0,5'i aşınca çıkıyor; ölçülen büyüklük eşikle aynı büyüklük.
+
+## K-16 · Hesap açık bir düğmeye bağlandı; girdi yazmak sonucu değiştirmez
+**Tarih:** 2026-09-15
+
+Araç her tuş vuruşunda baştan hesaplıyordu. Bu, tek başına bakıldığında hızlı bir
+arayüz; kullanımda ise güveni bozuyor. Sebebi şu: bu modelde bazı girdiler bazı
+sayıları hiç değiştirmez. `K` emniyet oranında sadeleşir (taban devre dışıyken),
+hız gerilmeyi değil gücü değiştirir, bant uçları nominal girdilerden ayrıdır.
+Kullanıcı bir sayı yazıp tablonun kıpırdamadığını gördüğünde iki açıklama arasında
+ayrım yapamaz: "bu girdi bu sonucu gerçekten etkilemiyor" ile "arayüz girdiyi almadı".
+Sonuç sürekli kendiliğinden değiştiği için de hangi sayının hangi girdiye ait
+olduğu hiçbir an sabitlenmiyordu.
+
+**Karar:** Ekrandaki sayıları değiştiren tek yol HESAPLA düğmesidir. İstisnası yoktur —
+hazır senaryo düğmeleri, pas dağıtım yöntemi, pas sayısı, ara tavlama kutuları,
+belirsizlik bandı ve manuel çap listesi dâhil, hepsi girdiyi değiştirir, hesabı değil.
+
+**Nasıl uygulanır — iki nesne:**
+
+| Nesne | Ne tutar | Ne zaman değişir |
+|---|---|---|
+| `taslak` | kullanıcının kutulara yazdığı değerler | yazarken, anında |
+| `durum`  | ekranda gösterilen hesabın girdileri | yalnızca `hesapla()` içinde |
+
+Sonuç boru hattının tamamı (`buildSchedule`, `bandHesapla`, `duyarlilik*`,
+`csvUret`, `adresYaz`) `durum`'dan okur ve bu değişiklikte hiç dokunulmadı.
+Böylece "ekrandaki sayı hangi girdiyle üretildi" sorusunun tek bir cevabı vardır:
+`durum`. Adres çubuğu da yalnızca hesapla ile güncellenir; paylaşılan bağlantı
+her zaman gerçekten hesaplanmış bir programı taşır.
+
+**Ayrışma gizlenmez, gösterilir.** Taslak ile durum ayrıldığı anda üç gösterge
+birlikte yanar ve üçü de tek fonksiyondan (`hesaplaDurumunuYaz`) yazılır:
+düğmenin yanındaki durum satırı, hangi girdinin hangi değerden hangi değere
+gittiğini tek tek sayan şerit, ve sayfa uzun olduğu için ekranın altında duran
+yapışkan çubuk. Sonuç bölümleri bu sürede soluklaşır. "Değişiklikleri geri al"
+taslağı ekrandaki hesaba döndürür.
+
+**Görünüm değişimleri bu kuralın dışındadır** — çünkü sonucu değiştirmezler:
+dil, tema, panel katlama, kalıp kesiti kaydırıcıları, tabloda pas seçme ve
+A/B karşılaştırmasını sabitleme. Bunlar aynı `durum`'u yeniden yazar, aynı
+sayıları üretir.
+
+**Girdi geçersizken** düğme kapanır ve sebebi yazılır; bayat kutusu alan hatası
+ile bant hatası için ortak tek kaynaktan yazılır.
+
+**Klavye:** girdi kutusunda Enter, sayfanın her yerinde Ctrl/Cmd+Enter.
+
+Açılış tek istisnadır: sayfa boş açılmaz, adresteki senaryo (ya da varsayılan
+"Otomotiv ince") bir kez hesaplanmış olarak gelir.
 
 ## Varsayılan kabuller (aksi söylenmedikçe geçerli)
 

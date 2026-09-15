@@ -17,6 +17,12 @@ desktop.ini
 tmp/
 scratch/
 *.local.html
+# Alt çizgiyle başlayan dosyalar tek kullanımlık test iskeleleridir
+_*.html
+
+# Python
+__pycache__/
+*.pyc
 
 # Claude Code yerel ayarları
 .claude/settings.local.json

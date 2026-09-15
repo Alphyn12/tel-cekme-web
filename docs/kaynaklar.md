@@ -1,5 +1,10 @@
 # Kaynaklar
 
+> **7 Eylül 2026:** Aşağıdaki kitap atıfları önceki proje belgelerinden alınmıştır;
+> ilgili baskı/sayfalar doğrudan incelenmedi. Özellikle sayısal eşiklerin evrenselliği
+> ve K/n aralıklarının malzeme partisindeki geçerliliği doğrulanmış değildir.
+> Erişilen birincil kaynaklar ve kanıt sınırları: [araştırma notları](arastirma-notlari.md).
+
 Araçtaki her formülün nereden geldiği. Formüller sekmesinde de aynı eşleme
 kısaltılmış hâliyle görünür.
 

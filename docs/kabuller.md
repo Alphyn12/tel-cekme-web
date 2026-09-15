@@ -1,5 +1,16 @@
 # Kabuller ve Sınırlar
 
+> **7 Eylül 2026 düzeltmesi:** Aşağıdaki tarihsel örnekler saha doğrulaması değildir.
+> 0,50/0,60 oran, Δ 1,5–3 ve ΔT 100 °C eşikleri aracın seçimidir; evrensel kırılma
+> ölçütleri değildir. %63,2 ideal, pekleşmesiz analizden alınan araç sınırıdır.
+> **8 Eylül 2026:** 70 MPa tabanı artık ortalama akma integraline de uygulanır
+> (bkz. K-15). Bunun sonucu olarak K değişmezliği koşulludur: taban devre dışıyken
+> ve pasın tamamı taban üzerindeyken oran sadeleşir, aradaki geçiş bölgesinde
+> sadeleşmez. ΔT mutlak sıcaklık değildir.
+> Motor verimi bilinmeden %15–25 sabit güç farkı garanti edilemez. Kademeli azalan
+> otomatik yöntem her pasta %20 sınırını artık gerçekten sağlar (otomotiv: 20 pas).
+> Güncel kaynak kapsamı: [araştırma notları](arastirma-notlari.md).
+
 Bu araç bir **ön tasarım** aracıdır, üretim reçetesi değildir. Aşağıdaki maddeler
 modelin bilerek dışarıda bıraktığı veya sabitlediği şeylerdir. Araç içindeki
 "Kabuller ve sınırlar" bölümü bu dosyayla aynı içeriği taşır.
@@ -20,10 +31,27 @@ modelin bilerek dışarıda bıraktığı veya sabitlediği şeylerdir. Araç i�
 
 ### M-1 · Akma gerilmesine 70 MPa taban
 
-`σ = K·εⁿ` bağıntısı `ε → 0`'da sıfır verir; bu fiziksel değildir. Bu yüzden
-**görüntülenen** akma gerilmelerine tavlanmış ETP bakır için `SIGMA_Y0 = 70 MPa`
-taban uygulanır. `sigmaBar` (pas boyunca ortalama akma gerilmesi) bu tabandan
-etkilenmez, analitik integralden gelir.
+`σ = K·εⁿ` bağıntısı `ε → 0`'da sıfır verir; bu fiziksel değildir. Bu yüzden akma
+gerilmelerine tavlanmış ETP bakır için `SIGMA_Y0 = 70 MPa` taban uygulanır.
+
+Taban **iki yerde birden** geçerlidir: çıkış akma gerilmesinde (`sigmaFOut`) ve pas
+boyunca ortalama akma gerilmesinde (`sigmaBar`). Gerekçe tutarlılıktır — malzeme
+70 MPa'nın altında akamıyorsa, o pasta yaptığı iş de o tabanın altında hesaplanamaz.
+Aksi hâlde payda "akamaz" derken pay akabiliyormuş gibi davranır.
+
+İntegral parça parça alınır. `ε* = (70/K)^(1/n)` tabanın kesiştiği gerinimdir:
+
+| Bölge | Koşul | `sigmaBar` |
+|---|---|---|
+| Pasın tamamı taban üzerinde | `ε_çıkış ≤ ε*` | `70 MPa` |
+| Geçiş | `ε_giriş < ε* < ε_çıkış` | iki parçanın ağırlıklı ortalaması |
+| Taban devre dışı | `ε_giriş ≥ ε*` | saf Hollomon integrali |
+
+Tabanın çekme gerilmesine katkısı (`tabanPayi`) %0,5'i aşarsa arayüz uyarı gösterir.
+Eşik projenin kendi sayısal toleransıdır: tabanın etkisi tolerans kadar büyüdüğünde
+sayı artık bir modelleme tercihini taşıyor demektir. Varsayılan senaryolarda pay
+%0,21 civarındadır (uyarı çıkmaz); pas başına kesit azalma %10'un altına inince
+eşik aşılır.
 
 ### M-2 · İlk pasta `epsIn = 0` — gelen filmaşin şekil değiştirmemiş kabul edilir
 
@@ -101,17 +129,23 @@ T7 ise toplam işin ideal şekil verme işine oranını (1,78) sınar.
 
 ### M-9 · Emniyet oranı pekleşme katsayısından bağımsızdır
 
-Emniyet oranı, pekleşme katsayısı `K`'dan **bağımsızdır** — `σ_d` ve `σ_f`
-ifadelerinin ikisi de `K` ile doğrusal olduğu için oran sadeleşir (akma tabanının
-devrede olmadığı, `ε > 0,02` bölgesinde). Bu nedenle `K`'nın literatürdeki geniş
-aralığı (315–530 MPa) **kopma riskini etkilemez**, buna karşılık kuvvet, güç ve
-sıcaklık artışını doğrudan oranlı biçimde etkiler.
+Emniyet oranı, pekleşme katsayısı `K`'dan **koşullu olarak** bağımsızdır. `σ_d` ve
+`σ_f` ifadelerinin ikisi de `K` ile doğrusal olduğu için oran sadeleşir — ama
+yalnızca tabanın devrede olmadığı ya da tamamen baskın olduğu bölgelerde. Aradaki
+geçiş bölgesinde sadeleşmez, çünkü `ε* = (70/K)^(1/n)` sınırının kendisi `K`'ya
+bağlıdır (bkz. M-1 ve K-15).
 
-Sayısal doğrulama (referans pas, `K` = 315 · 380 · 450 · 530):
-emniyet oranı dördünde de **0,29214535** — sekiz basamağa kadar aynı.
-`equalSafety` programının tamamı da değişmez (aynı N, aynı çaplar); değişen tek
-şey güçtür: 212,0 → 356,6 kW. Akma tabanı yalnızca `ε < 0,014` altında devreye
-girer; gerçek hiçbir pas oraya inmez.
+Sayısal doğrulama (referans pas, `K` = 315 / 530):
+
+| Bölge | Emniyet oranı farkı |
+|---|---|
+| Taban devre dışı (`ε_giriş = 0,05`) | `0` — on iki basamağa kadar aynı |
+| Geçiş (`ε_giriş = 0`, referans pas) | `2,0 · 10⁻³` — **sadeleşmiyor** |
+| Tamamen taban üzerinde (`r = %0,25`) | `0` — iki taraf da 70 MPa'ya sabit |
+
+`equalSafety` programının yapısı `K` ile değişmez (aynı N = 11, aynı çaplar);
+en yüksek emniyet oranı altıncı basamakta oynar (0,495384 → 0,495237), güç ise
+doğrudan ölçeklenir: 212,0 → 356,6 kW.
 
 Bunun araçtaki üç sonucu: **T8** bu değişmezliği sınar, duyarlılık analizi
 **iki ayrı grafik** olarak sunulur (emniyet için K çubuğu sıfır, enerji için en
