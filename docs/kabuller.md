@@ -35,7 +35,10 @@ modelin bilerek dışarıda bıraktığı veya sabitlediği şeylerdir. Araç i�
 ### M-1 · Akma gerilmesine 70 MPa taban
 
 `σ = K·εⁿ` bağıntısı `ε → 0`'da sıfır verir; bu fiziksel değildir. Bu yüzden akma
-gerilmelerine tavlanmış ETP bakır için `SIGMA_Y0 = 70 MPa` taban uygulanır.
+gerilmelerine bir taban uygulanır. **Taban artık girdidir** (varsayılan tavlanmış
+ETP bakır için 70 MPa); malzeme listesinden seçim yapılınca o malzemenin değeriyle
+gelir — alüminyum 28, çelik 180, paslanmaz 250 MPa. Sabit kalsaydı malzeme listesi
+bakırın tabanıyla çalışır ve düşük gerinimli paslarda yanlış sonuç verirdi.
 
 Taban **iki yerde birden** geçerlidir: çıkış akma gerilmesinde (`sigmaFOut`) ve pas
 boyunca ortalama akma gerilmesinde (`sigmaBar`). Gerekçe tutarlılıktır — malzeme

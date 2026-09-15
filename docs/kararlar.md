@@ -704,3 +704,40 @@ bilmeyen ziyaretçi ilk ekranda kalıyordu.
 
 Palet, yazı ailesi ve ölçek değişmedi: sorun renk değil hiyerarşiydi. Baskı kuralları
 yeni sınıf adlarına taşındı; araç grubu ekran içindir, kâğıda basılmaz.
+
+## K-25 · Malzeme listesi: beş değer birlikte gelir
+**Tarih:** 2026-09-15
+
+K-20 yoğunluk ve özgül ısıyı girdiye çıkarmıştı ama tek tek. Bu, kapatılan sessiz
+hatanın yeni bir biçimini açıyordu: biri `K` ve `n`'i alüminyuma çevirip yoğunluğu
+bakırda unutabilir. Üstelik akma tabanı (M-1) hâlâ sabitti — 70 MPa, bakıra göre.
+Alüminyum için 28, paslanmaz için 250 MPa olması gerekirken.
+
+**Karar:** Malzeme bir liste oldu ve bir malzeme **beş değeri birden** kurar:
+pekleşme katsayısı, üsteli, akma tabanı, yoğunluk, özgül ısı. Akma tabanı da
+girdiye çıktı; kodda malzemeye bağlı sabit kalmadı.
+
+**Belirsizlik bandı da malzemeyle gelir.** Bakırın `K` aralığı (315–530) çeliğin
+aralığı değildir. Malzeme seçilince bant uçları o malzemenin aralığına oturur;
+yoksa bant, seçilen malzemeyle ilgisi olmayan bir belirsizliği gösterirdi.
+
+**Sürtünme listede yok.** `μ` malzemenin değil hattın özelliğidir — yağa, kalıp
+yüzeyine ve hıza bağlıdır (K-19). Malzeme listesine koymak, ölçülmesi gereken bir
+sayıyı kataloğa yazmak olurdu.
+
+**Seçili malzeme durumda tutulmaz, taslaktan türetilir.** `malzemeBul` beş alanın
+hepsine bakar; kullanıcı `K`'yı elle değiştirdiği anda liste kendiliğinden "Özel"e
+düşer. Ayrı bir durum alanı tutulsaydı ekranda yanlış bir malzeme adı kalabilirdi —
+aracın en temel kuralının (ekranda görünen, hesaba giren şeydir) ihlali olurdu.
+
+**Bir sınır genişletildi:** `K` üst sınırı 1000'den 1600 MPa'ya çıkarıldı, çünkü
+paslanmaz 304'ün pekleşme katsayısı 1275 MPa mertebesindedir ve eski sınır onu
+modelin geçerli alanı dışında bırakıyordu. Genişletme yalnızca bu; `n`, çaplar ve
+sürtünme sınırları olduğu gibi kaldı.
+
+Dört test eklendi: her malzemenin beş değeri ve bant uçları kendi sınırları içinde
+ve nominal değer kendi bandının içinde; her malzeme sonlu ve geçerli bir program
+kuruyor, hiçbir pasın akma gerilmesi tabanın altına düşmüyor; taban varsayılanda
+eski sayıları birebir üretiyor, yükseltilince düşük gerinimli pasta gerilmeyi
+artırıyor, sınır dışı değerler reddediliyor; malzeme eşleşmesi tam — tek alan
+farklıysa "özel".

@@ -167,8 +167,11 @@ sonucu değiştirmedikleri için düğme beklemezler.
 
 - **Çekme gerilmesi:** Siebel yaklaşımı — şekil verme + sürtünme + fazlalık iş
 - **Pekleşme:** Hollomon (`σ = K·εⁿ`), birikmiş gerinim taşınır, ara tavlamada sıfırlanır
-- **Malzeme:** yoğunluk ve özgül ısı girdidir (varsayılan tavlanmış ETP bakır:
-  8960 kg/m³, 385 J/(kg·K)); kütle debisini, kWh/ton değerini ve ΔT'yi belirler
+- **Malzeme:** açılır listeden seçilir (ETP bakır, alüminyum 1350-O, pirinç CuZn30,
+  düşük karbonlu çelik, paslanmaz 304). Seçim beş değeri birden kurar — pekleşme
+  katsayısı ve üsteli, akma tabanı, yoğunluk, özgül ısı — ve belirsizlik bandını o
+  malzemenin aralığına oturtur. Beşi elle de girilebilir; biri değişince liste
+  "Özel"e düşer. Sürtünme listede yoktur: o malzemenin değil hattın özelliğidir
 - **Hız:** hat boyunca zincirlenir, kütle debisi sabittir (`ṁ = 900,8 g/s`, çıkış 67,2 m/s)
 - **Belirsizlik:** `K`, `n`, `μ` için alt/üst sınır, sekiz köşe taraması; çap dizisi
   sabit tutulur, böylece bant malzeme belirsizliğini gösterir, program değişimini değil
