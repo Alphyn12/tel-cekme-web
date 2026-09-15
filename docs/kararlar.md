@@ -592,3 +592,35 @@ sapma 0,025 mm, ve en yüksek emniyet oranı 0,389'dan 0,410'a çıkıyor. Yuvar
 Üç test eklendi: uç çaplar korunur ve ara çapların hepsi adımın tam katıdır, sapma
 yarım adımı aşmaz, sıra korunur; yuvarlanmış dizi geçerli bir program kurar; kaba
 adım reddedilir ve geçersiz girdiler ayrı durum kodlarıyla döner.
+
+## K-22 · Makine kısıtları: modelin sınırları ile fabrikanın sınırları ayrı
+**Tarih:** 2026-09-15
+
+Optimizasyon (K-18) modelin kısıtlarıyla çalışıyordu: emniyet, delta bandı, ΔT.
+Ama bir hattın gerçek sınırları başkadır — kasnak motorunun gücü, hattın hızı,
+makinedeki kalıp sayısı. Tabloda pas başına `kW` zaten hesaplanıyordu ve hiçbir
+şeyle karşılaştırılmıyordu.
+
+**Karar:** Üç isteğe bağlı kısıt eklendi. Boş bırakılan kısıt uygulanmaz; sıfır ya
+da sınır dışı değer de "kısıt yok" sayılır, çünkü makine sınırı olarak sıfırın
+anlamı yoktur ve geçersiz bir kısıt yüzünden hesabın durması orantısız olurdu.
+
+**Kısıt hesabı değiştirmez, değerlendirir.** Aynı girdiler aynı programı ve aynı
+sayıları verir; kısıt yalnızca "bu makinede koşar mı" sorusunu cevaplar. Bu ayrım
+kasıtlıdır: modelin fiziği ile fabrikanın envanteri aynı yere yazılmamalı.
+
+**Denetim sırası: önce fizik, sonra makine.** Optimizasyon taramasında aday önce
+modelin kısıtlarından geçer, sonra makine kısıtlarından. Tersi olsaydı "makineye
+uyuyor ama tel kopuyor" adayları erken elenmez, sıralamayı kirletirdi.
+
+**Kısıt değişimi bekleyen değişiklik şeridine düşer.** Kısıt ekrandaki sayıları
+değiştirmez ama ekrandaki uyarıları değiştirir; uyarı da bir sonuçtur. K-16'nın
+kuralı burada da geçerli: yazmak değil, HESAPLA göstermektir.
+
+**"Bulunamadı" cevabı sebebini söyler.** Kısıt sağlanamadığında tarama uygulanan
+makine sınırlarını listeler — kullanıcı çoğu zaman fiziği değil kendi girdiği sınırı
+sorgulamalıdır.
+
+Üç test eklendi: boş ve geniş kısıtlar sessiz kalır; aşım hangi pasta olduğunu
+doğru söyler; optimizasyon kısıtı sağlayan program döndürür ya da imkânsız kısıtta
+"bulunamadı" der — ve bunu taramadan vazgeçerek değil, tarayarak söyler.

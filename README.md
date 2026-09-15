@@ -80,6 +80,26 @@ içerir, bu yolla çözülen `μ` sistematik olarak yüksek çıkar. Güvenilir 
 önü/arkası gerilme ölçümü ister. Çözülen sayı, modelin bütün kabullerini (sabit `μ`,
 geri gerilim yok, izotermal akma) üstlenen tek bir değerdir.
 
+## Makine kısıtları
+
+Modelin sınırları fizikten gelir; bunlar fabrikadan. Üçü de isteğe bağlıdır ve boş
+bırakılan kısıt uygulanmaz:
+
+| Kısıt | Ne yapar |
+|---|---|
+| Pas başına güç sınırı (kW) | Bir kasnağın motor gücü. Tablodaki mekanik güç bununla karşılaştırılır |
+| Hat hızı sınırı (m/s) | Hattın güvenle çalıştığı en yüksek çıkış hızı |
+| Mevcut kalıp sayısı | Optimizasyon bundan fazla pas öneremez |
+
+Kısıtlar hesabı **değiştirmez, değerlendirir**: aynı program aynı sayıları verir.
+İki yerde çalışırlar — ekrandaki program bir sınırı aşarsa yorum kutusu hangi pasta
+ne kadar aşıldığını söyler (*"Pas 11 35,5 kW çekiyor; makine sınırı 28,0 kW"*), ve
+optimizasyon taraması kısıtı aşan adayı eler.
+
+Kısıtlar sağlanamıyorsa sayı uydurulmaz: tarama "bütün kısıtları sağlayan program
+bulunamadı" der ve uygulanan makine sınırlarını listeler — çünkü çoğu zaman sebep
+fizik değil, girilen sınırdır.
+
 ## Optimizasyon
 
 Çapları ve malzemeyi sabit tutup **kalıp yarı açısını, dağıtım yöntemini ve pas

@@ -1022,6 +1022,12 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
 
   <!-- Optimizasyon: girdi tarafının yardımcısı. Sonucu doğrudan ekrana yazmaz;
        "girdilere al" der ve bekleyen değişiklik şeridini açar (K-16). -->
+  <section class="bolum" id="makineBolumu">
+    <h2 class="bolum-basligi" id="makineBaslik"></h2>
+    <p class="gerekce" id="makineAciklama"></p>
+    <div class="panel" id="makinePaneli"></div>
+  </section>
+
   <section class="bolum" id="optBolumu">
     <h2 class="bolum-basligi" id="optBaslik"></h2>
     <p class="gerekce" id="optAciklama"></p>
@@ -2267,6 +2273,20 @@ const METIN = {
       rozet: { ok: 'Güvenli', warn: 'Sınırda', crit: 'Riskli' }
     },
     sozlukBaslik: 'Sütunlar ne anlama geliyor?',
+    makine: {
+      baslik: 'Makine kısıtları',
+      aciklama: 'Hattınızın sınırlarını girin; boş bıraktığınız kısıt uygulanmaz. Kısıtlar hesabı değiştirmez, değerlendirir: optimizasyon bunları aşan programı elemeye başlar, ekrandaki program bir sınırı aşarsa yorumda söylenir.',
+      alan: { gucKW: 'Pas başına güç sınırı', hizMS: 'Hat hızı sınırı', kalip: 'Mevcut kalıp sayısı' },
+      yardim: {
+        gucKW: 'Bir kasnağın motor gücü. Tablodaki mekanik güç bu sınırla karşılaştırılır; şebeke gücü aktarma kayıpları nedeniyle %15–25 daha yüksektir.',
+        hizMS: 'Hattın güvenle çalıştığı en yüksek çıkış hızı.',
+        kalip: 'Makinedeki kalıp/kasnak sayısı. Optimizasyon bundan fazla pas öneremez.'
+      },
+      yer: 'sınır yok',
+      asimGuc: 'Pas {no} {deger} kW çekiyor; makine sınırı {sinir} kW. Pas sayısını artırmak pas başına gücü düşürür.',
+      asimHiz: 'Çıkış hızı {deger} m/s; hat sınırı {sinir} m/s. Giriş hızını düşürün.',
+      asimKalip: 'Program {deger} kalıp istiyor; makinede {sinir} kalıp var.'
+    },
     yuvarla: {
       baslik: 'Kalıp çapına yuvarla',
       aciklama: 'Hesaplanan ara çaplar kalıp deposunda birebir bulunmaz. Çapları gerçek kalıp adımına oturtur; giriş çapı ve hedef çap değişmez, çünkü biri hattın beslemesi, öteki ürünün kendisidir.',
@@ -2314,6 +2334,7 @@ const METIN = {
       delta: 'Delta bandı {alt} – {ust} (istenen {dmin} – {dmax})',
       isi: 'En yüksek ΔT {dt} °C (eşik {esik})',
       denenen: '{n} aday denendi; hepsi kısıtlara göre elendi ya da sıralandı.',
+      makineKisiti: 'Makine kısıtları da uygulandı: {liste}.',
       uygula: 'Bu programı girdilere al',
       uygulandi: 'Girdilere alındı — sonucu görmek için HESAPLA.',
       yok: 'Bu girdilerle bütün kısıtları sağlayan bir program bulunamadı. Her adayda kısıtlardan biri aşılıyor; çapları, sürtünmeyi ya da hedef emniyeti gözden geçirin.',
@@ -2613,6 +2634,20 @@ const METIN = {
       rozet: { ok: 'Safe', warn: 'Borderline', crit: 'At risk' }
     },
     sozlukBaslik: 'What do the columns mean?',
+    makine: {
+      baslik: 'Machine limits',
+      aciklama: 'Enter your line\'s limits; a limit left empty is not applied. Limits do not change the calculation, they judge it: the optimiser starts ruling out schedules that exceed them, and a schedule on screen that crosses one is called out in the commentary.',
+      alan: { gucKW: 'Power limit per pass', hizMS: 'Line speed limit', kalip: 'Dies available' },
+      yardim: {
+        gucKW: 'Motor power of one capstan. The mechanical power in the table is compared against it; grid power is 15–25% higher because of drivetrain losses.',
+        hizMS: 'Highest exit speed the line runs safely.',
+        kalip: 'Number of dies or capstans on the machine. The optimiser cannot propose more passes than this.'
+      },
+      yer: 'no limit',
+      asimGuc: 'Pass {no} draws {deger} kW; the machine limit is {sinir} kW. More passes lowers the power per pass.',
+      asimHiz: 'Exit speed is {deger} m/s; the line limit is {sinir} m/s. Lower the entry speed.',
+      asimKalip: 'The schedule needs {deger} dies; the machine has {sinir}.'
+    },
     yuvarla: {
       baslik: 'Snap to die sizes',
       aciklama: 'The intermediate diameters a calculation produces are not the ones on the die shelf. This snaps them to a real die increment; the entry and target diameters are left alone, because one is the line feedstock and the other is the product.',
@@ -2660,6 +2695,7 @@ const METIN = {
       delta: 'Delta band {alt} – {ust} (wanted {dmin} – {dmax})',
       isi: 'Highest ΔT {dt} °C (threshold {esik})',
       denenen: '{n} candidates evaluated; each was ranked or ruled out by the constraints.',
+      makineKisiti: 'Machine limits were applied too: {liste}.',
       uygula: 'Load this schedule into the inputs',
       uygulandi: 'Loaded into the inputs — press CALCULATE to see the result.',
       yok: 'No schedule meeting every constraint was found for these inputs. Every candidate breaks one of them; revisit the diameters, the friction or the safety target.',
@@ -2744,7 +2780,9 @@ const durum = {
   // son geçerli hesap "güncel değil" uyarısıyla durur.
   alanHatalari: {},
   bant: { acik: false, K: BANT_VARSAYILAN.K.slice(), n: BANT_VARSAYILAN.n.slice(),
-          mu: BANT_VARSAYILAN.mu.slice() }
+          mu: BANT_VARSAYILAN.mu.slice() },
+  // Makine kısıtları: null = kısıt yok. Hesabı değiştirmez, değerlendirir.
+  limit: { gucKW: null, hizMS: null, kalip: null }
 };
 
 /* ==== TASLAK GİRDİ KATMANI ====
@@ -2771,6 +2809,7 @@ const taslak = {
   method: durum.method,
   passes: durum.passes,
   anneals: durum.anneals.slice(),
+  limit: { gucKW: null, hizMS: null, kalip: null },
   manuelCaplar: null,
   bant: { acik: durum.bant.acik, K: durum.bant.K.slice(),
           n: durum.bant.n.slice(), mu: durum.bant.mu.slice() }
@@ -2787,6 +2826,7 @@ function taslagiDurumdanAl() {
   taslak.manuelCaplar = durum.manuelCaplar ? durum.manuelCaplar.slice() : null;
   taslak.bant.acik = durum.bant.acik;
   for (const k of ['K', 'n', 'mu']) taslak.bant[k] = durum.bant[k].slice();
+  for (const k of ['gucKW', 'hizMS', 'kalip']) taslak.limit[k] = durum.limit[k];
 }
 
 /* Taslağı ekrana geçirir: bu çağrıdan sonra durum artık kullanıcının yazdığıdır. */
@@ -2796,6 +2836,7 @@ function taslagiDuruma() {
   durum.manuelCaplar = taslak.manuelCaplar ? taslak.manuelCaplar.slice() : null;
   durum.bant.acik = taslak.bant.acik;
   for (const k of ['K', 'n', 'mu']) durum.bant[k] = taslak.bant[k].slice();
+  for (const k of ['gucKW', 'hizMS', 'kalip']) durum.limit[k] = taslak.limit[k];
 }
 
 const ayniDizi = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
@@ -2826,6 +2867,11 @@ function bekleyenDegisiklikler() {
   if (Boolean(manuelA) !== Boolean(manuelB) || (manuelA && manuelB && !ayniDizi(manuelA, manuelB))) {
     const yaz = (c) => c ? doldur(M.ozetPas, { n: c.length - 1 }) : M.uyariYok;
     liste.push(M.manuelBekliyor + ': ' + yaz(manuelA) + ' → ' + yaz(manuelB));
+  }
+  for (const k of ['gucKW', 'hizMS', 'kalip']) {
+    if (taslak.limit[k] === durum.limit[k]) continue;
+    const yaz = (v) => v === null ? M.uyariYok : fmt(v, k === 'kalip' ? 0 : 1);
+    liste.push(M.makine.alan[k] + ': ' + yaz(durum.limit[k]) + ' → ' + yaz(taslak.limit[k]));
   }
   if (taslak.bant.acik !== durum.bant.acik) {
     const ak = (v) => v ? M.acikKapali.acik : M.acikKapali.kapali;
@@ -2979,6 +3025,45 @@ function esitBolge(paslar) {
 }
 
 
+/* ==== MAKİNE KISITLARI ====
+   Modelin sınırları fizikten gelir; bunlar fabrikadan gelir. Üçü de isteğe bağlıdır:
+   boş bırakılan kısıt uygulanmaz. Girilen kısıt iki yerde çalışır — optimizasyon
+   taraması kısıtı aşan adayı eler, ve ekrandaki program bir kısıtı aşarsa yorum
+   kutusu hangi pasta ne kadar aşıldığını söyler.
+
+   Kısıtlar hesabı DEĞİŞTİRMEZ, yalnızca değerlendirir: aynı program aynı sayıları
+   verir, kısıt sadece "bu makinede koşar mı" sorusunu cevaplar. */
+const MAKINE_SINIRLARI = {
+  gucKW:  { alt: 0.1, ust: 5000 },   // pas başına mekanik güç
+  hizMS:  { alt: 0.1, ust: 100 },    // hat çıkış hızı
+  kalip:  { alt: 1,   ust: MAX_PASSES }
+};
+
+/* Programın makine kısıtlarını aşan yerleri. Boş kısıt denetlenmez. */
+function makineAsimlari(prog, limit) {
+  const asim = { guc: null, hiz: null, kalip: null };
+  if (!limit) return asim;
+
+  if (Number.isFinite(limit.gucKW)) {
+    const enGuclu = prog.passes.reduce((a, b) => (b.P > a.P ? b : a));
+    if (enGuclu.P / 1000 > limit.gucKW + 1e-9) {
+      asim.guc = { no: enGuclu.no, deger: enGuclu.P / 1000, sinir: limit.gucKW };
+    }
+  }
+  if (Number.isFinite(limit.hizMS) && prog.v1Line > limit.hizMS + 1e-9) {
+    asim.hiz = { deger: prog.v1Line, sinir: limit.hizMS };
+  }
+  if (Number.isFinite(limit.kalip) && prog.passCount > limit.kalip) {
+    asim.kalip = { deger: prog.passCount, sinir: limit.kalip };
+  }
+  return asim;
+}
+
+const makineUygun = (prog, limit) => {
+  const a = makineAsimlari(prog, limit);
+  return !a.guc && !a.hiz && !a.kalip;
+};
+
 /* ==== OPTİMİZASYON ====
    Soru: bu çaplar ve bu malzeme için kısıtları sağlayan EN İYİ program hangisi?
    Değişkenler: kalıp yarı açısı (tek değer — M-4 kabulü korunur), pas dağıtım
@@ -3027,7 +3112,7 @@ function optDeger(prog, amac) {
   return amac === 'kalip' ? prog.passCount * 1e6 + e : e;
 }
 
-function optAday(temel, alphaDeg, method, passes) {
+function optAday(temel, alphaDeg, method, passes, limit) {
   let prog;
   try {
     prog = buildSchedule(Object.assign({}, temel, { alphaDeg, method, passes }));
@@ -3036,18 +3121,22 @@ function optAday(temel, alphaDeg, method, passes) {
     throw hata;
   }
   const kisit = optKisit(prog);
-  return optUygun(kisit) ? { prog, alphaDeg, method, kisit } : null;
+  if (!optUygun(kisit)) return null;
+  // Makine kısıtları modelin kısıtlarından SONRA denetlenir: önce fiziken geçerli
+  // program, sonra "bu makinede koşar mı" sorusu.
+  if (!makineUygun(prog, limit)) return null;
+  return { prog, alphaDeg, method, kisit };
 }
 
 /* Hızlı yöntemler (eşit gerinim, kademeli azalan) tam ızgarada taranır; eşit
    emniyet çağrı başına ~70 ms sürdüğü için kaba-ince aramayla ve yalnızca kendi
    otomatik pas sayısıyla denenir — o yöntemde pas sayısı zaten hedefin sonucudur. */
-function optimizeEt(temel, amac) {
+function optimizeEt(temel, amac, limit = null) {
   let enIyi = null, kaba = null, denenen = 0;
   const dahaIyi = (a, b) => !b || optDeger(a.prog, amac) < optDeger(b.prog, amac);
   const dene = (alphaDeg, method, passes) => {
     denenen++;
-    const aday = optAday(temel, alphaDeg, method, passes);
+    const aday = optAday(temel, alphaDeg, method, passes, limit);
     if (aday && dahaIyi(aday, enIyi)) enIyi = aday;
     return aday;
   };
@@ -3074,8 +3163,8 @@ function optimizeEt(temel, amac) {
 
   return enIyi
     ? { bulundu: true, prog: enIyi.prog, alphaDeg: enIyi.alphaDeg, method: enIyi.method,
-        kisit: enIyi.kisit, enerji: optEnerji(enIyi.prog), amac, denenen }
-    : { bulundu: false, amac, denenen };
+        kisit: enIyi.kisit, enerji: optEnerji(enIyi.prog), amac, denenen, limit }
+    : { bulundu: false, amac, denenen, limit };
 }
 
 /* En riskli pasta emniyeti hedefe indirecek kesit azalmasını çözer. */
@@ -3141,6 +3230,20 @@ function oneriCumleleri(prog) {
   const sicak = prog.passes.reduce((a, b) => (b.dT > a.dT ? b : a));
   if (sicak.dT > DT_WARNING) {
     cumleler.push(doldur(M.oneriIsi, { pas: sicak.no, dT: fmt(sicak.dT, 1) }));
+  }
+
+  // Makine kısıtları: modelin değil fabrikanın sınırları. Girilmemişse sessizdir.
+  const asim = makineAsimlari(prog, durum.limit);
+  const MK = M.makine;
+  if (asim.guc) {
+    cumleler.push(doldur(MK.asimGuc, { no: asim.guc.no, deger: fmt(asim.guc.deger, 1),
+                                       sinir: fmt(asim.guc.sinir, 1) }));
+  }
+  if (asim.hiz) {
+    cumleler.push(doldur(MK.asimHiz, { deger: fmt(asim.hiz.deger, 1), sinir: fmt(asim.hiz.sinir, 1) }));
+  }
+  if (asim.kalip) {
+    cumleler.push(doldur(MK.asimKalip, { deger: fmt(asim.kalip.deger, 0), sinir: fmt(asim.kalip.sinir, 0) }));
   }
 
   // Malzeme bakır dışına ayarlandıysa: K, n ve 70 MPa tabanı hâlâ bakıra göre.
@@ -3613,11 +3716,80 @@ function metinleriYaz() {
   sozlukCiz();
   kalibMetinleri();
   yuvarlaMetinleri();
+  makineMetinleri();
   optMetinleri();
 }
 
 
 
+
+/* ==== MAKİNE KISITLARI ARAYÜZÜ ====
+   Üç kutu, hepsi isteğe bağlı. Boş kutu "kısıt yok" demektir; sıfır ya da geçersiz
+   değer de boş sayılır — makine sınırı olarak sıfırın anlamı yok. Kısıt değişimi
+   bekleyen değişiklik şeridine düşer, çünkü ekrandaki uyarıları değiştirir (K-16). */
+const MAKINE_ALANLARI = ['gucKW', 'hizMS', 'kalip'];
+const MAKINE_BIRIMLERI = { gucKW: 'kW', hizMS: 'm/s', kalip: '' };
+const makineGirdileri = {};
+
+function makinePaneliniKur() {
+  const panel = $('makinePaneli');
+  panel.textContent = '';
+  for (const k of MAKINE_ALANLARI) {
+    const sar = document.createElement('div');
+    sar.className = 'alan';
+    const lab = document.createElement('label');
+    lab.htmlFor = 'makine-' + k;
+    lab.id = 'makineEtiket-' + k;
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.inputMode = 'decimal';
+    inp.id = 'makine-' + k;
+    inp.autocomplete = 'off';
+    const yardim = document.createElement('p');
+    yardim.className = 'alan-yardim';
+    yardim.id = 'makineYardim-' + k;
+    inp.addEventListener('input', () => {
+      const v = sayiOku(inp.value);
+      const s = MAKINE_SINIRLARI[k];
+      // Sınır dışı ya da okunamayan değer "kısıt yok" sayılır; hesap durmaz.
+      taslak.limit[k] = (Number.isFinite(v) && v >= s.alt && v <= s.ust) ? v : null;
+      inp.classList.toggle('gecersiz', inp.value.trim() !== '' && taslak.limit[k] === null);
+      girdiDegisti();
+    });
+    inp.addEventListener('keydown', (olay) => {
+      if (olay.key === 'Enter') { olay.preventDefault(); hesapla(); }
+    });
+    makineGirdileri[k] = inp;
+    sar.append(lab, inp, yardim);
+    panel.appendChild(sar);
+  }
+}
+
+function makineMetinleri() {
+  const M = S().makine;
+  $('makineBaslik').textContent = M.baslik;
+  $('makineAciklama').textContent = M.aciklama;
+  for (const k of MAKINE_ALANLARI) {
+    const lab = $('makineEtiket-' + k);
+    lab.textContent = M.alan[k];
+    if (MAKINE_BIRIMLERI[k]) {
+      const b = document.createElement('span');
+      b.className = 'birim';
+      b.textContent = ' ' + MAKINE_BIRIMLERI[k];
+      lab.appendChild(b);
+    }
+    $('makineYardim-' + k).textContent = M.yardim[k];
+    makineGirdileri[k].placeholder = M.yer;
+  }
+}
+
+function makineAlanlariniYaz() {
+  for (const k of MAKINE_ALANLARI) {
+    const inp = makineGirdileri[k];
+    if (document.activeElement === inp) continue;
+    inp.value = taslak.limit[k] === null ? '' : String(taslak.limit[k]);
+  }
+}
 
 /* ==== YUVARLAMA ARAYÜZÜ ====
    Ekrandaki programın çaplarını kalıp adımına oturtur ve manuel program olarak
@@ -3874,9 +4046,21 @@ function optSonucuCiz(sonuc) {
     liste.appendChild(li);
   };
 
+  // Uygulanan makine kısıtları her iki sonuçta da yazılır: "bulunamadı" cevabının
+  // sebebi çoğu zaman fizik değil, girilen makine sınırıdır.
+  const kisitMetni = () => {
+    const L = sonuc.limit, MK = S().makine, parcalar = [];
+    if (L && Number.isFinite(L.gucKW)) parcalar.push(MK.alan.gucKW + ' ≤ ' + fmt(L.gucKW, 1) + ' kW');
+    if (L && Number.isFinite(L.hizMS)) parcalar.push(MK.alan.hizMS + ' ≤ ' + fmt(L.hizMS, 1) + ' m/s');
+    if (L && Number.isFinite(L.kalip)) parcalar.push(MK.alan.kalip + ' ≤ ' + fmt(L.kalip, 0));
+    return parcalar.length ? doldur(O.makineKisiti, { liste: parcalar.join(' · ') }) : null;
+  };
+
   if (!sonuc.bulundu) {
     $('optOzet').textContent = O.yok;
     $('optUygula').hidden = true;
+    const km = kisitMetni();
+    if (km) satir(km);
     satir(doldur(O.denenen, { n: fmt(sonuc.denenen, 0) }));
     return;
   }
@@ -3908,6 +4092,8 @@ function optSonucuCiz(sonuc) {
     dmin: fmt(DELTA_MIN, 1), dmax: fmt(DELTA_MAX, 1)
   }));
   satir(doldur(O.isi, { dt: fmt(sonuc.kisit.dT, 1), esik: fmt(DT_WARNING, 0) }));
+  const km = kisitMetni();
+  if (km) satir(km);
   satir(doldur(O.denenen, { n: fmt(sonuc.denenen, 0) }));
 }
 
@@ -3929,7 +4115,7 @@ function optCalistir() {
 
   requestAnimationFrame(() => setTimeout(() => {
     try {
-      sonOptSonuc = optimizeEt(temel, optAmac);
+      sonOptSonuc = optimizeEt(temel, optAmac, Object.assign({}, taslak.limit));
       optSonucuCiz(sonOptSonuc);
     } finally {
       dugme.disabled = false;
@@ -4008,6 +4194,7 @@ function alanlariYaz() {
     pasSayisiGirdisi.value = taslak.passes === null ? '' : String(taslak.passes);
   }
   $('bantAnahtari').checked = taslak.bant.acik;
+  makineAlanlariniYaz();
 }
 
 function bilgiGoster(mesaj) {
@@ -5862,6 +6049,7 @@ function csvIndir(prog) {
 function baslat() {
   kurSenaryoDugmeleri();
   kurPanel();
+  makinePaneliniKur();
   kurBantAlanlari();
   kurTabloBasligi();
   $('yuvarlaCalistir').addEventListener('click', yuvarlaCalistir);
