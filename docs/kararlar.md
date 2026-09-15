@@ -781,3 +781,29 @@ gürültüyle doldurmak olurdu.
 etiketlerinde de kullanılıyor ve onlar bu ölçüyle devleşiyordu. Karar rozeti kendi
 sınıfına (`karar-rozet`) alındı. Ders: paylaşılan bir sınıf adına yeni anlam
 yüklemeden önce kim kullanıyor diye bakmak gerekir.
+
+## K-27 · Rapor PDF'i arayüzle aynı dili konuşuyor
+**Tarih:** 2026-09-15
+
+`tools/rapor.py` kendi görsel dilindeydi: vurgu rengi kritik kırmızı, başlıklar
+numarasız, açılışta doğrudan metin. Arayüz K-24 ile yeniden düzenlenince rapor geride
+kaldı — aynı projenin iki farklı yüzü gibi duruyordu.
+
+**Karar:** Palet doğrudan `index.html`in tasarım jetonlarından alındı (bakır vurgu;
+patina, uyarı ve kritik yalnızca gerçek durumlar için). Bölüm başlıkları numaralandı:
+bakır kutuda sıra numarası, yanında başlık, altında ince çizgi — sayfadaki adım
+başlıklarının kâğıt karşılığı. Açılışa bir künye şeridi eklendi (yerleşik doğrulama,
+otomatik kontrol, en büyük sapma, tarih); arayüzdeki özet şeridinin aynısı. Sonuç
+kutusunun sol kenarı durumu taşıyor: bütün testler geçiyorsa patina, kalan varsa
+kritik. Üst künyeye bakır çizgi, alt künyeye sınır cümlesi ve kaynak adresi geldi.
+
+**Yol boyunca bir kırık bulundu.** Rapor üreteci `GIRDI_SINIRLARI` üzerinde geziyor ve
+alan etiketlerini elle eşliyordu; K-20, K-23 ve K-25 ile dört yeni girdi (yoğunluk,
+özgül ısı, geri gerilim, akma tabanı) eklenince `KeyError` ile çöküyordu. Rapor
+testlerin parçası olmadığı için sessizce bozulmuştu — yerel araçlar da bir kod
+değişikliğinin kapsamına girmeli. Haritalar tamamlandı; geçerlilik tablosu artık on bir
+alanın hepsini gösteriyor.
+
+İki paragraf da eskimişti ve düzeltildi: akma tabanı artık "seçilmiş sabit bir kabul"
+değil, malzemeyle gelen bir girdi (K-25); kapsam cümlesi de Excel dosyasının gerçek bir
+okuyucuyla doğrulandığını söylüyor (K-26).
