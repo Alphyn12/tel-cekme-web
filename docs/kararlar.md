@@ -529,3 +529,34 @@ olarak yüksek çıkar. Daha derini: çözülen sayı modelin bütün ihmallerin
 gerilim, sıcaklık geri beslemesi, kalıp esnemesi) tek bir katsayıya yükler. Yani
 "gerçek sürtünme katsayısı" değil, **modelin o pası açıklamak için ihtiyaç duyduğu
 sürtünme katsayısıdır**. Uyarı bu ayrımı açıkça yazar.
+
+## K-20 · Yoğunluk ve özgül ısı girdiye çıktı: sessiz bakır bağı kapatıldı
+**Tarih:** 2026-09-15
+
+`RHO = 8960` ve `CP = 385` kod içinde sabitti, ama `K` ve `n` serbestçe düzenlenebiliyordu.
+Bu ikisi birlikte sessiz bir hata üretiyordu: biri alüminyum için `K = 140`, `n = 0,25`
+girdiğinde çekme gerilmesi doğru çıkıyor, **kütle debisi, kWh/ton ve ΔT bakır sabitleriyle
+hesaplanmaya devam ediyordu**. Ekranda hata görünmüyordu; sayı yanlış değil, *sessizce
+yanlıştı*. Bu, yanlış sayıdan kötüdür — çünkü denetlenemez.
+
+**Karar:** `rho` ve `cp` girdi alanı oldu (varsayılan bakır). Değer çekirdekten arayüze
+kadar tek yoldan akar: `calcPass` → pas nesnesi → `massFlowOf` → özgül enerji ve ΔT.
+Sınırlar `1000–20000 kg/m³` ve `100–2000 J/(kg·K)`; alüminyumdan tungstene kadar gerçek
+malzemeleri kapsar, saçma değeri reddeder.
+
+**Kök sebep, ilk denemede kaçtı ve tarayıcı yakaladı.** `HESAP_ALANLARI` listesi
+taslak↔durum eşitlemesinin tek kaynağıdır; oraya eklemeyi unutunca bağlantıdan gelen
+`rho` hesaba giriyor ama kutuda eski değer görünüyordu. Yani tam olarak K-16'nın
+engellemek için var olduğu durum: ekrandaki girdi ile hesabın girdisi ayrışmıştı.
+Ders: yeni bir hesap girdisi eklemek üç listeye birden dokunmayı gerektirir —
+`ALANLAR` (çizim), `HESAP_ALANLARI` (eşitleme), `bekleyenDegisiklikler` (fark).
+
+**Geri kalan bağ açıkça yazıldı.** `K`, `n` ve 70 MPa tabanı (M-1) hâlâ bakıra göredir.
+Yoğunluk ya da özgül ısı varsayılandan ayrılınca yorum kutusu bunu söyler. Malzeme
+kütüphanesi (açılır liste) bir sonraki adımdır; bu adım yalnızca **sessiz** olanı
+**görünür** yaptı.
+
+Üç test eklendi: yoğunluk iki katına çıkınca kütle debisi iki kat, özgül enerji ve ΔT
+yarıya iner, güç değişmez; özgül ısı yalnızca sıcaklığı değiştirir; alüminyum
+değerleriyle ΔT ve kWh/ton gerçekten değişir; sınır dışı değerler reddedilir ve
+varsayılanlar eski sayıları birebir korur.

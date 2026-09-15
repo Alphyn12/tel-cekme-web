@@ -113,6 +113,8 @@ sonucu değiştirmedikleri için düğme beklemezler.
 
 - **Çekme gerilmesi:** Siebel yaklaşımı — şekil verme + sürtünme + fazlalık iş
 - **Pekleşme:** Hollomon (`σ = K·εⁿ`), birikmiş gerinim taşınır, ara tavlamada sıfırlanır
+- **Malzeme:** yoğunluk ve özgül ısı girdidir (varsayılan tavlanmış ETP bakır:
+  8960 kg/m³, 385 J/(kg·K)); kütle debisini, kWh/ton değerini ve ΔT'yi belirler
 - **Hız:** hat boyunca zincirlenir, kütle debisi sabittir (`ṁ = 900,8 g/s`, çıkış 67,2 m/s)
 - **Belirsizlik:** `K`, `n`, `μ` için alt/üst sınır, sekiz köşe taraması; çap dizisi
   sabit tutulur, böylece bant malzeme belirsizliğini gösterir, program değişimini değil
@@ -154,7 +156,12 @@ python tools/rapor.py     # teknik inceleme raporunu koddan üretir
 
 Bu bir **ön tasarım** aracıdır, üretim reçetesi değildir. Kalıp esnemesi, yağ filmi
 rejimi, geri gerilim, şekil değiştirme hızı, sıcaklığın akmaya geri beslenmesi, kalıp
-aşınması ve artık gerilmeler hesaba katılmaz. Tablodaki güç kalıplarda harcanan
+aşınması ve artık gerilmeler hesaba katılmaz.
+
+Malzeme yoğunluğu ve özgül ısısı artık girdidir, ama `K`, `n` ve 70 MPa akma tabanı
+hâlâ tavlanmış ETP bakıra göre kalibrelidir. Yoğunluk bakır dışına ayarlanınca araç
+bunu yorumda hatırlatır: malzeme değiştiyse pekleşme verisi de malzemenin kendi
+verisi olmalıdır. Tablodaki güç kalıplarda harcanan
 mekanik güçtür; şebeke gücü aktarma ve motor kayıpları nedeniyle %15–25 daha yüksektir.
 Tamamı: [`docs/kabuller.md`](docs/kabuller.md).
 

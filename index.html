@@ -1274,8 +1274,12 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
    Saf fonksiyonlar. DOM'a dokunmaz, yan etkisi yoktur. */
 
 // --- Malzeme ve proses sabitleri ---
-const RHO       = 8960;   // kg/m3   bakır yoğunluğu
-const CP        = 385;    // J/(kg·K) bakır özgül ısı
+/* Yoğunluk ve özgül ısı artık girdidir; bunlar yalnızca VARSAYILAN değerlerdir.
+   Önceden sabittiler: K ve n serbestçe düzenlenebildiği için alüminyum ya da çelik
+   değerleri girildiğinde gerilme doğru, kütle debisi / kWh-ton / ΔT sessizce yanlış
+   çıkıyordu. Sessiz hata, yanlış sayıdan kötüdür. */
+const RHO       = 8960;   // kg/m3   tavlanmış ETP bakır — varsayılan
+const CP        = 385;    // J/(kg·K) tavlanmış ETP bakır — varsayılan
 const SIGMA_Y0  = 70;     // MPa      tavlanmış ETP bakır akma gerilmesi tabanı
 
 // --- Pas programı sabitleri ---
@@ -1322,7 +1326,9 @@ const GIRDI_SINIRLARI = {
   mu:       { alt: 0.005, ust: 0.30 },   // —
   K:        { alt: 100,   ust: 1000 },   // MPa
   n:        { alt: 0.05,  ust: 0.80 },   // —
-  v0:       { alt: 0.1,   ust: 20 }      // m/s
+  v0:       { alt: 0.1,   ust: 20 },     // m/s
+  rho:      { alt: 1000,  ust: 20000 },  // kg/m3 — alüminyum 2700, bakır 8960, tungsten 19300
+  cp:       { alt: 100,   ust: 2000 }    // J/(kg·K) — bakır 385, çelik 470, alüminyum 900
 };
 
 /* --- Çekirdek savunma sınırları ---
@@ -1336,6 +1342,8 @@ const CEKIRDEK_SINIRLARI = {
   alphaDeg: { alt: 0, ust: GIRDI_SINIRLARI.alphaDeg.ust, sifirDisi: true },
   mu:       { alt: 0, ust: GIRDI_SINIRLARI.mu.ust },
   K:        { alt: 0, ust: GIRDI_SINIRLARI.K.ust,        sifirDisi: true },
+  rho:      { alt: 0, ust: GIRDI_SINIRLARI.rho.ust,      sifirDisi: true },
+  cp:       { alt: 0, ust: GIRDI_SINIRLARI.cp.ust,       sifirDisi: true },
   n:        { alt: 0, ust: GIRDI_SINIRLARI.n.ust },
   v0:       { alt: 0, ust: Infinity,                     sifirDisi: true }
 };
@@ -1416,20 +1424,20 @@ function safetyForStrain(epsPas, epsIn, params) {
 }
 
 /* Tek pasın bütün çıktıları. Girdiler: çaplar mm, açı derece, hız m/s, K MPa. */
-function calcPass({ d0, d1, epsIn = 0, alphaDeg, mu, K, n, v0 }) {
+function calcPass({ d0, d1, epsIn = 0, alphaDeg, mu, K, n, v0, rho = RHO, cp = CP }) {
   // Çekirdek savunması. CEKIRDEK_SINIRLARI arayüzünkinden bilerek daha geniştir:
   // doğrulama testleri limitleri sınamak için μ = 0 ve α = 0,001° gibi değerler
   // kullanır. Üst uçlar GIRDI_SINIRLARI ile ortaktır, sabit tekrarlanmaz.
   const sinirDisi = Object.keys(CEKIRDEK_SINIRLARI).some((alan) => {
-    const v = { d0, alphaDeg, mu, K, n, v0 }[alan];
+    const v = { d0, alphaDeg, mu, K, n, v0, rho, cp }[alan];
     const s = CEKIRDEK_SINIRLARI[alan];
     return v < s.alt || v > s.ust || (s.sifirDisi && v === 0);
   });
-  if (![d0, d1, epsIn, alphaDeg, mu, K, n, v0].every(Number.isFinite) ||
+  if (![d0, d1, epsIn, alphaDeg, mu, K, n, v0, rho, cp].every(Number.isFinite) ||
       epsIn < 0 || sinirDisi) {
     throw new DrawingError('GECERSIZ_PARAMETRE',
       'Hesap parametreleri modelin geçerli olduğu aralıkta ve sonlu olmalı.',
-      { d0, d1, epsIn, alphaDeg, mu, K, n, v0 });
+      { d0, d1, epsIn, alphaDeg, mu, K, n, v0, rho, cp });
   }
   if (!(d0 > 0) || !(d1 > 0)) {
     throw new DrawingError('GECERSIZ_CAP', 'Çaplar sıfırdan büyük olmalı.', { d0, d1 });
@@ -1462,7 +1470,7 @@ function calcPass({ d0, d1, epsIn = 0, alphaDeg, mu, K, n, v0 }) {
   const delta = alphaRad * (1 + Math.sqrt(1 - r)) ** 2 / r;
 
   // Adyabatik sıcaklık artışı: bütün iş ısıya döner, kayıp yok kabulü — üst sınırdır.
-  const dT = sigmaD * 1e6 / (RHO * CP);   // sigmaD MPa -> Pa
+  const dT = sigmaD * 1e6 / (rho * cp);   // sigmaD MPa -> Pa
 
   const A0 = Math.PI * d0 ** 2 / 4;           // mm2
   const A1 = Math.PI * d1 ** 2 / 4;           // mm2
@@ -1471,7 +1479,7 @@ function calcPass({ d0, d1, epsIn = 0, alphaDeg, mu, K, n, v0 }) {
   const P  = F * v1;                          // W
 
   return { d0, d1, r, epsPas, epsIn, epsOut, sigmaFIn, sigmaFOut, sigmaBar, tabanPayi,
-           sigmaD, safety, delta, dT, A0, A1, F, v0, v1, P, alphaDeg, mu, K, n };
+           sigmaD, safety, delta, dT, A0, A1, F, v0, v1, P, alphaDeg, mu, K, n, rho, cp };
 }
 
 /* ==== SÜRTÜNME KALİBRASYONU (ters problem) ====
@@ -1485,8 +1493,8 @@ function calcPass({ d0, d1, epsIn = 0, alphaDeg, mu, K, n, v0 }) {
    Siebel'de çekme gerilmesi mu'da monoton artandır (sürtünme terimi mu ile
    doğrusal), bu yüzden ikili arama tek köke yakınsar. Aralık dışı ölçümde sayı
    uydurulmaz: hangi sınırın aşıldığı söylenir. */
-function muCoz(hedefSigmaD, { d0, d1, epsIn = 0, alphaDeg, K, n, v0 }) {
-  const dene = (mu) => calcPass({ d0, d1, epsIn, alphaDeg, mu, K, n, v0 }).sigmaD;
+function muCoz(hedefSigmaD, { d0, d1, epsIn = 0, alphaDeg, K, n, v0, rho = RHO, cp = CP }) {
+  const dene = (mu) => calcPass({ d0, d1, epsIn, alphaDeg, mu, K, n, v0, rho, cp }).sigmaD;
   const muAlt = 0;                       // sürtünmesiz alt sınır: şekil verme + fazlalık iş
   const muUst = GIRDI_SINIRLARI.mu.ust;  // arayüzün kabul ettiği üst uç
 
@@ -1593,7 +1601,7 @@ function diametersFromStrains(d0, dTarget, strains) {
    `diameters`: yalnızca "manual" yönteminde, d0 dahil azalan çap dizisi.
    `anneals`: 1-indeksli pas numaraları; o pastan sonra birikmiş gerinim sıfırlanır. */
 function buildSchedule({ d0, dTarget, method = 'equalStrain', passes = null, diameters = null,
-                         alphaDeg, mu, K, n, v0, anneals = [] }) {
+                         alphaDeg, mu, K, n, v0, rho = RHO, cp = CP, anneals = [] }) {
   const anneal = Array.isArray(anneals) ? anneals : [];
   let d, autoN_sonuc = null;   // yöntemine göre hesaplanan otomatik pas sayısı
 
@@ -1670,7 +1678,7 @@ function buildSchedule({ d0, dTarget, method = 'equalStrain', passes = null, dia
     const no = i + 1;
     let pass;
     try {
-      pass = calcPass({ d0: d[i], d1: d[i + 1], epsIn, alphaDeg, mu, K, n, v0: hiz });
+      pass = calcPass({ d0: d[i], d1: d[i + 1], epsIn, alphaDeg, mu, K, n, v0: hiz, rho, cp });
     } catch (err) {
       if (err instanceof DrawingError && err.code === 'R_TEORIK_ASIM') {
         throw new DrawingError('R_TEORIK_ASIM',
@@ -1727,7 +1735,7 @@ function autoPassCountEqualSafety(epsTotal, params, anneals) {
 /* Bir pasın taşıdığı kütle debisi (kg/s), raporlanan çap ve hızdan.
    A mm² -> m² için 1e-6. Sürekli hatta bu değer bütün paslarda aynı olmalıdır. */
 function massFlowOf(pass) {
-  return RHO * pass.A0 * 1e-6 * pass.v0;
+  return pass.rho * pass.A0 * 1e-6 * pass.v0;
 }
 
 /* Kullanıcının yapıştırdığı çap listesini sayı dizisine çevirir.
@@ -1795,9 +1803,9 @@ const REFERANS_GIRDI = { d0: 8.00, d1: 7.16, epsIn: 0, alphaDeg: 8, mu: 0.05, K:
 
 // Hazır senaryolar — d0, hedef çap ve proses parametreleri.
 const SENARYOLAR = [
-  { id: 'otomotiv', tr: 'Otomotiv ince', en: 'Automotive fine', d0: 8.00, dTarget: 1.38, alphaDeg: 8, mu: 0.05, K: 450, n: 0.35, v0: 2.0, beklenenN: 16, beklenenNes: 11 },
-  { id: 'genel',    tr: 'Genel amaçlı',  en: 'General purpose', d0: 8.00, dTarget: 2.50, alphaDeg: 8, mu: 0.06, K: 450, n: 0.35, v0: 3.0, beklenenN: 11, beklenenNes:  8 },
-  { id: 'ultra',    tr: 'Çok ince',      en: 'Ultra fine',      d0: 8.00, dTarget: 0.50, alphaDeg: 6, mu: 0.04, K: 450, n: 0.35, v0: 1.0, beklenenN: 25, beklenenNes: 17 }
+  { id: 'otomotiv', tr: 'Otomotiv ince', en: 'Automotive fine', d0: 8.00, dTarget: 1.38, alphaDeg: 8, mu: 0.05, K: 450, n: 0.35, v0: 2.0, rho: RHO, cp: CP, beklenenN: 16, beklenenNes: 11 },
+  { id: 'genel',    tr: 'Genel amaçlı',  en: 'General purpose', d0: 8.00, dTarget: 2.50, alphaDeg: 8, mu: 0.06, K: 450, n: 0.35, v0: 3.0, rho: RHO, cp: CP, beklenenN: 11, beklenenNes:  8 },
+  { id: 'ultra',    tr: 'Çok ince',      en: 'Ultra fine',      d0: 8.00, dTarget: 0.50, alphaDeg: 6, mu: 0.04, K: 450, n: 0.35, v0: 1.0, rho: RHO, cp: CP, beklenenN: 25, beklenenNes: 17 }
 ];
 
 function runValidation() {
@@ -1852,7 +1860,7 @@ function runValidation() {
     method: 'equalStrain', alphaDeg: SENARYOLAR[0].alphaDeg, mu: SENARYOLAR[0].mu,
     K: SENARYOLAR[0].K, n: SENARYOLAR[0].n, v0: SENARYOLAR[0].v0 });
   const debiler = t4Prog.passes.map(massFlowOf)
-    .concat(t4Prog.passes.map(p => RHO * p.A1 * 1e-6 * p.v1));   // giriş ve çıkış tarafı
+    .concat(t4Prog.passes.map(p => p.rho * p.A1 * 1e-6 * p.v1));   // giriş ve çıkış tarafı
   const enBuyuk = Math.max(...debiler), enKucuk = Math.min(...debiler);
   const t4Sapma = (enBuyuk - enKucuk) / enKucuk;
   sonuc.push({
@@ -1892,7 +1900,8 @@ function runValidation() {
   const t7 = SENARYOLAR[0];
   const t7Prog = buildSchedule({ d0: t7.d0, dTarget: t7.dTarget, method: 'equalStrain',
     alphaDeg: t7.alphaDeg, mu: t7.mu, K: t7.K, n: t7.n, v0: t7.v0 });
-  const idealOzgulIs  = t7.K * 1e6 * t7Prog.epsTotal ** (t7.n + 1) / ((t7.n + 1) * RHO); // J/kg
+  const idealOzgulIs  = t7.K * 1e6 * t7Prog.epsTotal ** (t7.n + 1) /
+                        ((t7.n + 1) * t7Prog.passes[0].rho); // J/kg
   const gercekOzgulIs = t7Prog.totalPower / t7Prog.massFlow;                              // J/kg
   const oran = gercekOzgulIs / idealOzgulIs;
   sonuc.push({
@@ -1927,7 +1936,8 @@ function runValidation() {
   // T9 — Sınır denetimi: modelin geçerli olmadığı girdi hesaba sokulmamalı.
   // Geçerli taban da sınanır; aksi hâlde "her şeyi reddet" diyen bir denetim de
   // testi geçerdi.
-  const t9Taban = { d0: 8.00, dTarget: 1.38, alphaDeg: 8, mu: 0.05, K: 450, n: 0.35, v0: 2.0 };
+  const t9Taban = { d0: 8.00, dTarget: 1.38, alphaDeg: 8, mu: 0.05, K: 450, n: 0.35,
+                    v0: 2.0, rho: RHO, cp: CP };
   const t9Vakalar = [
     { ad: 'geçerli taban', girdi: {},              bekle: null },
     { ad: 'negatif μ',     girdi: { mu: -0.05 },   bekle: 'mu' },
@@ -1994,6 +2004,7 @@ const METIN = {
     oneriGuvenli: 'En yüksek emniyet oranı {emniyet} ({pas}. pas) — 0,50 sınırının altında, nominal model oranı tarama eşiğinin altında.',
     oneriGuvenliDar: 'En yüksek emniyet oranı {emniyet} ({pas}. pas) — 0,50 sınırının hemen altında, pay çok dar.',
     oneriEsitBolge: 'En yüksek orana yakın {adet} pas var ({ilk}–{son} aralığında; en yüksek {emniyet}).',
+    oneriMalzeme: 'Yoğunluk veya özgül ısı bakır varsayılanından farklı. Pekleşme katsayısı K, üsteli n ve 70 MPa akma tabanı hâlâ tavlanmış ETP bakıra göre kalibrelidir; malzeme değiştiyse onları da malzemenin kendi verisiyle girin.',
     oneriGuvenliBolge: 'Bu seviye 0,50 sınırının altında, nominal model oranı tarama eşiğinin altında.',
     oneriDeltaDusuk: '{pas}. pasta delta {delta} (alt sınır 1,5) — aşırı sürtünme ve kalıp aşınması. Kalıp yarı açısını {alpha}°\'ye çıkarmak bu pası sınıra döndürür.',
     oneriDeltaYuksek: '{pas}. pasta delta {delta} (üst sınır 3,0) — merkezi çatlak (chevron) riski. Kalıp yarı açısını {alpha}°\'ye düşürmek bu pası sınıra döndürür.',
@@ -2139,7 +2150,8 @@ const METIN = {
     alan: {
       d0: 'Başlangıç çapı', dTarget: 'Hedef çap', alphaDeg: 'Kalıp yarı açısı',
       mu: 'Sürtünme katsayısı', K: 'Pekleşme katsayısı', n: 'Pekleşme üsteli',
-      v0: 'Hat giriş hızı', method: 'Pas dağıtım yöntemi', passes: 'Pas sayısı'
+      v0: 'Hat giriş hızı', rho: 'Yoğunluk', cp: 'Özgül ısı',
+      method: 'Pas dağıtım yöntemi', passes: 'Pas sayısı'
     },
     /* Her girdinin altındaki tek satır: alan ne demek, tipik aralığı ne. Sayfa
        terimleri hiç tanımlamıyordu; uzman olmayan ziyaretçi ilk ekranda kalıyordu. */
@@ -2151,6 +2163,8 @@ const METIN = {
       K: 'Malzemenin sertleşme eğrisinin yüksekliği. Tavlanmış ETP bakırda 315–530 MPa, tipik 450.',
       n: 'Malzeme sertleşmesinin hızı. ETP bakırda 0,30–0,40 arası.',
       v0: 'Filmaşinin hatta giriş hızı. Gerilmeyi değiştirmez; gücü ve çıkış hızını ölçekler.',
+      rho: 'Malzeme yoğunluğu. Bakır 8960, çelik 7850, alüminyum 2700 kg/m³. Kütle debisini ve kWh/ton değerini belirler.',
+      cp: 'Özgül ısı. Bakır 385, çelik 470, alüminyum 900 J/(kg·K). Sıcaklık artışını belirler.',
       method: 'Azaltmanın paslara nasıl dağıtılacağı. Emin değilseniz eşit emniyet seçin.',
       passes: 'Boş bırakın: araç gereken en az pas sayısını bulur. Kalıp sayınız sabitse yazın.'
     },
@@ -2325,6 +2339,7 @@ const METIN = {
     oneriGuvenli: 'The highest safety ratio is {emniyet} at pass {pas} — below the nominal model screening threshold of 0.50.',
     oneriGuvenliDar: 'The highest safety ratio is {emniyet} at pass {pas} — just below the 0.50 limit, the margin is very thin.',
     oneriEsitBolge: '{adet} passes are near the highest ratio (within passes {ilk}–{son}; maximum {emniyet}).',
+    oneriMalzeme: 'Density or specific heat differs from the copper default. The strength coefficient K, the exponent n and the 70 MPa flow floor are still calibrated for annealed ETP copper; if the material changed, enter those from its own data too.',
     oneriGuvenliBolge: 'That level is below the nominal model screening threshold of 0.50.',
     oneriDeltaDusuk: 'Pass {pas} has delta {delta} (lower limit 1.5) — excessive friction and die wear. Raising the die semi-angle to {alpha}° brings this pass back to the limit.',
     oneriDeltaYuksek: 'Pass {pas} has delta {delta} (upper limit 3.0) — risk of centre burst (chevron). Lowering the die semi-angle to {alpha}° brings this pass back to the limit.',
@@ -2470,7 +2485,8 @@ const METIN = {
     alan: {
       d0: 'Starting diameter', dTarget: 'Target diameter', alphaDeg: 'Die semi-angle',
       mu: 'Friction coefficient', K: 'Strength coefficient', n: 'Strain-hardening exponent',
-      v0: 'Line entry speed', method: 'Pass distribution method', passes: 'Number of passes'
+      v0: 'Line entry speed', rho: 'Density', cp: 'Specific heat',
+      method: 'Pass distribution method', passes: 'Number of passes'
     },
     alanYardim: {
       d0: 'Diameter of the rod entering the line. Standard for copper lines is 8.00 mm.',
@@ -2480,6 +2496,8 @@ const METIN = {
       K: 'Height of the material hardening curve. 315–530 MPa for annealed ETP copper, 450 typical.',
       n: 'How fast the material hardens. 0.30–0.40 for ETP copper.',
       v0: 'Speed of the rod entering the line. Does not change stress; it scales power and exit speed.',
+      rho: 'Material density. Copper 8960, steel 7850, aluminium 2700 kg/m³. Sets the mass flow and the kWh per tonne.',
+      cp: 'Specific heat. Copper 385, steel 470, aluminium 900 J/(kg·K). Sets the temperature rise.',
       method: 'How the reduction is spread over the passes. If unsure, pick equal safety.',
       passes: 'Leave it empty and the tool finds the smallest workable pass count. Type a number if your die count is fixed.'
     },
@@ -2622,6 +2640,7 @@ const METIN = {
 const durum = {
   dil: 'tr',
   d0: 8.00, dTarget: 1.38, alphaDeg: 8, mu: 0.05, K: 450, n: 0.35, v0: 2.0,
+  rho: RHO, cp: CP,
   method: 'equalStrain',
   passes: null,            // null = Otomatik
   anneals: [],             // 1-indeksli pas numaraları
@@ -2656,11 +2675,12 @@ const durum = {
 
 // Hesabı etkileyen alanlar. Bu listede olan her şey HESAPLA'yı bekler;
 // olmayan her şey (dil, tema, seçili pas, karşılaştırma) anında uygulanır.
-const HESAP_ALANLARI = ['d0', 'dTarget', 'alphaDeg', 'mu', 'K', 'n', 'v0', 'method', 'passes'];
+const HESAP_ALANLARI = ['d0', 'dTarget', 'alphaDeg', 'mu', 'K', 'n', 'v0', 'rho', 'cp',
+                        'method', 'passes'];
 
 const taslak = {
   d0: durum.d0, dTarget: durum.dTarget, alphaDeg: durum.alphaDeg, mu: durum.mu,
-  K: durum.K, n: durum.n, v0: durum.v0,
+  K: durum.K, n: durum.n, v0: durum.v0, rho: durum.rho, cp: durum.cp,
   method: durum.method,
   passes: durum.passes,
   anneals: durum.anneals.slice(),
@@ -2698,9 +2718,9 @@ const ayniDizi = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]
 function bekleyenDegisiklikler() {
   const M = S();
   const liste = [];
-  const bas = { d0: 2, dTarget: 2, alphaDeg: 1, mu: 3, K: 0, n: 2, v0: 1 };
+  const bas = { d0: 2, dTarget: 2, alphaDeg: 1, mu: 3, K: 0, n: 2, v0: 1, rho: 0, cp: 0 };
 
-  for (const k of ['d0', 'dTarget', 'alphaDeg', 'mu', 'K', 'n', 'v0']) {
+  for (const k of ['d0', 'dTarget', 'alphaDeg', 'mu', 'K', 'n', 'v0', 'rho', 'cp']) {
     if (taslak[k] === durum[k]) continue;
     liste.push(M.alan[k] + ': ' + fmt(durum[k], bas[k]) + ' → ' + fmt(taslak[k], bas[k]));
   }
@@ -2744,7 +2764,9 @@ const ALANLAR = [
   { k: 'mu',       birim: '' },
   { k: 'K',        birim: 'MPa' },
   { k: 'n',        birim: '' },
-  { k: 'v0',       birim: 'm/s' }
+  { k: 'v0',       birim: 'm/s' },
+  { k: 'rho',      birim: 'kg/m³' },
+  { k: 'cp',       birim: 'J/(kg·K)' }
 ];
 
 // Tablo sütunları: anahtar, ondalık basamak ve birim. Aynı sütundaki bütün sayılar
@@ -2796,7 +2818,7 @@ function sayiOku(metin) {
    geri okunabiliyorsa biçimli yazılır (8 -> "8,00"); okunamıyorsa ham değer
    korunur (0,0523 -> "0,0523"). Böylece panel hizalı kalır ama paylaşılan
    bağlantıdaki hassasiyet sessizce yuvarlanmaz. */
-const GIRDI_BASAMAK = { d0: 2, dTarget: 2, alphaDeg: 1, mu: 3, K: 0, n: 2, v0: 1 };
+const GIRDI_BASAMAK = { d0: 2, dTarget: 2, alphaDeg: 1, mu: 3, K: 0, n: 2, v0: 1, rho: 0, cp: 0 };
 function girdiMetni(v, anahtar) {
   const basamak = GIRDI_BASAMAK[anahtar];
   const ham = String(v);
@@ -3034,6 +3056,12 @@ function oneriCumleleri(prog) {
     cumleler.push(doldur(M.oneriIsi, { pas: sicak.no, dT: fmt(sicak.dT, 1) }));
   }
 
+  // Malzeme bakır dışına ayarlandıysa: K, n ve 70 MPa tabanı hâlâ bakıra göre.
+  // Yoğunluğu değiştirip pekleşmeyi unutmak sessiz bir tutarsızlık olurdu.
+  if (prog.passes[0].rho !== RHO || prog.passes[0].cp !== CP) {
+    cumleler.push(M.oneriMalzeme);
+  }
+
   return cumleler;
 }
 
@@ -3053,7 +3081,7 @@ function uyariSayimi(prog) {
 function girdiGoruntusu(prog) {
   return {
     d0: durum.d0, dTarget: durum.dTarget, alphaDeg: durum.alphaDeg, mu: durum.mu,
-    K: durum.K, n: durum.n, v0: durum.v0,
+    K: durum.K, n: durum.n, v0: durum.v0, rho: durum.rho, cp: durum.cp,
     method: durum.manuelCaplar ? 'manual' : durum.method,
     passes: durum.passes,                  // null = otomatik
     passCount: prog.passCount,
@@ -3355,6 +3383,7 @@ function kurTabloBasligi() {
 function senaryoYukle(s) {
   taslak.d0 = s.d0; taslak.dTarget = s.dTarget; taslak.alphaDeg = s.alphaDeg;
   taslak.mu = s.mu; taslak.K = s.K; taslak.n = s.n; taslak.v0 = s.v0;
+  taslak.rho = s.rho; taslak.cp = s.cp;
   taslak.passes = null;          // K-01: senaryo düğmesi pas sayısını otomatiğe döndürür
   taslak.anneals = [];
   taslak.manuelCaplar = null;
@@ -3591,7 +3620,7 @@ function kalibCoz() {
   // Çekme gerilmesi ÇIKIŞ kesitinde tanımlıdır: sigma_d = F / A1.
   const sigmaOlculen = F / pas.A1;
   const geometri = { d0: pas.d0, d1: pas.d1, epsIn: pas.epsIn, alphaDeg: pas.alphaDeg,
-                     K: pas.K, n: pas.n, v0: pas.v0 };
+                     K: pas.K, n: pas.n, v0: pas.v0, rho: pas.rho, cp: pas.cp };
   const cozum = muCoz(sigmaOlculen, geometri);
 
   if (cozum.durum !== 'tamam') {
@@ -3707,7 +3736,8 @@ function optCalistir() {
 
   const temel = {
     d0: taslak.d0, dTarget: taslak.dTarget, mu: taslak.mu,
-    K: taslak.K, n: taslak.n, v0: taslak.v0, anneals: taslak.anneals.slice()
+    K: taslak.K, n: taslak.n, v0: taslak.v0, rho: taslak.rho, cp: taslak.cp,
+    anneals: taslak.anneals.slice()
   };
 
   requestAnimationFrame(() => setTimeout(() => {
@@ -4093,10 +4123,10 @@ function gorunumHesapla() {
   const prog = manuel
     ? buildSchedule({ method: 'manual', diameters: durum.manuelCaplar,
         alphaDeg: durum.alphaDeg, mu: durum.mu, K: durum.K, n: durum.n,
-        v0: durum.v0, anneals: durum.anneals })
+        v0: durum.v0, rho: durum.rho, cp: durum.cp, anneals: durum.anneals })
     : buildSchedule({ d0: durum.d0, dTarget: durum.dTarget, method: durum.method,
         passes: durum.passes, alphaDeg: durum.alphaDeg, mu: durum.mu, K: durum.K,
-        n: durum.n, v0: durum.v0, anneals: durum.anneals });
+        n: durum.n, v0: durum.v0, rho: durum.rho, cp: durum.cp, anneals: durum.anneals });
 
   // Seçili pas artık yoksa (pas sayısı düştüyse) ilk pasa dönülür.
   const secilenPas = prog.passes.find(x => x.no === durum.secilenPas) || prog.passes[0];
@@ -5019,7 +5049,8 @@ function programKopyasi(prog, K, n, mu) {
   const caplar = [prog.passes[0].d0].concat(prog.passes.map(x => x.d1));
   return buildSchedule({
     method: 'manual', diameters: caplar, alphaDeg: prog.passes[0].alphaDeg,
-    mu, K, n, v0: prog.v0Line, anneals: prog.anneals
+    mu, K, n, v0: prog.v0Line, rho: prog.passes[0].rho, cp: prog.passes[0].cp,
+    anneals: prog.anneals
   });
 }
 
@@ -5111,7 +5142,8 @@ function duyarlilikEnerji(prog) {
       method: prog.method, passes: prog.passCount,
       diameters: prog.method === 'manual' ? [prog.passes[0].d0, ...prog.passes.map(p => p.d1)] : null,
       alphaDeg: prog.passes[0].alphaDeg, mu: prog.passes[0].mu, K: prog.passes[0].K,
-      n: prog.passes[0].n, v0: prog.v0Line, anneals: prog.anneals
+      n: prog.passes[0].n, v0: prog.v0Line, rho: prog.passes[0].rho, cp: prog.passes[0].cp,
+      anneals: prog.anneals
     };
     return enerjiOf(buildSchedule(Object.assign(temel, degisim)));
   };
@@ -5484,6 +5516,9 @@ function adresYaz() {
   p.set('d0', s(durum.d0)); p.set('d1', s(durum.dTarget));
   p.set('a', s(durum.alphaDeg)); p.set('mu', s(durum.mu));
   p.set('K', s(durum.K)); p.set('n', s(durum.n)); p.set('v0', s(durum.v0));
+  // Malzeme varsayılandan (bakır) farklıysa bağlantıda taşınır.
+  if (durum.rho !== RHO) p.set('rho', s(durum.rho));
+  if (durum.cp !== CP) p.set('cp', s(durum.cp));
   p.set('m', durum.method);
   if (durum.passes !== null) p.set('N', String(durum.passes));
   // Liste ayırıcısı '_': ondalık noktayla çakışmaz.
@@ -5519,6 +5554,7 @@ function adrestenOku() {
   };
   sayi('d0', 'd0'); sayi('d1', 'dTarget'); sayi('a', 'alphaDeg'); sayi('mu', 'mu');
   sayi('K', 'K'); sayi('n', 'n'); sayi('v0', 'v0');
+  sayi('rho', 'rho'); sayi('cp', 'cp');
   const yontem = p.get('m');
   if (['equalStrain', 'tapered', 'equalSafety'].includes(yontem)) durum.method = yontem;
   const N = sayiOku(p.get('N'));
@@ -5584,6 +5620,8 @@ function csvUret(prog) {
   satirlar.push([M.alan.alphaDeg, girdiMetni(first.alphaDeg) + '°', M.alan.mu, girdiMetni(first.mu),
                  M.alan.K, girdiMetni(first.K) + ' MPa', M.alan.n, girdiMetni(first.n),
                  M.alan.v0, girdiMetni(prog.v0Line) + ' m/s'].map(alan).join(ayirici));
+  satirlar.push([M.alan.rho, girdiMetni(first.rho) + ' kg/m3',
+                 M.alan.cp, girdiMetni(first.cp) + ' J/(kg.K)'].map(alan).join(ayirici));
   satirlar.push(alan(sonBant ? M.csvBant : M.csvMerkez));
   if (sonBant) {
     for (const key of ['K', 'n', 'mu']) satirlar.push([key, ...durum.bant[key].map(girdiMetni)].map(alan).join(ayirici));
