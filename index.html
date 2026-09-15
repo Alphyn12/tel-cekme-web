@@ -1110,6 +1110,7 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
       <button type="button" class="dugme sessiz" id="karsilastirKapat" data-t="karsilastirKapat" hidden></button>
       <button type="button" class="dugme sessiz" id="yazdir" data-t="yazdir"></button>
       <button type="button" class="dugme sessiz" id="csvIndir" data-t="csvIndir"></button>
+      <button type="button" class="dugme sessiz" id="excelIndir" data-t="excelIndir"></button>
       <button type="button" class="dugme sessiz" id="baglantiKopyala" data-t="baglantiKopyala"></button>
       <button type="button" class="dugme" id="karsilastirSabitle" data-t="karsilastirSabitle"></button>
     </div>
@@ -2361,6 +2362,7 @@ const METIN = {
     baglantiKopyalandi: 'Bağlantı panoya kopyalandı — bütün girdiler ve belirsizlik bandı ayarları adreste.',
     baglantiHatasi: 'Bağlantı kopyalanamadı; adres çubuğundaki bağlantıyı elle kopyalayabilirsiniz.',
     csvIndir: 'CSV indir',
+    excelIndir: 'Excel indir',
     csvIndi: 'CSV indirildi.',
     csvMerkez: 'merkez değerler (belirsizlik bandı kapalı)',
     csvBant: 'belirsizlik bandı açık: alt – üst',
@@ -2744,6 +2746,7 @@ const METIN = {
     baglantiKopyalandi: 'Link copied — every input and the uncertainty band settings are in the address.',
     baglantiHatasi: 'The link could not be copied; you can copy it from the address bar.',
     csvIndir: 'Download CSV',
+    excelIndir: 'Download Excel',
     csvIndi: 'CSV downloaded.',
     csvMerkez: 'central values (uncertainty band off)',
     csvBant: 'uncertainty band on: low – high',
@@ -4900,7 +4903,7 @@ function gorunumuYaz(g) {
 /* Sonucu dışa aktaran düğmeler. Program yokken hepsi kapanır: indirilecek,
    yazdırılacak ya da paylaşılacak tutarlı bir hesap yok. */
 function sonucDugmeleri(etkin) {
-  for (const id of ['csvIndir', 'yazdir', 'baglantiKopyala']) $(id).disabled = !etkin;
+  for (const id of ['csvIndir', 'excelIndir', 'yazdir', 'baglantiKopyala']) $(id).disabled = !etkin;
   $('karsilastirSabitle').disabled = !etkin;
   if (!etkin) $('paylasimDurumu').hidden = true;
 }
@@ -6374,6 +6377,316 @@ function csvUret(prog) {
   return satirlar.join('\r\n');
 }
 
+
+/* ==== XLSX ÇIKTISI ====
+   CSV her yerde açılır ama biçim taşımaz: sütun genişliği, sayı biçimi, dondurulmuş
+   başlık, eşiği aşan hücrenin rengi — hiçbiri gitmez. Bu yüzden gerçek bir .xlsx
+   üretiliyor.
+
+   Kütüphane yok. Bir xlsx, içinde birkaç XML dosyası olan bir ZIP'tir; ZIP'i
+   SIKIŞTIRMADAN (stored) yazmak yeterlidir, tek gereken doğru CRC-32. Böylece araç
+   "tek dosya, sıfır bağımlılık, çevrimdışı çalışır" iddiasını korur.
+
+   Metinler paylaşılan dizin (sharedStrings) yerine satır içi yazılır: bir tablo için
+   dizin kazancı yok, karmaşıklık ise fazlaydı. */
+
+const CRC_TABLOSU = (() => {
+  const t = new Uint32Array(256);
+  for (let i = 0; i < 256; i++) {
+    let c = i;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    t[i] = c >>> 0;
+  }
+  return t;
+})();
+
+function crc32(bayt) {
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < bayt.length; i++) c = CRC_TABLOSU[(c ^ bayt[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+
+/* Sıkıştırmasız ZIP. Girdi: [{ad, veri(Uint8Array)}]. Çıktı: Blob. */
+function zipYaz(dosyalar) {
+  const kodla = new TextEncoder();
+  const parcalar = [];
+  const dizin = [];
+  let uzaklik = 0;
+
+  const u16 = (v) => [v & 0xFF, (v >>> 8) & 0xFF];
+  const u32 = (v) => [v & 0xFF, (v >>> 8) & 0xFF, (v >>> 16) & 0xFF, (v >>> 24) & 0xFF];
+
+  for (const d of dosyalar) {
+    const ad = kodla.encode(d.ad);
+    const crc = crc32(d.veri);
+    // Yerel başlık: sürüm 2.0, sıkıştırma 0 (stored), tarih/saat sabit.
+    const bas = [].concat(u32(0x04034b50), u16(20), u16(0), u16(0), u16(0), u16(0),
+                          u32(crc), u32(d.veri.length), u32(d.veri.length),
+                          u16(ad.length), u16(0));
+    parcalar.push(new Uint8Array(bas), ad, d.veri);
+    dizin.push({ ad, crc, boy: d.veri.length, uzaklik });
+    uzaklik += bas.length + ad.length + d.veri.length;
+  }
+
+  const merkezBas = uzaklik;
+  for (const g of dizin) {
+    const bas = [].concat(u32(0x02014b50), u16(20), u16(20), u16(0), u16(0), u16(0), u16(0),
+                          u32(g.crc), u32(g.boy), u32(g.boy),
+                          u16(g.ad.length), u16(0), u16(0), u16(0), u16(0), u32(0), u32(g.uzaklik));
+    parcalar.push(new Uint8Array(bas), g.ad);
+    uzaklik += bas.length + g.ad.length;
+  }
+  const son = [].concat(u32(0x06054b50), u16(0), u16(0), u16(dizin.length), u16(dizin.length),
+                        u32(uzaklik - merkezBas), u32(merkezBas), u16(0));
+  parcalar.push(new Uint8Array(son));
+
+  return new Blob(parcalar, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+}
+
+const xmlKacir = (m) => String(m).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+/* Sütun harfi: 0 -> A, 26 -> AA */
+function sutunAdi(i) {
+  let ad = '';
+  for (let n = i + 1; n > 0; n = Math.floor((n - 1) / 26)) {
+    ad = String.fromCharCode(65 + ((n - 1) % 26)) + ad;
+  }
+  return ad;
+}
+
+/* Hücre: sayı ya da metin. stil = cellXfs dizini. */
+function xlHucre(sutun, satir, deger, stil) {
+  const ref = sutunAdi(sutun) + satir;
+  const st = stil ? ' s="' + stil + '"' : '';
+  if (deger === null || deger === undefined || deger === '') return '<c r="' + ref + '"' + st + '/>';
+  if (typeof deger === 'number' && Number.isFinite(deger)) {
+    return '<c r="' + ref + '"' + st + '><v>' + deger + '</v></c>';
+  }
+  return '<c r="' + ref + '"' + st + ' t="inlineStr"><is><t xml:space="preserve">' +
+         xmlKacir(deger) + '</t></is></c>';
+}
+
+/* Stil dizini — cellXfs sırası: 0 normal · 1 başlık · 2 sayı(3 basamak) ·
+   3 sayı(1 basamak) · 4 sayı(0) · 5 yüzde · 6 başlık büyük · 7 etiket ·
+   8 güvenli · 9 uyarı · 10 kritik · 11 tarih/altbilgi */
+const XL_STIL = { normal: 0, baslik: 1, s3: 2, s1: 3, s0: 4, yuzde: 5, buyuk: 6,
+                  etiket: 7, ok: 8, warn: 9, crit: 10, kucuk: 11 };
+
+function xlStiller() {
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+  '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+    '<numFmts count="3">' +
+      '<numFmt numFmtId="164" formatCode="0.000"/>' +
+      '<numFmt numFmtId="165" formatCode="0.0"/>' +
+      '<numFmt numFmtId="166" formatCode="0.0%"/>' +
+    '</numFmts>' +
+    '<fonts count="5">' +
+      '<font><sz val="10"/><name val="Calibri"/></font>' +
+      '<font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>' +
+      '<font><b/><sz val="14"/><color rgb="FF141A19"/><name val="Calibri"/></font>' +
+      '<font><b/><sz val="10"/><color rgb="FF414B49"/><name val="Calibri"/></font>' +
+      '<font><sz val="9"/><color rgb="FF6C7775"/><name val="Calibri"/></font>' +
+    '</fonts>' +
+    '<fills count="6">' +
+      '<fill><patternFill patternType="none"/></fill>' +
+      '<fill><patternFill patternType="gray125"/></fill>' +
+      '<fill><patternFill patternType="solid"><fgColor rgb="FFA6512A"/><bgColor indexed="64"/></patternFill></fill>' +
+      '<fill><patternFill patternType="solid"><fgColor rgb="FFD9E6E2"/><bgColor indexed="64"/></patternFill></fill>' +
+      '<fill><patternFill patternType="solid"><fgColor rgb="FFF0E5CC"/><bgColor indexed="64"/></patternFill></fill>' +
+      '<fill><patternFill patternType="solid"><fgColor rgb="FFF2DCDF"/><bgColor indexed="64"/></patternFill></fill>' +
+    '</fills>' +
+    '<borders count="2">' +
+      '<border><left/><right/><top/><bottom/><diagonal/></border>' +
+      '<border><left style="thin"><color rgb="FFD2D8D6"/></left><right style="thin"><color rgb="FFD2D8D6"/></right>' +
+      '<top style="thin"><color rgb="FFD2D8D6"/></top><bottom style="thin"><color rgb="FFD2D8D6"/></bottom><diagonal/></border>' +
+    '</borders>' +
+    '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
+    '<cellXfs count="12">' +
+      '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/>' +
+      '<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>' +
+      '<xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/>' +
+      '<xf numFmtId="165" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/>' +
+      '<xf numFmtId="1" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/>' +
+      '<xf numFmtId="166" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/>' +
+      '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>' +
+      '<xf numFmtId="0" fontId="3" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1"/>' +
+      '<xf numFmtId="164" fontId="0" fillId="3" borderId="1" xfId="0" applyNumberFormat="1" applyFill="1" applyBorder="1"/>' +
+      '<xf numFmtId="164" fontId="0" fillId="4" borderId="1" xfId="0" applyNumberFormat="1" applyFill="1" applyBorder="1"/>' +
+      '<xf numFmtId="164" fontId="0" fillId="5" borderId="1" xfId="0" applyNumberFormat="1" applyFill="1" applyBorder="1"/>' +
+      '<xf numFmtId="0" fontId="4" fillId="0" borderId="0" xfId="0" applyFont="1"/>' +
+    '</cellXfs>' +
+    '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>' +
+  '</styleSheet>';
+}
+
+
+/* Pas tablosu sayfası: başlık satırı dondurulur, sütun genişlikleri sayının
+   genişliğine göre, emniyet sütunu eşiğe göre renklenir. */
+function xlPasSayfasi(prog) {
+  const M = S();
+  const genislikler = [6, 11, 11, 12, 13, 13, 13, 13, 12, 9, 11, 11, 12, 10];
+  let xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+    '<sheetViews><sheetView workbookViewId="0" tabSelected="1">' +
+    '<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>' +
+    '</sheetView></sheetViews>' +
+    '<sheetFormatPr defaultRowHeight="14"/><cols>';
+  genislikler.forEach((g, i) => {
+    xml += '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + g + '" customWidth="1"/>';
+  });
+  xml += '</cols><sheetData>';
+
+  // Başlık: sütun adı + birim, tabloyla aynı sözlükten.
+  xml += '<row r="1" ht="30" customHeight="1">';
+  SUTUNLAR.forEach((sut, i) => {
+    const ad = M.sutun[sut.k] + (sut.birim ? ' (' + sut.birim + ')' : '');
+    xml += xlHucre(i, 1, ad, XL_STIL.baslik);
+  });
+  xml += xlHucre(SUTUNLAR.length, 1, M.sutun.anneal, XL_STIL.baslik);
+  xml += '</row>';
+
+  const bicim = { no: XL_STIL.s0, d0: XL_STIL.s3, d1: XL_STIL.s3, rPct: XL_STIL.s1,
+                  epsOut: XL_STIL.s3, sigmaBar: XL_STIL.s1, sigmaFOut: XL_STIL.s1,
+                  sigmaD: XL_STIL.s1, safety: XL_STIL.s3, delta: XL_STIL.s1,
+                  dT: XL_STIL.s1, v1: XL_STIL.s1, PkW: XL_STIL.s1 };
+
+  prog.passes.forEach((pas, r) => {
+    const satir = r + 2;
+    xml += '<row r="' + satir + '">';
+    SUTUNLAR.forEach((sut, i) => {
+      const ham = sut.k === 'rPct' ? pas.r * 100 : sut.k === 'PkW' ? pas.P / 1000 : pas[sut.k];
+      // Emniyet sütunu eşiğe göre renklenir: sayının yanında durumu da taşısın.
+      const stil = sut.k === 'safety'
+        ? { ok: XL_STIL.ok, warn: XL_STIL.warn, crit: XL_STIL.crit }[safetyDurumu(pas.safety)]
+        : bicim[sut.k];
+      xml += xlHucre(i, satir, Number.isFinite(ham) ? Number(ham) : '', stil);
+    });
+    xml += xlHucre(SUTUNLAR.length, satir, pas.anneal ? M.tavlamaEtiketi : '', XL_STIL.normal);
+    xml += '</row>';
+  });
+
+  return xml + '</sheetData></worksheet>';
+}
+
+/* Özet sayfası: başlık, karar, girdiler ve özet büyüklükler. Rapor gibi okunur. */
+function xlOzetSayfasi(prog) {
+  const M = S();
+  const o = programOzeti(prog);
+  const ilk = prog.passes[0], son = prog.passes[prog.passCount - 1];
+  const satirlar = [];
+
+  satirlar.push([{ v: M.baslik, s: XL_STIL.buyuk }]);
+  satirlar.push([{ v: new Date().toLocaleString(durum.dil === 'tr' ? 'tr-TR' : 'en-GB'), s: XL_STIL.kucuk }]);
+  satirlar.push([]);
+
+  const baslik = (metin) => satirlar.push([{ v: metin, s: XL_STIL.baslik }, { v: '', s: XL_STIL.baslik }]);
+  const cift = (ad, deger, stil) => satirlar.push([{ v: ad, s: XL_STIL.etiket }, { v: deger, s: stil }]);
+
+  baslik(M.karar.baslik);
+  cift(M.alan.d0, ilk.d0, XL_STIL.s3);
+  cift(M.alan.dTarget, son.d1, XL_STIL.s3);
+  cift(M.ozetAlan.pas, o.pas, XL_STIL.s0);
+  cift(M.ozetAlan.enRiskli, o.enYuksekEmniyet,
+       { ok: XL_STIL.ok, warn: XL_STIL.warn, crit: XL_STIL.crit }[safetyDurumu(o.enYuksekEmniyet)]);
+  cift(M.karar.rozet[safetyDurumu(o.enYuksekEmniyet)] + '', '', XL_STIL.normal);
+  satirlar.push([]);
+
+  baslik(M.girdiler || M.adimGirdiler);
+  const malzeme = malzemeBul(ilk);
+  cift(M.alan.malzeme, malzeme ? (durum.dil === 'tr' ? malzeme.tr : malzeme.en) : M.malzemeOzel, XL_STIL.normal);
+  cift(M.alan.method, prog.method === 'manual' ? M.ozetManuel : M.yontem[prog.method], XL_STIL.normal);
+  cift(M.alan.alphaDeg, ilk.alphaDeg, XL_STIL.s1);
+  cift(M.alan.mu, ilk.mu, XL_STIL.s3);
+  cift(M.alan.K, ilk.K, XL_STIL.s0);
+  cift(M.alan.n, ilk.n, XL_STIL.s3);
+  cift(M.alan.sigmaY0, ilk.sigmaY0, XL_STIL.s0);
+  cift(M.alan.sigmaB, ilk.sigmaB, XL_STIL.s1);
+  cift(M.alan.rho, ilk.rho, XL_STIL.s0);
+  cift(M.alan.cp, ilk.cp, XL_STIL.s0);
+  cift(M.alan.v0, ilk.v0, XL_STIL.s1);
+  satirlar.push([]);
+
+  baslik(M.ozetBaslik);
+  cift(M.ozetAlan.guc, o.guc, XL_STIL.s1);
+  cift(M.ozetAlan.enerji, o.enerji, XL_STIL.s1);
+  cift(M.ozetAlan.uzama, o.uzama, XL_STIL.s1);
+  cift(M.ozetAlan.cikisHizi, o.cikisHizi, XL_STIL.s1);
+  satirlar.push([]);
+
+  // Kaynak ve sınır: tablo bir başkasına gittiğinde de yanında dursun.
+  satirlar.push([{ v: M.giris.sinir, s: XL_STIL.kucuk }]);
+  satirlar.push([{ v: M.oneriKapsam || '', s: XL_STIL.kucuk }]);
+
+  let xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+    '<cols><col min="1" max="1" width="26" customWidth="1"/>' +
+    '<col min="2" max="2" width="30" customWidth="1"/></cols><sheetData>';
+  satirlar.forEach((satir, r) => {
+    xml += '<row r="' + (r + 1) + '">';
+    satir.forEach((h, i) => { xml += xlHucre(i, r + 1, h.v, h.s); });
+    xml += '</row>';
+  });
+  return xml + '</sheetData></worksheet>';
+}
+
+function xlsxUret(prog) {
+  const M = S();
+  const kodla = new TextEncoder();
+  const ad = (durum.dil === 'tr' ? ['Pas programı', 'Özet'] : ['Pass schedule', 'Summary']);
+  const dosya = (isim, metin) => ({ ad: isim, veri: kodla.encode(metin) });
+
+  const tipler = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+    '<Default Extension="xml" ContentType="application/xml"/>' +
+    '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
+    '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' +
+    '<Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' +
+    '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
+    '</Types>';
+
+  const kokRel = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>' +
+    '</Relationships>';
+
+  const kitap = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" ' +
+    'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>' +
+    '<sheet name="' + xmlKacir(ad[0]) + '" sheetId="1" r:id="rId1"/>' +
+    '<sheet name="' + xmlKacir(ad[1]) + '" sheetId="2" r:id="rId2"/>' +
+    '</sheets></workbook>';
+
+  const kitapRel = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>' +
+    '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/>' +
+    '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
+    '</Relationships>';
+
+  return zipYaz([
+    dosya('[Content_Types].xml', tipler),
+    dosya('_rels/.rels', kokRel),
+    dosya('xl/workbook.xml', kitap),
+    dosya('xl/_rels/workbook.xml.rels', kitapRel),
+    dosya('xl/styles.xml', xlStiller()),
+    dosya('xl/worksheets/sheet1.xml', xlPasSayfasi(prog)),
+    dosya('xl/worksheets/sheet2.xml', xlOzetSayfasi(prog))
+  ]);
+}
+
+function excelIndir(prog) {
+  if (!prog) return;
+  const bag = document.createElement('a');
+  bag.href = URL.createObjectURL(xlsxUret(prog));
+  bag.download = 'tel-cekme-pas-programi.xlsx';
+  document.body.appendChild(bag);
+  bag.click();
+  document.body.removeChild(bag);
+  URL.revokeObjectURL(bag.href);
+}
+
 function csvIndir(prog) {
   if (!prog) return;
   const icerik = '\ufeff' + csvUret(prog);      // BOM: Excel Türkçe karakterleri doğru okusun
@@ -6455,6 +6768,7 @@ function baslat() {
   $('temaDugmesi').addEventListener('click', temaDegistir);
   $('baglantiKopyala').addEventListener('click', baglantiKopyala);
   $('csvIndir').addEventListener('click', () => csvIndir(sonProgram));
+  $('excelIndir').addEventListener('click', () => excelIndir(sonProgram));
   $('yazdir').addEventListener('click', () => window.print());
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
     if (durum.tema === 'sistem') temaUygula();

@@ -238,7 +238,12 @@ yazı tipleriyle açılır.
 
 Arayüz Türkçe ve İngilizce. Girdiler yuvarlanmadan adres çubuğunda taşınır, yani bir senaryoyu
 bağlantı olarak paylaşabilirsiniz; adres yalnızca hesaplandığında güncellendiği için
-paylaşılan bağlantı her zaman gerçekten hesaplanmış bir programı taşır. Pas tablosu CSV olarak indirilir; yazdırma çıktısı
+paylaşılan bağlantı her zaman gerçekten hesaplanmış bir programı taşır. Pas tablosu iki biçimde indirilir. **CSV** her yerde açılır. **Excel (.xlsx)** biçimi
+taşır: başlık satırı dondurulmuş, sütun genişlikleri ve sayı biçimleri ayarlı, emniyet
+sütunu eşiğe göre renkli, ikinci sayfada girdiler ve karar özeti. Dosya kütüphanesiz
+üretilir — bir xlsx, içinde XML dosyaları olan bir ZIP'tir; sıkıştırmasız yazmak ve
+doğru CRC-32 vermek yeterlidir, böylece "tek dosya, sıfır bağımlılık" bozulmaz.
+Yazdırma çıktısı yazdırma çıktısı
 pas sayısına göre uzar (mühendislik özeti + belirsizlik, doğrulama ve kabuller).
 
 ## 7 Eylül 2026 incelemesi
