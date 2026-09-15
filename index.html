@@ -699,6 +699,25 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
   .panel .alan label, .panel .alan .etiket { min-height: calc(3 * 1.2 * var(--t11)); }
 }
 
+/* ---- Optimizasyon bölümü ---- */
+.opt-satiri { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s12); }
+.opt-sonuc {
+  border: 1px solid var(--line-strong);
+  border-left: 2px solid var(--patina);
+  background: var(--surface);
+  padding: var(--s12);
+  display: flex; flex-direction: column; gap: var(--s8);
+}
+.opt-ozet {
+  margin: 0;
+  font: 600 var(--t16)/1.3 var(--yazi-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.opt-liste { margin: 0; padding-left: 1.1em; display: grid; gap: var(--s4); }
+.opt-liste li { font: 400 var(--t125)/1.45 var(--yazi-govde); color: var(--ink2); }
+
 /* ---- Giriş kartı: araç ne işe yarar ----
    Sayfa doğrudan uzman parametreleriyle açılıyordu; terimleri bilmeyen bir
    ziyaretçi ilk ekranda kalıyordu. Kart, kararı ve üç adımı öne alır. */
@@ -888,6 +907,10 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
   .karar-ozet { font-size: var(--t16); }
   .rozet { padding: var(--s8); }
   .sozluk dl { padding: 0 var(--s12) var(--s12); }
+  /* Telefonda amaç seçimi ve düğme alt alta, ikisi de tam genişlik. */
+  .opt-satiri { flex-direction: column; align-items: stretch; }
+  .opt-satiri .segment, .opt-satiri .dugme { width: 100%; }
+  .opt-satiri .segment button { flex: 1 1 0; }
 }
 </style>
 </head>
@@ -965,6 +988,29 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
   <div class="uyari bayat" id="bayatKutusu" role="status" hidden></div>
   <div class="uyari" id="hataKutusu" hidden></div>
   <div class="bilgi" id="bilgiKutusu" hidden></div>
+
+  <!-- Optimizasyon: girdi tarafının yardımcısı. Sonucu doğrudan ekrana yazmaz;
+       "girdilere al" der ve bekleyen değişiklik şeridini açar (K-16). -->
+  <section class="bolum" id="optBolumu">
+    <h2 class="bolum-basligi" id="optBaslik"></h2>
+    <p class="gerekce" id="optAciklama"></p>
+    <div class="opt-satiri">
+      <div class="segment" role="group" id="optAmacSecimi">
+        <button type="button" id="optAmacEnerji" aria-pressed="true"></button>
+        <button type="button" id="optAmacKalip" aria-pressed="false"></button>
+      </div>
+      <button type="button" class="dugme birincil" id="optCalistir"></button>
+    </div>
+    <div class="opt-sonuc" id="optSonuc" hidden>
+      <p class="opt-ozet" id="optOzet"></p>
+      <ul class="opt-liste" id="optListe"></ul>
+      <div class="dugme-sirasi">
+        <button type="button" class="dugme" id="optUygula"></button>
+      </div>
+      <p class="ipucu" id="optDurum" hidden></p>
+    </div>
+    <p class="gerekce" id="optUyari"></p>
+  </section>
 
   <section class="bolum" id="ozetBolumu">
     <h2 class="bolum-basligi" data-t="ozetBaslik"></h2>
@@ -2085,6 +2131,26 @@ const METIN = {
       rozet: { ok: 'Güvenli', warn: 'Sınırda', crit: 'Riskli' }
     },
     sozlukBaslik: 'Sütunlar ne anlama geliyor?',
+    opt: {
+      baslik: 'Optimizasyon',
+      aciklama: 'Çapları ve malzemeyi sabit tutar; kalıp yarı açısını, pas dağıtım yöntemini ve pas sayısını tarayarak bütün kısıtları sağlayan en iyi programı arar. Kısıtlar: emniyet ≤ {emniyet} · delta {dmin}–{dmax} · ΔT ≤ {dt} °C.',
+      amac: { enerji: 'En az enerji', kalip: 'En az kalıp' },
+      calistir: 'OPTİMİZE ET',
+      calisiyor: 'Taranıyor…',
+      ozet: '{n} kalıp · α {alpha}° · {yontem} · {enerji} kWh/t',
+      enerji: 'Enerji {eski} → {yeni} kWh/t ({fark})',
+      enerjiTek: 'Enerji {yeni} kWh/t',
+      pas: 'Kalıp sayısı {eski} → {yeni}',
+      aci: 'Kalıp yarı açısı {eski}° → {yeni}°',
+      emniyet: 'En yüksek emniyet {yeni} (eşik {esik})',
+      delta: 'Delta bandı {alt} – {ust} (istenen {dmin} – {dmax})',
+      isi: 'En yüksek ΔT {dt} °C (eşik {esik})',
+      denenen: '{n} aday denendi; hepsi kısıtlara göre elendi ya da sıralandı.',
+      uygula: 'Bu programı girdilere al',
+      uygulandi: 'Girdilere alındı — sonucu görmek için HESAPLA.',
+      yok: 'Bu girdilerle bütün kısıtları sağlayan bir program bulunamadı. Her adayda kısıtlardan biri aşılıyor; çapları, sürtünmeyi ya da hedef emniyeti gözden geçirin.',
+      uyari: 'Bu bir model optimumudur, saha optimumu değildir. Model sürtünmeyi kalıp açısından bağımsız sabit alır; kalıp aşınmasını, yağ filmi rejimini ve geri gerilimi hesaba katmaz. Uygulamadan önce kalıp tedarikçinizin verisiyle karşılaştırın.'
+    },
     yontem: { equalStrain: 'Eşit gerinim', tapered: 'Kademeli azalan', equalSafety: 'Eşit emniyet' },
     sutun: {
       no: 'Pas', d0: 'Giriş çapı', d1: 'Çıkış çapı', rPct: 'Kesit azalma',
@@ -2375,6 +2441,26 @@ const METIN = {
       rozet: { ok: 'Safe', warn: 'Borderline', crit: 'At risk' }
     },
     sozlukBaslik: 'What do the columns mean?',
+    opt: {
+      baslik: 'Optimisation',
+      aciklama: 'Diameters and material stay fixed; the tool sweeps die semi-angle, pass distribution method and pass count for the best schedule that meets every constraint. Constraints: safety ≤ {emniyet} · delta {dmin}–{dmax} · ΔT ≤ {dt} °C.',
+      amac: { enerji: 'Least energy', kalip: 'Fewest dies' },
+      calistir: 'OPTIMISE',
+      calisiyor: 'Sweeping…',
+      ozet: '{n} dies · α {alpha}° · {yontem} · {enerji} kWh/t',
+      enerji: 'Energy {eski} → {yeni} kWh/t ({fark})',
+      enerjiTek: 'Energy {yeni} kWh/t',
+      pas: 'Die count {eski} → {yeni}',
+      aci: 'Die semi-angle {eski}° → {yeni}°',
+      emniyet: 'Highest safety {yeni} (threshold {esik})',
+      delta: 'Delta band {alt} – {ust} (wanted {dmin} – {dmax})',
+      isi: 'Highest ΔT {dt} °C (threshold {esik})',
+      denenen: '{n} candidates evaluated; each was ranked or ruled out by the constraints.',
+      uygula: 'Load this schedule into the inputs',
+      uygulandi: 'Loaded into the inputs — press CALCULATE to see the result.',
+      yok: 'No schedule meeting every constraint was found for these inputs. Every candidate breaks one of them; revisit the diameters, the friction or the safety target.',
+      uyari: 'This is a model optimum, not a shop-floor optimum. The model holds friction constant and independent of die angle, and ignores die wear, the lubricant film regime and back tension. Compare it with your die supplier data before using it.'
+    },
     yontem: { equalStrain: 'Equal strain', tapered: 'Tapered', equalSafety: 'Equal safety' },
     sutun: {
       no: 'Pass', d0: 'Entry dia.', d1: 'Exit dia.', rPct: 'Area reduction',
@@ -2682,6 +2768,106 @@ function esitBolge(paslar) {
   // bunu zaten engelliyor; yine de burada çökmek yerine "bölge yok" denir.
   if (bolge.length === 0) return null;
   return { ilk: bolge[0].no, son: bolge[bolge.length - 1].no, adet: bolge.length, emniyet: enBuyuk };
+}
+
+
+/* ==== OPTİMİZASYON ====
+   Soru: bu çaplar ve bu malzeme için kısıtları sağlayan EN İYİ program hangisi?
+   Değişkenler: kalıp yarı açısı (tek değer — M-4 kabulü korunur), pas dağıtım
+   yöntemi ve pas sayısı. Kısıtlar aracın kendi tarama eşikleridir.
+
+   Sonuç bir MODEL optimumudur. Model sürtünmeyi kalıp açısından bağımsız sabit
+   alır; kalıp aşınmasını, yağ filmi rejimini ve geri gerilimi görmez (kabuller.md).
+   Yani "α'yı 5,2°'ye indir" önerisi modelde kazanç, sahada sürtünme artışı
+   olabilir. Arayüz bu cümleyi sonucun yanında taşır.
+
+   Tarama deterministiktir: aynı girdi her zaman aynı programı verir. buildSchedule
+   saf fonksiyon olduğu için tarama yan etkisizdir. */
+const OPT_ALPHA_MIN  = 4;     // derece — altı pratikte kalıp imalatı sınırı
+const OPT_ALPHA_MAX  = 12;    // derece
+const OPT_ALPHA_ADIM = 0.1;   // öneri cümleleri de açıyı 0,1° çözünürlükte veriyor
+const OPT_KABA_ADIM  = 1;     // eşit emniyet pahalı: önce 1°, sonra ince tarama
+const OPT_INCE_YARI  = 0.6;   // kaba en iyinin ±0,6° çevresi
+const OPT_MAKS_PAS   = MAX_PASSES;
+
+/* Kısıt büyüklükleri: hepsi pas tablosunda görünen sayılar, gizli ölçüt yok. */
+function optKisit(prog) {
+  const t = prog.passes;
+  return {
+    emniyet:  Math.max(...t.map(x => x.safety)),
+    deltaAlt: Math.min(...t.map(x => x.delta)),
+    deltaUst: Math.max(...t.map(x => x.delta)),
+    dT:       Math.max(...t.map(x => x.dT)),
+    r:        Math.max(...t.map(x => x.r))
+  };
+}
+
+function optUygun(k) {
+  return k.emniyet <= SAFETY_WARNING + 1e-9 &&
+         k.deltaAlt >= DELTA_MIN - 1e-9 &&
+         k.deltaUst <= DELTA_MAX + 1e-9 &&
+         k.dT <= DT_WARNING + 1e-9 &&
+         k.r <= R_THEORETICAL_MAX;
+}
+
+function optEnerji(prog) { return prog.totalPower / prog.massFlow / 3600; }
+
+/* Amaç değeri — küçük olan iyidir. "En az kalıp" seçildiğinde beraberlik enerjiyle
+   bozulur; böylece sıralama tam ve sonuç tekrarlanabilir olur. */
+function optDeger(prog, amac) {
+  const e = optEnerji(prog);
+  return amac === 'kalip' ? prog.passCount * 1e6 + e : e;
+}
+
+function optAday(temel, alphaDeg, method, passes) {
+  let prog;
+  try {
+    prog = buildSchedule(Object.assign({}, temel, { alphaDeg, method, passes }));
+  } catch (hata) {
+    if (hata instanceof DrawingError) return null;   // aralık dışı aday: sessizce elenir
+    throw hata;
+  }
+  const kisit = optKisit(prog);
+  return optUygun(kisit) ? { prog, alphaDeg, method, kisit } : null;
+}
+
+/* Hızlı yöntemler (eşit gerinim, kademeli azalan) tam ızgarada taranır; eşit
+   emniyet çağrı başına ~70 ms sürdüğü için kaba-ince aramayla ve yalnızca kendi
+   otomatik pas sayısıyla denenir — o yöntemde pas sayısı zaten hedefin sonucudur. */
+function optimizeEt(temel, amac) {
+  let enIyi = null, kaba = null, denenen = 0;
+  const dahaIyi = (a, b) => !b || optDeger(a.prog, amac) < optDeger(b.prog, amac);
+  const dene = (alphaDeg, method, passes) => {
+    denenen++;
+    const aday = optAday(temel, alphaDeg, method, passes);
+    if (aday && dahaIyi(aday, enIyi)) enIyi = aday;
+    return aday;
+  };
+
+  const adim = Math.round((OPT_ALPHA_MAX - OPT_ALPHA_MIN) / OPT_ALPHA_ADIM);
+  for (let i = 0; i <= adim; i++) {
+    const alphaDeg = Number((OPT_ALPHA_MIN + i * OPT_ALPHA_ADIM).toFixed(1));
+    for (const method of ['equalStrain', 'tapered']) {
+      for (let N = 1; N <= OPT_MAKS_PAS; N++) dene(alphaDeg, method, N);
+    }
+  }
+
+  for (let a = OPT_ALPHA_MIN; a <= OPT_ALPHA_MAX + 1e-9; a += OPT_KABA_ADIM) {
+    const aday = dene(Number(a.toFixed(1)), 'equalSafety', null);
+    if (aday && dahaIyi(aday, kaba)) kaba = aday;
+  }
+  if (kaba) {
+    const alt = Math.max(OPT_ALPHA_MIN, kaba.alphaDeg - OPT_INCE_YARI);
+    const ust = Math.min(OPT_ALPHA_MAX, kaba.alphaDeg + OPT_INCE_YARI);
+    for (let a = alt; a <= ust + 1e-9; a += OPT_ALPHA_ADIM) {
+      dene(Number(a.toFixed(1)), 'equalSafety', null);
+    }
+  }
+
+  return enIyi
+    ? { bulundu: true, prog: enIyi.prog, alphaDeg: enIyi.alphaDeg, method: enIyi.method,
+        kisit: enIyi.kisit, enerji: optEnerji(enIyi.prog), amac, denenen }
+    : { bulundu: false, amac, denenen };
 }
 
 /* En riskli pasta emniyeti hedefe indirecek kesit azalmasını çözer. */
@@ -3210,6 +3396,134 @@ function metinleriYaz() {
   $('manuelMetin').placeholder = durum.dil === 'tr' ? '8,00 7,16 6,40' : '8.00 7.16 6.40';
   girisiCiz();
   sozlukCiz();
+  optMetinleri();
+}
+
+
+/* ==== OPTİMİZASYON ARAYÜZÜ ====
+   Bölüm girdi tarafının yardımcısıdır: bulduğu programı ekrana yazmaz, girdilere
+   alır ve bekleyen değişiklik şeridini açar. Ekrandaki sayıları değiştiren tek
+   şey HESAPLA olmaya devam eder (K-16). */
+let optAmac = 'enerji';
+let sonOptSonuc = null;
+
+function optMetinleri() {
+  const O = S().opt;
+  $('optBaslik').textContent = O.baslik;
+  $('optAciklama').textContent = doldur(O.aciklama, {
+    emniyet: fmt(SAFETY_WARNING, 2), dmin: fmt(DELTA_MIN, 1),
+    dmax: fmt(DELTA_MAX, 1), dt: fmt(DT_WARNING, 0)
+  });
+  $('optAmacEnerji').textContent = O.amac.enerji;
+  $('optAmacKalip').textContent = O.amac.kalip;
+  $('optCalistir').textContent = O.calistir;
+  $('optUygula').textContent = O.uygula;
+  $('optUyari').textContent = O.uyari;
+  $('optAmacEnerji').setAttribute('aria-pressed', String(optAmac === 'enerji'));
+  $('optAmacKalip').setAttribute('aria-pressed', String(optAmac === 'kalip'));
+  optSonucuCiz(sonOptSonuc);
+}
+
+/* Tarama sonucunu yazar. Karşılaştırma ekrandaki hesaba göredir; hesap yoksa
+   yalnızca bulunan programın kendi sayıları gösterilir. */
+function optSonucuCiz(sonuc) {
+  const O = S().opt;
+  const kap = $('optSonuc');
+  kap.hidden = !sonuc;
+  $('optDurum').hidden = true;
+  if (!sonuc) return;
+
+  const liste = $('optListe');
+  liste.textContent = '';
+  const satir = (metin) => {
+    const li = document.createElement('li');
+    li.textContent = metin;
+    liste.appendChild(li);
+  };
+
+  if (!sonuc.bulundu) {
+    $('optOzet').textContent = O.yok;
+    $('optUygula').hidden = true;
+    satir(doldur(O.denenen, { n: fmt(sonuc.denenen, 0) }));
+    return;
+  }
+
+  $('optUygula').hidden = false;
+  $('optOzet').textContent = doldur(O.ozet, {
+    n: fmt(sonuc.prog.passCount, 0), alpha: fmt(sonuc.alphaDeg, 1),
+    yontem: S().yontem[sonuc.method], enerji: fmt(sonuc.enerji, 1)
+  });
+
+  // Karşılaştırma tabanı: ekranda duran hesap. Yoksa tek taraflı yazılır.
+  const taban = sonProgram;
+  if (taban) {
+    const eskiEnerji = taban.totalPower / taban.massFlow / 3600;
+    const oran = (sonuc.enerji - eskiEnerji) / eskiEnerji * 100;
+    satir(doldur(O.enerji, {
+      eski: fmt(eskiEnerji, 1), yeni: fmt(sonuc.enerji, 1),
+      fark: (oran >= 0 ? '+' : '−') + fmt(Math.abs(oran), 1) + '%'
+    }));
+    satir(doldur(O.pas, { eski: fmt(taban.passCount, 0), yeni: fmt(sonuc.prog.passCount, 0) }));
+    satir(doldur(O.aci, { eski: fmt(taban.passes[0].alphaDeg, 1), yeni: fmt(sonuc.alphaDeg, 1) }));
+  } else {
+    satir(doldur(O.enerjiTek, { yeni: fmt(sonuc.enerji, 1) }));
+  }
+
+  satir(doldur(O.emniyet, { yeni: fmt(sonuc.kisit.emniyet, 3), esik: fmt(SAFETY_WARNING, 2) }));
+  satir(doldur(O.delta, {
+    alt: fmt(sonuc.kisit.deltaAlt, 2), ust: fmt(sonuc.kisit.deltaUst, 2),
+    dmin: fmt(DELTA_MIN, 1), dmax: fmt(DELTA_MAX, 1)
+  }));
+  satir(doldur(O.isi, { dt: fmt(sonuc.kisit.dT, 1), esik: fmt(DT_WARNING, 0) }));
+  satir(doldur(O.denenen, { n: fmt(sonuc.denenen, 0) }));
+}
+
+/* Tarama ~2 saniye sürer ve tek iş parçacığında koşar; düğme önce "Taranıyor…"
+   yazıp bir kare beklemezse kullanıcı hiçbir tepki görmeden donmuş bir sayfayla
+   kalır. requestAnimationFrame + setTimeout, boyamanın araya girmesini sağlar. */
+function optCalistir() {
+  const O = S().opt;
+  const dugme = $('optCalistir');
+  if (dugme.disabled) return;
+  dugme.disabled = true;
+  dugme.textContent = O.calisiyor;
+
+  const temel = {
+    d0: taslak.d0, dTarget: taslak.dTarget, mu: taslak.mu,
+    K: taslak.K, n: taslak.n, v0: taslak.v0, anneals: taslak.anneals.slice()
+  };
+
+  requestAnimationFrame(() => setTimeout(() => {
+    try {
+      sonOptSonuc = optimizeEt(temel, optAmac);
+      optSonucuCiz(sonOptSonuc);
+    } finally {
+      dugme.disabled = false;
+      dugme.textContent = S().opt.calistir;
+    }
+  }, 0));
+}
+
+/* Bulunan programı girdilere alır. Hesap KOŞULMAZ: bekleyen değişiklik şeridi
+   açılır, kullanıcı ne değiştiğini görür ve HESAPLA'ya kendisi basar. */
+function optUygula() {
+  if (!sonOptSonuc || !sonOptSonuc.bulundu) return;
+  taslak.alphaDeg = sonOptSonuc.alphaDeg;
+  taslak.method = sonOptSonuc.method;
+  taslak.passes = sonOptSonuc.prog.passCount;
+  taslak.manuelCaplar = null;
+  alanlariYaz();
+  butunAlanlariDenetle();
+  girdiDegisti();
+  $('optDurum').textContent = S().opt.uygulandi;
+  $('optDurum').hidden = false;
+}
+
+function optAmacSec(amac) {
+  optAmac = amac;
+  sonOptSonuc = null;      // amaç değişti: eski sonuç artık bu amacın cevabı değil
+  optSonucuCiz(null);
+  optMetinleri();
 }
 
 /* Giriş kartı: aracın ne yaptığı ve üç adımlık kullanımı. Sonuca bağlı değildir,
@@ -5102,6 +5416,10 @@ function baslat() {
   kurPanel();
   kurBantAlanlari();
   kurTabloBasligi();
+  $('optCalistir').addEventListener('click', optCalistir);
+  $('optUygula').addEventListener('click', optUygula);
+  $('optAmacEnerji').addEventListener('click', () => optAmacSec('enerji'));
+  $('optAmacKalip').addEventListener('click', () => optAmacSec('kalip'));
   $('dilTR').addEventListener('click', () => dilDegistir('tr'));
   $('dilEN').addEventListener('click', () => dilDegistir('en'));
   // Hesabı başlatan üç düğme de aynı fonksiyonu çağırır.

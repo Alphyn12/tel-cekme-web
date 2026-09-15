@@ -457,3 +457,42 @@ sabitlendi, çünkü İngilizcede `PEKLEŞME KATSAYISI + MPa` üç satıra taş�
 kutuları kaydırıyordu. 360 px'te yatay taşma yok, sözlük başlığı 44 px dokunma hedefi.
 
 Giriş kartı ve sözlük baskıda gizlenir; karar satırı basılır.
+
+## K-18 · Optimizasyon: kısıt tabanlı tarama, amaç fonksiyonu seçilir
+**Tarih:** 2026-09-15
+
+Araç pas sayısını zaten optimize ediyordu (eşit emniyet + otomatik), kesit azalmayı
+yönteme göre dağıtıyordu, ama **kalıp yarı açısını hiç optimize etmiyordu** — tek
+değer, bütün paslarda sabit (M-4). Daha tuhafı: düzeltici değerleri hesaplayan
+fonksiyonlar (`gerekliAci`, `guvenliAzalma`) kodda vardı ve yalnızca öneri
+cümlelerinde kullanılıyordu. Araç doğru açıyı söylüyor, uygulamıyordu.
+
+**Karar:** Amaç fonksiyonu kullanıcı tarafından seçilen, kısıtları aracın kendi
+eşikleri olan deterministik bir tarama eklendi. Değişkenler: kalıp yarı açısı
+(tek değer — M-4 korunur), pas dağıtım yöntemi, pas sayısı. Kısıtlar: emniyet ≤ 0,50,
+delta 1,5–3,0, ΔT ≤ 100 °C, `r` ≤ %63,2 — hepsi pas tablosunda görünen sayılar,
+gizli ölçüt yok.
+
+**Neden ızgara, neden sezgisel arama değil:** `buildSchedule` saf fonksiyon, tarama
+yan etkisiz. Izgara deterministiktir — aynı girdi her zaman aynı programı verir,
+yani sonuç test edilebilir. Üç test eklendi: çıktı bütün kısıtları sağlar, bağımsız
+olarak yeniden taranan ızgaradaki en iyiden kötü değildir, ve iki koşu aynı sonucu
+verir.
+
+**Maliyet ölçüldü, tahmin edilmedi.** `equalSafety` çağrı başına 50–138 ms (kök bulma
+iterasyonu), `equalStrain`/`tapered` ise ~0,05 ms. Tam ızgarada üç yöntem beş dakika
+sürüyordu. Bu yüzden hızlı yöntemler tam ızgarada (81 açı × 60 pas), eşit emniyet
+kaba (1°) sonra ince (±0,6° içinde 0,1°) aramayla ve yalnızca kendi otomatik pas
+sayısıyla taranır — o yöntemde pas sayısı zaten hedefin sonucudur. Tarayıcıda
+~9700 aday, 530 ms.
+
+**K-16 korundu.** Optimizasyon ekrandaki hiçbir sayıyı değiştirmez: bulunan programı
+girdilere alır, bekleyen değişiklik şeridi ne değiştiğini yazar, sonucu HESAPLA
+getirir. Tarama 0,5 saniye tek iş parçacığında koştuğu için düğme önce "Taranıyor…"
+yazar ve bir kare bekler; yoksa kullanıcı donmuş bir sayfa görür.
+
+**Sınır — bu bir model optimumudur.** Model `μ`'yü `α`'dan bağımsız sabit alır; gerçekte
+kalıp açısı değişince yağlama rejimi ve kalıp aşınması da değişir, ikisi de kabuller
+listesinde "hesaba katılmayanlar" arasında. Optimizer "açıyı 9,3°'ye çıkar" derse bu
+modelde kazançtır, sahada doğrulanması gerekir. Uyarı cümlesi sonucun altında sabit
+durur, kapatılamaz.

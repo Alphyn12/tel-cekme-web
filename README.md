@@ -39,6 +39,30 @@ Bedeli de görünür: 11 pasta delta 1,32'ye (aşırı sürtünme sınırı) ve 
 100,3 °C'ye çıkar, araç ikisini de uyarı olarak gösterir ve gereken kalıp açısını
 (9,1°) söyler.
 
+## Optimizasyon
+
+Çapları ve malzemeyi sabit tutup **kalıp yarı açısını, dağıtım yöntemini ve pas
+sayısını** tarar; bütün kısıtları sağlayan en iyi programı bulur. Amaç seçilir:
+en az enerji ya da en az kalıp. Kısıtlar aracın kendi eşikleridir — emniyet ≤ 0,50,
+delta 1,5–3,0, ΔT ≤ 100 °C, kesit azalma ≤ %63,2.
+
+Tarama deterministiktir: kalıp açısı 4–12° arasında 0,1° adımla, pas sayısı 1–60
+arasında denenir. Eşit gerinim ve kademeli azalan tam ızgarada; eşit emniyet
+çağrı başına ~70 ms sürdüğü için kaba (1°) sonra ince (0,1°) aramayla ve kendi
+otomatik pas sayısıyla taranır. Genel amaçlı senaryoda ~9700 aday, tarayıcıda
+yarım saniye.
+
+Otomotiv senaryosu farkı iyi gösteriyor: eşit emniyet 11 pas bulur, **optimizasyon
+12 der** — çünkü 11 pasta delta alt sınırın ve ΔT üst sınırın dışına çıkıyor.
+Kısıtlara uyan en iyi program, kısıtsız en küçük program değildir.
+
+Bulunan program ekrana yazılmaz, **girdilere alınır**; bekleyen değişiklik şeridi
+ne değiştiğini söyler ve sonucu HESAPLA getirir (K-16).
+
+Sonuç bir **model optimumudur**. Model sürtünmeyi kalıp açısından bağımsız sabit
+alır; kalıp aşınmasını, yağ filmi rejimini ve geri gerilimi görmez. Arayüz bu
+cümleyi sonucun altında taşır.
+
 ## Hesap ne zaman çalışır
 
 Ekrandaki sayıları değiştiren tek şey **HESAPLA** düğmesidir. Girdi yazmak,
