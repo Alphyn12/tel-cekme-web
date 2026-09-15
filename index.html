@@ -2717,6 +2717,7 @@ const METIN = {
       amac: { enerji: 'En az enerji', kalip: 'En az kalıp' },
       calistir: 'OPTİMİZE ET',
       calisiyor: 'Taranıyor…',
+      calisiyorYuzde: 'Taranıyor… %{yuzde}',
       ozet: '{n} kalıp · α {alpha}° · {yontem} · {enerji} kWh/t',
       enerji: 'Enerji {eski} → {yeni} kWh/t ({fark})',
       enerjiTek: 'Enerji {yeni} kWh/t',
@@ -3101,6 +3102,7 @@ const METIN = {
       amac: { enerji: 'Least energy', kalip: 'Fewest dies' },
       calistir: 'OPTIMISE',
       calisiyor: 'Sweeping…',
+      calisiyorYuzde: 'Sweeping… {yuzde}%',
       ozet: '{n} dies · α {alpha}° · {yontem} · {enerji} kWh/t',
       enerji: 'Energy {eski} → {yeni} kWh/t ({fark})',
       enerjiTek: 'Energy {yeni} kWh/t',
@@ -3552,40 +3554,70 @@ function optAday(temel, alphaDeg, method, passes, limit) {
 /* Hızlı yöntemler (eşit gerinim, kademeli azalan) tam ızgarada taranır; eşit
    emniyet çağrı başına ~70 ms sürdüğü için kaba-ince aramayla ve yalnızca kendi
    otomatik pas sayısıyla denenir — o yöntemde pas sayısı zaten hedefin sonucudur. */
-function optimizeEt(temel, amac, limit = null) {
-  let enIyi = null, kaba = null, denenen = 0;
+/* Tarama tek parça değil, ADIMLANABİLİR: arayüz onu kare kare sürebilsin diye.
+   Tek iş parçacığında dönen 9700 adaylık bir döngü telefonda sayfayı saniyelerce
+   donduruyordu; kullanıcı "Taranıyor…" yazısını bile boyanmış göremiyordu.
+
+   Tek uygulama var. optimizeEt bu tarayıcıyı sonuna kadar süren ince bir
+   sarmalayıcıdır; testler onu çağırır, arayüz aynı tarayıcıyı parça parça sürer.
+   İki ayrı tarama kodu olsaydı biri diğerinden sessizce ayrılırdı. */
+function optimizeTarayici(temel, amac, limit = null) {
+  let enIyi = null, kaba = null, denenen = 0, i = 0, inceEklendi = false;
   const dahaIyi = (a, b) => !b || optDeger(a.prog, amac) < optDeger(b.prog, amac);
-  const dene = (alphaDeg, method, passes) => {
+
+  // Aşama 1 — hızlı yöntemler tam ızgarada. İşler önceden listelenir: sıra sabittir,
+  // yani sonuç adım boyundan bağımsız olarak hep aynı çıkar.
+  const isler = [];
+  const adimSayisi = Math.round((OPT_ALPHA_MAX - OPT_ALPHA_MIN) / OPT_ALPHA_ADIM);
+  for (let k = 0; k <= adimSayisi; k++) {
+    const alphaDeg = Number((OPT_ALPHA_MIN + k * OPT_ALPHA_ADIM).toFixed(1));
+    for (const method of ['equalStrain', 'tapered']) {
+      for (let N = 1; N <= OPT_MAKS_PAS; N++) isler.push({ alphaDeg, method, passes: N });
+    }
+  }
+  // Aşama 2 — eşit emniyet kaba tarama (çağrı başına ~70 ms).
+  for (let a = OPT_ALPHA_MIN; a <= OPT_ALPHA_MAX + 1e-9; a += OPT_KABA_ADIM) {
+    isler.push({ alphaDeg: Number(a.toFixed(1)), method: 'equalSafety', passes: null, kabaMi: true });
+  }
+  const asama2Son = isler.length;   // aşama 3 işleri buradan sonra eklenir
+
+  const birAdim = () => {
+    // Aşama 2 bittiyse, kaba en iyinin çevresini ince tarayan işler eklenir.
+    if (i >= asama2Son && !inceEklendi) {
+      inceEklendi = true;
+      if (kaba) {
+        const alt = Math.max(OPT_ALPHA_MIN, kaba.alphaDeg - OPT_INCE_YARI);
+        const ust = Math.min(OPT_ALPHA_MAX, kaba.alphaDeg + OPT_INCE_YARI);
+        for (let a = alt; a <= ust + 1e-9; a += OPT_ALPHA_ADIM) {
+          isler.push({ alphaDeg: Number(a.toFixed(1)), method: 'equalSafety', passes: null });
+        }
+      }
+    }
+    if (i >= isler.length) return false;
+    const is = isler[i++];
     denenen++;
-    const aday = optAday(temel, alphaDeg, method, passes, limit);
+    const aday = optAday(temel, is.alphaDeg, is.method, is.passes, limit);
     if (aday && dahaIyi(aday, enIyi)) enIyi = aday;
-    return aday;
+    if (is.kabaMi && aday && dahaIyi(aday, kaba)) kaba = aday;
+    return true;
   };
 
-  const adim = Math.round((OPT_ALPHA_MAX - OPT_ALPHA_MIN) / OPT_ALPHA_ADIM);
-  for (let i = 0; i <= adim; i++) {
-    const alphaDeg = Number((OPT_ALPHA_MIN + i * OPT_ALPHA_ADIM).toFixed(1));
-    for (const method of ['equalStrain', 'tapered']) {
-      for (let N = 1; N <= OPT_MAKS_PAS; N++) dene(alphaDeg, method, N);
-    }
-  }
+  return {
+    bitti: () => i >= isler.length && inceEklendi,
+    ilerleme: () => (isler.length ? Math.min(1, i / isler.length) : 1),
+    adim(n = 1) { for (let k = 0; k < n && !this.bitti(); k++) birAdim(); },
+    sonuc: () => (enIyi
+      ? { bulundu: true, prog: enIyi.prog, alphaDeg: enIyi.alphaDeg, method: enIyi.method,
+          kisit: enIyi.kisit, enerji: optEnerji(enIyi.prog), amac, denenen, limit }
+      : { bulundu: false, amac, denenen, limit })
+  };
+}
 
-  for (let a = OPT_ALPHA_MIN; a <= OPT_ALPHA_MAX + 1e-9; a += OPT_KABA_ADIM) {
-    const aday = dene(Number(a.toFixed(1)), 'equalSafety', null);
-    if (aday && dahaIyi(aday, kaba)) kaba = aday;
-  }
-  if (kaba) {
-    const alt = Math.max(OPT_ALPHA_MIN, kaba.alphaDeg - OPT_INCE_YARI);
-    const ust = Math.min(OPT_ALPHA_MAX, kaba.alphaDeg + OPT_INCE_YARI);
-    for (let a = alt; a <= ust + 1e-9; a += OPT_ALPHA_ADIM) {
-      dene(Number(a.toFixed(1)), 'equalSafety', null);
-    }
-  }
-
-  return enIyi
-    ? { bulundu: true, prog: enIyi.prog, alphaDeg: enIyi.alphaDeg, method: enIyi.method,
-        kisit: enIyi.kisit, enerji: optEnerji(enIyi.prog), amac, denenen, limit }
-    : { bulundu: false, amac, denenen, limit };
+/* Taramayı sonuna kadar sürer. Testlerin ve raporun kullandığı yol budur. */
+function optimizeEt(temel, amac, limit = null) {
+  const tarayici = optimizeTarayici(temel, amac, limit);
+  while (!tarayici.bitti()) tarayici.adim(500);
+  return tarayici.sonuc();
 }
 
 /* En riskli pasta emniyeti hedefe indirecek kesit azalmasını çözer. */
@@ -4567,9 +4599,15 @@ function optSonucuCiz(sonuc) {
   satir(doldur(O.denenen, { n: fmt(sonuc.denenen, 0) }));
 }
 
-/* Tarama ~2 saniye sürer ve tek iş parçacığında koşar; düğme önce "Taranıyor…"
-   yazıp bir kare beklemezse kullanıcı hiçbir tepki görmeden donmuş bir sayfayla
-   kalır. requestAnimationFrame + setTimeout, boyamanın araya girmesini sağlar. */
+/* Tarama kare kare sürülür. Tek parça koşarken masaüstünde yarım saniye,
+   telefonda birkaç saniye sayfa donuyordu: "Taranıyor…" yazısı bile boyanmadan
+   kalıyordu, yani kullanıcı hiçbir tepki görmüyordu.
+
+   Her karede 20 ms'lik bütçe kadar aday denenir, sonra kare tarayıcıya bırakılır.
+   Bütçe adayın maliyetinden bağımsızdır: eşit emniyet adayı tek başına ~70 ms
+   sürer, bu yüzden bütçe HER adaydan sonra ölçülür, sabit bir adım sayısı değil. */
+const OPT_KARE_BUTCESI = 20;   // ms
+
 function optCalistir() {
   const O = S().opt;
   const dugme = $('optCalistir');
@@ -4583,16 +4621,33 @@ function optCalistir() {
     sigmaB: taslak.sigmaB, sigmaY0: taslak.sigmaY0,
     anneals: taslak.anneals.slice()
   };
+  const tarayici = optimizeTarayici(temel, optAmac, Object.assign({}, taslak.limit));
 
-  requestAnimationFrame(() => setTimeout(() => {
+  const bitir = () => {
+    dugme.disabled = false;
+    dugme.textContent = S().opt.calistir;
+  };
+
+  const sur = () => {
+    const t0 = Date.now();
     try {
-      sonOptSonuc = optimizeEt(temel, optAmac, Object.assign({}, taslak.limit));
-      optSonucuCiz(sonOptSonuc);
-    } finally {
-      dugme.disabled = false;
-      dugme.textContent = S().opt.calistir;
+      while (!tarayici.bitti() && Date.now() - t0 < OPT_KARE_BUTCESI) tarayici.adim(1);
+    } catch (hata) {
+      bitir();
+      throw hata;
     }
-  }, 0));
+    if (!tarayici.bitti()) {
+      dugme.textContent = doldur(S().opt.calisiyorYuzde,
+        { yuzde: fmt(tarayici.ilerleme() * 100, 0) });
+      requestAnimationFrame(sur);
+      return;
+    }
+    sonOptSonuc = tarayici.sonuc();
+    optSonucuCiz(sonOptSonuc);
+    bitir();
+  };
+
+  requestAnimationFrame(sur);
 }
 
 /* Bulunan programı girdilere alır. Hesap KOŞULMAZ: bekleyen değişiklik şeridi
