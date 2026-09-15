@@ -417,3 +417,43 @@ Açılış tek istisnadır: sayfa boş açılmaz, adresteki senaryo (ya da varsa
 - `r > R_THEORETICAL_MAX` kontrolü **pas bazındadır**, hesabı durdurur ve hata
   mesajı hangi pas / hangi değer olduğunu söyler.
 - Eşik ve sabitlerin tamamı tek bir adlandırılmış sabitler bloğunda toplanır.
+
+## K-17 · Anlama katmanı: sayfa önce ne işe yaradığını söyler
+**Tarih:** 2026-09-15
+
+Sayfa doğrudan yedi uzman parametresiyle açılıyordu: `μ`, `K`, `n`, kalıp yarı açısı,
+akma tabanı. Hesap doğruydu, terimlerin hiçbiri sayfada tanımlı değildi. Aracı
+kullanabilmek için zaten Siebel yaklaşımını bilmek gerekiyordu; bilmeyen ziyaretçi
+ilk ekranda kalıyordu. Eksik olan yorum değil — `oneriCumleleri()` sonucu zaten
+sayıyla yorumluyor — **giriş ve sözlük** idi.
+
+**Karar:** Hesap koduna dokunmadan dört parçalı bir anlama katmanı eklendi:
+
+1. **Giriş kartı** (`.giris`): aracın ne yaptığı, hangi soruya cevap verdiği ve üç
+   adımlık kullanım. Sonuca bağlı değildir, hesap beklemez.
+2. **Karar satırı** (`.karar`): özet şeridinden önce gelen tek cümlelik sonuç —
+   `8,00 → 1,38 mm · 16 kalıp`, en kritik pas, emniyet oranı, uyarı eşiği ve
+   Güvenli / Sınırda / Riskli rozeti. Özet şeridi altı sayıyı eşit ağırlıkta
+   gösteriyor, hangisinin karar sayısı olduğu görünmüyordu.
+3. **Girdi açıklamaları** (`alanYardim`): her kutunun altında bir satır — alan ne
+   demek ve tipik aralığı ne (`μ`: 0,03 iyi yağlanmış hat, 0,08 kötü).
+4. **Sütun sözlüğü** (`sutunYardim`): tablo başlıklarının düz karşılığı. Aynı metin
+   başlık ipucu (`title`) olarak da durur; ipuçları dokunmatik ekranda görünmediği
+   için sözlük katlanır bir bölüm olarak tabloyla birlikte gelir.
+
+Karar satırı ve rozet **sonuç** bölümünün içindedir: bekleyen değişiklikte diğer
+sayılarla birlikte soluklaşır, hesaplanamadığında birlikte gizlenir (K-16, K-14).
+
+**Yan sonuç — V3 tek dile indi.** Karar satırı ilk yazımında her zaman "en kritik pas
+{n}" diyordu; oysa V3, tek bir belirgin tepe yoksa tek pas numarası vermenin
+yanıltıcı olduğunu söylüyor ve öneri cümleleri bu ayrımı zaten yapıyordu. Şimdi
+karar satırı, öneri cümleleri **ve** özet şeridi aynı ölçütü (`belirginTepe`,
+`esitBolge`) kullanır: eşit gerinim programında üçü birden "6–16 aralığında 11 pas"
+der. Önceden şerit aynı ekranda "pas 16" yazıyordu.
+
+**Mobil:** Telefonda girdi paneli tek sütuna iner — iki sütunda açıklama satırı üçe
+kırılıyor ve kutular hizasını kaybediyordu. Geniş ekranda etiket yüksekliği üç satıra
+sabitlendi, çünkü İngilizcede `PEKLEŞME KATSAYISI + MPa` üç satıra taşıp aynı sıradaki
+kutuları kaydırıyordu. 360 px'te yatay taşma yok, sözlük başlığı 44 px dokunma hedefi.
+
+Giriş kartı ve sözlük baskıda gizlenir; karar satırı basılır.

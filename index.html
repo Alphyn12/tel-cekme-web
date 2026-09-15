@@ -695,7 +695,88 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
 /* Geniş ekranda yöntem ve pas sayısı iki sütun kaplasın (metinleri uzun) */
 @media (min-width: 720px) {
   .alan.genis { grid-column: span 2; }
+  /* Çok sütunlu düzende kutular aynı hizada dursun: en uzun etiket (İngilizcede
+     PEKLEŞME KATSAYISI + MPa) üç satıra taşıyor, ikisi taşmıyordu. */
+  .panel .alan label, .panel .alan .etiket { min-height: calc(3 * 1.2 * var(--t11)); }
 }
+
+/* ---- Giriş kartı: araç ne işe yarar ----
+   Sayfa doğrudan uzman parametreleriyle açılıyordu; terimleri bilmeyen bir
+   ziyaretçi ilk ekranda kalıyordu. Kart, kararı ve üç adımı öne alır. */
+.giris {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--copper);
+  background: var(--surface);
+  padding: var(--s16);
+  display: grid;
+  gap: var(--s8);
+}
+.giris h2 { margin: 0; font: 600 var(--t16)/1.3 var(--yazi-baslik); color: var(--ink); }
+.giris p { margin: 0; font: 400 var(--t14)/1.55 var(--yazi-govde); color: var(--ink2); max-width: 70ch; }
+.giris .giris-sinir { font-size: var(--t125); color: var(--ink3); }
+.giris ol { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--s8); counter-reset: adim; }
+.giris ol li {
+  counter-increment: adim;
+  display: grid; grid-template-columns: 20px 1fr; gap: var(--s8);
+  align-items: start; min-width: 0;
+  font: 400 var(--t125)/1.45 var(--yazi-govde); color: var(--ink2);
+}
+.giris ol li::before {
+  content: counter(adim);
+  width: 20px; height: 20px;
+  font: 600 var(--t11)/18px var(--yazi-mono);
+  text-align: center;
+  color: var(--copper); border: 1px solid var(--copper); background: var(--copper-tint);
+}
+
+/* ---- Karar satırı: sonucun tek cümlelik özeti ----
+   Özet şeridi altı sayıyı eşit ağırlıkta gösteriyor; hangisinin karar sayısı
+   olduğu görünmüyordu. Bu satır kararı tablodan önce düz cümleyle söyler. */
+.karar {
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  padding: var(--s12) var(--s16);
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--s8) var(--s16);
+}
+.karar-metin { display: grid; gap: var(--s4); min-width: 0; flex: 1 1 240px; }
+.karar-ozet {
+  margin: 0;
+  font: 600 var(--t19)/1.25 var(--yazi-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.karar-alt { margin: 0; font: 400 var(--t125)/1.45 var(--yazi-govde); color: var(--ink2); }
+.rozet {
+  font: 600 var(--t11)/1 var(--yazi-mono);
+  letter-spacing: .12em; text-transform: uppercase;
+  padding: var(--s12);
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+.rozet.ok   { color: var(--patina); background: var(--patina-tint); }
+.rozet.warn { color: var(--warn);   background: var(--warn-tint); }
+.rozet.crit { color: var(--crit);   background: var(--crit-tint); }
+
+/* ---- Girdi yardımı: her kutunun altında tek satır ---- */
+.alan-yardim { margin: 0; font: 400 var(--t11)/1.4 var(--yazi-govde); color: var(--ink3); }
+
+/* ---- Sütun sözlüğü: tablo başlıklarının düz karşılığı ---- */
+.sozluk { border: 1px solid var(--line); background: var(--surface); }
+.sozluk > summary {
+  padding: var(--s12);
+  cursor: pointer;
+  min-height: var(--dokunma);
+  display: flex; align-items: center;
+  font: 500 var(--t125)/1.3 var(--yazi-govde); color: var(--ink2);
+}
+.sozluk dl { margin: 0; padding: 0 var(--s16) var(--s16); display: grid; gap: var(--s8); }
+.sozluk dt {
+  margin: 0;
+  font: 600 var(--t11)/1.3 var(--yazi-mono);
+  letter-spacing: .08em; text-transform: uppercase; color: var(--ink);
+}
+.sozluk dd { margin: 0; font: 400 var(--t125)/1.45 var(--yazi-govde); color: var(--ink2); }
 
 /* ---- Yazdırma: iki sayfa ----
    Sayfa 1: kimlik, girdiler, özet, ana grafik, pas tablosu.
@@ -736,6 +817,9 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
   .hesapla-kutusu, #hesaplaAciklama, .yapiskan-cubuk { display: none !important; }
   /* Baskıda sonuçlar soluk çıkmasın; bekleyen uyarısı metin olarak kalır. */
   .bayat-sonuc { opacity: 1 !important; }
+  /* Giriş kartı ve sözlük ekran içindir; baskıda mühendislik özeti kalır. */
+  .giris, .sozluk { display: none !important; }
+  .karar { break-inside: avoid; }
 
   /* Sayfa 1'de yalnızca ana grafik kalır */
   .gorsel-bolum .gorsel-kutu:not(:first-child) { display: none; }
@@ -795,6 +879,14 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
 /* ---- Dar ekran ---- */
 @media (max-width: 719px) {
   .kabuk { padding: var(--s12); gap: var(--s16); }
+  /* Telefonda girdi paneli tek sütun: etiket, kutu ve açıklaması birlikte okunur.
+     İki sütunda açıklama satırı üç satıra kırılıyor ve kutular hizasını kaybediyordu. */
+  .panel { grid-template-columns: 1fr; }
+  .giris { padding: var(--s12); }
+  .karar { padding: var(--s12); }
+  .karar-ozet { font-size: var(--t16); }
+  .rozet { padding: var(--s8); }
+  .sozluk dl { padding: 0 var(--s12) var(--s12); }
 }
 </style>
 </head>
@@ -821,6 +913,15 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
     <a class="kimlik-bag" href="mailto:bariskirli9@gmail.com">bariskirli9@gmail.com</a>
     <a class="kimlik-bag" href="https://www.linkedin.com/in/bariskirli" target="_blank" rel="noopener">linkedin.com/in/bariskirli</a>
   </div>
+
+  <!-- Giriş kartı: sayfanın ilk ekranı artık parametre değil, iş tanımı. -->
+  <section class="giris" id="girisKarti">
+    <h2 id="girisBaslik"></h2>
+    <p id="girisOzet"></p>
+    <p id="girisOrnek"></p>
+    <ol id="girisAdimlar"></ol>
+    <p class="giris-sinir" id="girisSinir"></p>
+  </section>
 
   <section class="bolum" id="senaryoBolumu">
     <h2 class="bolum-basligi" data-t="senaryolar"></h2>
@@ -866,6 +967,15 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
 
   <section class="bolum" id="ozetBolumu">
     <h2 class="bolum-basligi" data-t="ozetBaslik"></h2>
+    <!-- Karar satırı özet bölümünün içinde: bekleyen değişiklikte diğer
+         sonuçlarla birlikte soluklaşır, hesaplanamadığında birlikte gizlenir. -->
+    <div class="karar" id="kararKutusu" hidden>
+      <div class="karar-metin">
+        <p class="karar-ozet" id="kararOzet"></p>
+        <p class="karar-alt" id="kararAlt"></p>
+      </div>
+      <span class="rozet" id="kararRozet"></span>
+    </div>
     <div class="serit" id="ozetSeridi"></div>
     <p class="oneri" id="oneriKutusu"></p>
     <div class="dugme-sirasi">
@@ -935,6 +1045,10 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
       </table>
     </div>
     <div class="kart-listesi" id="pasKartlari" hidden></div>
+    <details class="sozluk" id="sozlukKutusu">
+      <summary id="sozlukBasligi"></summary>
+      <dl id="sozlukListesi"></dl>
+    </details>
   </section>
 
   <section class="bolum" id="bantBolumu">
@@ -1761,6 +1875,7 @@ const METIN = {
       enerji: 'Enerji', uzama: 'Toplam uzama', cikisHizi: 'Çıkış hızı'
     },
     ozetPasNotu: 'pas {n}',
+    ozetBolgeNotu: 'pas {ilk}–{son}',
     durum: { crit: 'Model eşiği aşıldı', warn: 'Uyarı bölgesi', ok: 'Model eşiği altında',
              deltaDusuk: 'Aşırı sürtünme, kalıp aşınması', deltaYuksek: 'Merkezi çatlak riski',
              isiYuksek: 'Yağ bozunma riski' },
@@ -1916,6 +2031,59 @@ const METIN = {
       mu: 'Sürtünme katsayısı', K: 'Pekleşme katsayısı', n: 'Pekleşme üsteli',
       v0: 'Hat giriş hızı', method: 'Pas dağıtım yöntemi', passes: 'Pas sayısı'
     },
+    /* Her girdinin altındaki tek satır: alan ne demek, tipik aralığı ne. Sayfa
+       terimleri hiç tanımlamıyordu; uzman olmayan ziyaretçi ilk ekranda kalıyordu. */
+    alanYardim: {
+      d0: 'Hatta giren filmaşin çapı. Bakır hatlarında standart 8,00 mm.',
+      dTarget: 'Hattın sonunda istenen tel çapı. İki çap arasındaki fark kaç kalıp gerektiğini belirler.',
+      alphaDeg: 'Kalıp konisinin yarı açısı. Tipik 6–10°. Küçük açı sürtünmeyi, büyük açı fazlalık işi artırır.',
+      mu: 'Yağlama kalitesi. 0,03 iyi yağlanmış hat, 0,08 kötü. Kopma riskini en çok bu değer değiştirir.',
+      K: 'Malzemenin sertleşme eğrisinin yüksekliği. Tavlanmış ETP bakırda 315–530 MPa, tipik 450.',
+      n: 'Malzeme sertleşmesinin hızı. ETP bakırda 0,30–0,40 arası.',
+      v0: 'Filmaşinin hatta giriş hızı. Gerilmeyi değiştirmez; gücü ve çıkış hızını ölçekler.',
+      method: 'Azaltmanın paslara nasıl dağıtılacağı. Emin değilseniz eşit emniyet seçin.',
+      passes: 'Boş bırakın: araç gereken en az pas sayısını bulur. Kalıp sayınız sabitse yazın.'
+    },
+    /* Tablo sütunlarının düz Türkçe karşılığı: hem başlık ipucu hem sözlük. */
+    sutunYardim: {
+      no: 'Kaçıncı kalıp.',
+      d0: 'Kalıba giren tel çapı.',
+      d1: 'Kalıptan çıkan tel çapı.',
+      rPct: 'O kalıpta kesitin yüzde kaç küçüldüğü.',
+      epsOut: 'Telin o noktaya kadarki toplam şekil değiştirmesi. Ara tavlama sıfırlar.',
+      sigmaBar: 'Pas boyunca malzemenin ortalama akma gerilmesi.',
+      sigmaFOut: 'Pekleşme sonrası telin kalıp çıkışındaki dayanımı.',
+      sigmaD: 'Teli kalıptan çekmek için uygulanan gerilme.',
+      safety: 'Çekme gerilmesinin çıkış dayanımına oranı. Düşük olması iyidir; 0,50 uyarı, 0,60 kritik eşiktir.',
+      delta: 'Şekil değiştirme bölgesinin biçimi. 1,5–3 arası istenir; küçükse sürtünme, büyükse merkez çatlağı riski artar.',
+      dT: 'Pasta açığa çıkan ısının telde yaratacağı sıcaklık artışı. Soğutma hesaba katılmaz.',
+      v1: 'Telin kalıptan çıkış hızı.',
+      PkW: 'O kalıpta harcanan mekanik güç.',
+      anneal: 'İşaretlenen pastan sonra ara tavlama uygulanır, birikmiş gerinim sıfırlanır.'
+    },
+    giris: {
+      baslik: 'Bu araç ne yapar?',
+      ozet: 'Bakır filmaşini hedef çapa indirmek için kaç kalıp gerektiğini hesaplar ve her kalıpta telin kopma sınırına ne kadar yaklaştığını gösterir.',
+      ornek: '“16 kalıp yerine 11 yeter mi?” ya da “yağlama bozulup sürtünme 0,08’e çıkarsa ne olur?” sorularına sayıyla cevap verir.',
+      sinir: 'Ön tasarım aracıdır, üretim reçetesi değildir.',
+      adimBaslik: 'Üç adımda',
+      adimlar: [
+        'Bir hazır senaryo seçin — sayılar hazır gelir.',
+        'İstediğiniz girdiyi değiştirip HESAPLA’ya basın.',
+        'Karar satırına ve tablodaki emniyet oranı sütununa bakın.'
+      ]
+    },
+    karar: {
+      baslik: 'Karar',
+      ozet: '{d0} → {d1} mm · {n} kalıp',
+      kritik: 'En kritik pas {pas} · emniyet {oran} · uyarı eşiği {esik}',
+      kritikBolge: 'En yüksek orana yakın {adet} pas ({ilk}–{son}) · emniyet {oran} · uyarı eşiği {esik}',
+      temiz: 'Hiçbir pas uyarı eşiğini aşmıyor.',
+      asan: '{n} pas uyarı eşiğini aşıyor.',
+      asanTek: '1 pas uyarı eşiğini aşıyor.',
+      rozet: { ok: 'Güvenli', warn: 'Sınırda', crit: 'Riskli' }
+    },
+    sozlukBaslik: 'Sütunlar ne anlama geliyor?',
     yontem: { equalStrain: 'Eşit gerinim', tapered: 'Kademeli azalan', equalSafety: 'Eşit emniyet' },
     sutun: {
       no: 'Pas', d0: 'Giriş çapı', d1: 'Çıkış çapı', rPct: 'Kesit azalma',
@@ -2000,6 +2168,7 @@ const METIN = {
       enerji: 'Energy', uzama: 'Total elongation', cikisHizi: 'Exit speed'
     },
     ozetPasNotu: 'pass {n}',
+    ozetBolgeNotu: 'passes {ilk}–{son}',
     durum: { crit: 'Model threshold exceeded', warn: 'Warning region', ok: 'Below model threshold',
              deltaDusuk: 'Excessive friction, die wear', deltaYuksek: 'Centre-burst risk',
              isiYuksek: 'Lubricant breakdown risk' },
@@ -2155,6 +2324,56 @@ const METIN = {
       mu: 'Friction coefficient', K: 'Strength coefficient', n: 'Strain-hardening exponent',
       v0: 'Line entry speed', method: 'Pass distribution method', passes: 'Number of passes'
     },
+    alanYardim: {
+      d0: 'Diameter of the rod entering the line. Standard for copper lines is 8.00 mm.',
+      dTarget: 'Wire diameter wanted at the end of the line. The gap between the two sets how many dies are needed.',
+      alphaDeg: 'Half-angle of the die cone. Typically 6–10°. A small angle raises friction, a large one raises redundant work.',
+      mu: 'Lubrication quality. 0.03 is a well-lubricated line, 0.08 a poor one. This moves breakage risk more than anything else.',
+      K: 'Height of the material hardening curve. 315–530 MPa for annealed ETP copper, 450 typical.',
+      n: 'How fast the material hardens. 0.30–0.40 for ETP copper.',
+      v0: 'Speed of the rod entering the line. Does not change stress; it scales power and exit speed.',
+      method: 'How the reduction is spread over the passes. If unsure, pick equal safety.',
+      passes: 'Leave it empty and the tool finds the smallest workable pass count. Type a number if your die count is fixed.'
+    },
+    sutunYardim: {
+      no: 'Which die in the line.',
+      d0: 'Wire diameter entering the die.',
+      d1: 'Wire diameter leaving the die.',
+      rPct: 'How much the cross-section shrinks in this die, in percent.',
+      epsOut: 'Total deformation carried by the wire up to this point. Annealing resets it.',
+      sigmaBar: 'Mean flow stress of the material through the pass.',
+      sigmaFOut: 'Strength of the wire at the die exit after work hardening.',
+      sigmaD: 'Stress applied to pull the wire through the die.',
+      safety: 'Drawing stress over exit strength. Lower is better; 0.50 is the warning and 0.60 the critical threshold.',
+      delta: 'Shape of the deformation zone. 1.5–3 is wanted; below it friction grows, above it centre-burst risk grows.',
+      dT: 'Temperature rise the heat of this pass would cause in the wire. Cooling is not counted.',
+      v1: 'Speed of the wire leaving the die.',
+      PkW: 'Mechanical power spent in this die.',
+      anneal: 'Intermediate annealing after the ticked pass; accumulated strain is reset.'
+    },
+    giris: {
+      baslik: 'What does this tool do?',
+      ozet: 'It works out how many dies are needed to take copper rod down to a target diameter, and shows how close the wire comes to breaking in each one.',
+      ornek: 'It answers questions like “would 11 dies do instead of 16?” or “what happens if lubrication degrades and friction reaches 0.08?” with numbers.',
+      sinir: 'A preliminary design tool, not a production recipe.',
+      adimBaslik: 'Three steps',
+      adimlar: [
+        'Pick a preset scenario — the numbers come ready.',
+        'Change any input and press CALCULATE.',
+        'Read the verdict line and the safety ratio column in the table.'
+      ]
+    },
+    karar: {
+      baslik: 'Verdict',
+      ozet: '{d0} → {d1} mm · {n} dies',
+      kritik: 'Most critical pass {pas} · safety {oran} · warning threshold {esik}',
+      kritikBolge: '{adet} passes near the highest ratio ({ilk}–{son}) · safety {oran} · warning threshold {esik}',
+      temiz: 'No pass crosses the warning threshold.',
+      asan: '{n} passes cross the warning threshold.',
+      asanTek: '1 pass crosses the warning threshold.',
+      rozet: { ok: 'Safe', warn: 'Borderline', crit: 'At risk' }
+    },
+    sozlukBaslik: 'What do the columns mean?',
     yontem: { equalStrain: 'Equal strain', tapered: 'Tapered', equalSafety: 'Equal safety' },
     sutun: {
       no: 'Pass', d0: 'Entry dia.', d1: 'Exit dia.', rPct: 'Area reduction',
@@ -2729,7 +2948,13 @@ function kurPanel() {
     hataSatiri.className = 'alan-hatasi';
     hataSatiri.id = 'hata-' + a.k;
     hataSatiri.hidden = true;
-    inp.setAttribute('aria-describedby', hataSatiri.id);
+    // Alanın ne demek olduğu kutunun hemen altında durur; ekran okuyucuya da
+    // hata satırıyla birlikte bağlanır.
+    const yardim = document.createElement('p');
+    yardim.className = 'alan-yardim';
+    yardim.id = 'yardim-' + a.k;
+    yardim.dataset.yardim = a.k;
+    inp.setAttribute('aria-describedby', yardim.id + ' ' + hataSatiri.id);
     inp.addEventListener('input', () => {
       // Değeri yalnızca okunabilir VE modelin geçerli olduğu aralıktaysa kabul et.
       // Aralık dışında hesap yapılmaz: sınırını bilen model, sessizce saçmalayandan iyidir.
@@ -2748,7 +2973,7 @@ function kurPanel() {
     });
     alanGirdileri[a.k] = inp;
     alanHataSatirlari[a.k] = hataSatiri;
-    sar.append(lab, inp, hataSatiri);
+    sar.append(lab, inp, yardim, hataSatiri);
     panel.appendChild(sar);
   }
 
@@ -2773,7 +2998,10 @@ function kurPanel() {
     girdiDegisti();
   });
   secimKabi.append(yontemSecimi, ikon('ok'));
-  sarY.append(labY, secimKabi);
+  const yardimY = document.createElement('p');
+  yardimY.className = 'alan-yardim';
+  yardimY.dataset.yardim = 'method';
+  sarY.append(labY, secimKabi, yardimY);
   panel.appendChild(sarY);
 
   // Pas sayısı — boş = Otomatik
@@ -2812,7 +3040,10 @@ function kurPanel() {
   pasSayisiIpucu = document.createElement('p');
   pasSayisiIpucu.className = 'ipucu';
   pasSayisiIpucu.id = 'pasSayisiIpucu';
-  sarP.append(labP, satir, pasSayisiIpucu);
+  const yardimP = document.createElement('p');
+  yardimP.className = 'alan-yardim';
+  yardimP.dataset.yardim = 'passes';
+  sarP.append(labP, satir, yardimP, pasSayisiIpucu);
   panel.appendChild(sarP);
 }
 
@@ -2954,9 +3185,13 @@ function metinleriYaz() {
       el.appendChild(b);
     }
   }
+  for (const el of document.querySelectorAll('[data-yardim]')) {
+    el.textContent = M.alanYardim[el.dataset.yardim] || '';
+  }
   for (const el of document.querySelectorAll('[data-sutun]')) {
     const s = SUTUNLAR.find(x => x.k === el.dataset.sutun);
     el.textContent = M.sutun[el.dataset.sutun];
+    if (M.sutunYardim[el.dataset.sutun]) el.title = M.sutunYardim[el.dataset.sutun];
     if (s && s.birim) {
       const b = document.createElement('span');
       b.className = 'birim';
@@ -2972,6 +3207,44 @@ function metinleriYaz() {
   $('otomatigeDon').textContent = M.otomatigeDon;
   pasSayisiGirdisi.placeholder = M.otomatikYer;
   $('manuelMetin').placeholder = durum.dil === 'tr' ? '8,00 7,16 6,40' : '8.00 7.16 6.40';
+  girisiCiz();
+  sozlukCiz();
+}
+
+/* Giriş kartı: aracın ne yaptığı ve üç adımlık kullanımı. Sonuca bağlı değildir,
+   hesap beklemez; dil değişiminde yeniden yazılır. */
+function girisiCiz() {
+  const g = S().giris;
+  $('girisBaslik').textContent = g.baslik;
+  $('girisOzet').textContent = g.ozet;
+  $('girisOrnek').textContent = g.ornek;
+  $('girisSinir').textContent = g.sinir;
+  const ol = $('girisAdimlar');
+  ol.textContent = '';
+  for (const adim of g.adimlar) {
+    const li = document.createElement('li');
+    li.textContent = adim;
+    ol.appendChild(li);
+  }
+}
+
+/* Sütun sözlüğü: tablo başlıklarının düz karşılığı. Başlık ipuçları (title)
+   dokunmatik ekranda görünmez, bu yüzden aynı metin burada da durur. */
+function sozlukCiz() {
+  const M = S();
+  $('sozlukBasligi').textContent = M.sozlukBaslik;
+  const dl = $('sozlukListesi');
+  dl.textContent = '';
+  const yaz = (anahtar, birim) => {
+    if (!M.sutunYardim[anahtar]) return;
+    const dt = document.createElement('dt');
+    dt.textContent = M.sutun[anahtar] + (birim ? ' (' + birim + ')' : '');
+    const dd = document.createElement('dd');
+    dd.textContent = M.sutunYardim[anahtar];
+    dl.append(dt, dd);
+  };
+  for (const s of SUTUNLAR) yaz(s.k, s.birim);
+  yaz('anneal', '');
 }
 
 /* Girdi kutularına durumu yazar; kullanıcının yazmakta olduğu kutuya dokunmaz. */
@@ -3003,6 +3276,54 @@ function satirDegerleri(p) {
 }
 
 /* Özet şeridi: beş büyüklük + hattın çıkış hızı. */
+/* Karar satırı: "kaç kalıp, kopar mı" sorusunun cevabı, tablodan önce.
+   Emniyet değeri özet şeridiyle aynı kaynaktan gelir — bant açıkken bandın üst
+   ucu, kapalıyken nominal değer — ki iki yerde iki farklı sayı görünmesin. */
+function kararCiz(g) {
+  const M = S();
+  const kutu = $('kararKutusu');
+  kutu.hidden = !g;
+  if (!g) return;
+
+  const o = g.ozet;
+  const paslar = g.prog.passes;
+  const capMetni = (v) => fmt(v, v >= 1 ? 2 : 3);
+  const emniyetDeger = sonBant ? sonBant.enYuksekEmniyet[1] : o.enYuksekEmniyet;
+  const sinif = safetyDurumu(emniyetDeger);
+  const oranMetni = sonBant
+    ? fmt(sonBant.enYuksekEmniyet[0], 3) + ' – ' + fmt(sonBant.enYuksekEmniyet[1], 3)
+    : fmt(o.enYuksekEmniyet, 3);
+
+  $('kararOzet').textContent = doldur(M.karar.ozet, {
+    d0: capMetni(paslar[0].d0),
+    d1: capMetni(paslar[paslar.length - 1].d1),
+    n: fmt(o.pas, 0)
+  });
+
+  const asan = paslar.filter(x => x.safety > SAFETY_WARNING).length;
+  const sayim = asan === 0 ? M.karar.temiz
+    : asan === 1 ? M.karar.asanTek
+    : doldur(M.karar.asan, { n: fmt(asan, 0) });
+
+  // V3: tek bir tepe yoksa "en kritik pas" demek yanıltıcıdır — öneri cümleleri
+  // bu ayrımı zaten yapıyor, karar satırı da aynı ölçütü kullanır.
+  const tepeBelirgin = belirginTepe(paslar) || paslar.length === 1;
+  const bolge = tepeBelirgin ? null : esitBolge(paslar);
+  const kritikMetin = bolge
+    ? doldur(M.karar.kritikBolge, {
+        adet: fmt(bolge.adet, 0), ilk: fmt(bolge.ilk, 0), son: fmt(bolge.son, 0),
+        oran: oranMetni, esik: fmt(SAFETY_WARNING, 2)
+      })
+    : doldur(M.karar.kritik, {
+        pas: fmt(o.enRiskliPas, 0), oran: oranMetni, esik: fmt(SAFETY_WARNING, 2)
+      });
+  $('kararAlt').textContent = kritikMetin + ' · ' + sayim;
+
+  const rozet = $('kararRozet');
+  rozet.className = 'rozet ' + sinif;
+  rozet.textContent = M.karar.rozet[sinif];
+}
+
 function ozetSeridiniCiz(g) {
   const M = S();
   const kap = $('ozetSeridi');
@@ -3043,8 +3364,15 @@ function ozetSeridiniCiz(g) {
   const emniyetSinif = safetyDurumu(emniyetDeger);
   const aralik = (b, bas) => fmt(b[0], bas) + ' – ' + fmt(b[1], bas);
   hucre('pas', fmt(o.pas, 0), '', '');
+  // V3: tek bir tepe yoksa tek pas numarası yazmak yanıltıcı olur. Karar satırı
+  // ve öneri cümleleri aynı ölçütü kullanıyor; şerit de aynı dili konuşur.
+  const tepeBelirgin = belirginTepe(g.prog.passes) || g.prog.passes.length === 1;
+  const tepeBolge = tepeBelirgin ? null : esitBolge(g.prog.passes);
+  const pasNotu = tepeBolge
+    ? doldur(M.ozetBolgeNotu, { ilk: tepeBolge.ilk, son: tepeBolge.son })
+    : doldur(M.ozetPasNotu, { n: o.enRiskliPas });
   hucre('enRiskli', sonBant ? aralik(sonBant.enYuksekEmniyet, 3) : fmt(o.enYuksekEmniyet, 3), '',
-        doldur(M.ozetPasNotu, { n: o.enRiskliPas }) + ' · ' + M.durum[emniyetSinif], emniyetSinif);
+        pasNotu + ' · ' + M.durum[emniyetSinif], emniyetSinif);
   hucre('guc', sonBant ? aralik(sonBant.guc, 1) : fmt(o.guc, 1), 'kW', '');
   hucre('enerji', sonBant ? aralik(sonBant.enerji, 1) : fmt(o.enerji, 1), 'kWh/t', '');
   hucre('uzama', fmt(o.uzama, 1), '×', '');
@@ -3283,6 +3611,7 @@ function gorunumuYaz(g) {
   $('ozetSeridi').hidden = false;
 
   bantKoselerCiz();
+  kararCiz(g);
   ozetSeridiniCiz(g);
   oneriyiCiz(g);
   karsilastirmayiCiz(g);
@@ -3319,6 +3648,7 @@ function hesaplanamadiDurumu(hata) {
   $('ozetSeridi').hidden = true;
 
   bantKoselerCiz();
+  kararCiz(null);
   ozetSeridiniCiz(null);
   oneriyiCiz(null);
   karsilastirmayiCiz(null);
