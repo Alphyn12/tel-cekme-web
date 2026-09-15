@@ -149,11 +149,39 @@ body {
 /* ---- Bölüm başlıkları ---- */
 .bolum { display: flex; flex-direction: column; gap: var(--s12); }
 .bolum-basligi {
-  font: 600 var(--t11)/1 var(--yazi-mono);
-  letter-spacing: .12em;
-  text-transform: uppercase;
-  color: var(--ink3);
   margin: 0;
+  font: 600 var(--t16)/1.25 var(--yazi-baslik);
+  color: var(--ink);
+}
+
+/* ---- Adım başlığı ----
+   Sayfa gerçekten bir sıra: girdileri kur → hesapla → sonucu oku → programı
+   iyileştir → yöntemi denetle. Numara bu yüzden var, süs olsun diye değil.
+   Ara bölümler (görseller, pas tablosu) numarasızdır; adımın içindedirler. */
+.bolum-ust {
+  display: flex; align-items: center; gap: var(--s12);
+  padding-bottom: var(--s8);
+  border-bottom: 1px solid var(--line-strong);
+}
+.adim-no {
+  flex: 0 0 auto;
+  width: 24px; height: 24px;
+  font: 600 var(--t125)/22px var(--yazi-mono);
+  text-align: center;
+  color: var(--copper);
+  border: 1px solid var(--copper);
+}
+.bolum-adi {
+  margin: 0; flex: 1 1 auto; min-width: 0;
+  font: 600 var(--t19)/1.2 var(--yazi-baslik);
+  color: var(--ink);
+}
+/* Amaç satırı tek cümledir ve bölümün tam genişliğini kullanır: ölçü sınırı
+   koyunca sayfanın ortasında bitip sağında boş şerit bırakıyordu. */
+.bolum-amac {
+  margin: 0;
+  font: 400 var(--t14)/1.55 var(--yazi-govde);
+  color: var(--ink2);
 }
 
 /* ---- Girdi paneli ---- */
@@ -162,8 +190,10 @@ body {
   background: var(--surface);
   padding: var(--s12);
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
-  gap: var(--s12) var(--s16);
+  /* 200px: yedi dar sütun yerine beş rahat sütun. Etiket ve açıklama satırı
+     kırılmadan sığsın, kutular aynı ritimde dursun. */
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--s16);
 }
 .panel[hidden] { display: none; }
 
@@ -252,7 +282,6 @@ select { appearance: none; -webkit-appearance: none; padding-right: var(--s32); 
 .dugme-sirasi { display: flex; flex-wrap: wrap; gap: var(--s8); }
 
 /* ---- Bölüm başlığı satırı ve kapalı panel özeti ---- */
-.baslik-satiri { display: flex; align-items: center; justify-content: space-between; gap: var(--s12); }
 .ozet {
   margin: 0;
   padding: var(--s12);
@@ -635,13 +664,18 @@ tbody td.ok { color: var(--patina); }
 /* Bekleyen değişiklik varken düğme yanıp sönmez, kalınlaşır: hareket değil ağırlık. */
 .dugme.birincil.bekliyor { box-shadow: 0 0 0 3px var(--copper-tint); }
 
-.hesapla-kutusu {
-  display: flex; flex-wrap: wrap; align-items: center; gap: var(--s12);
-  margin-top: var(--s16); padding-top: var(--s16);
+/* ---- Eylem çubuğu ----
+   Düğmeler yalnızca burada yaşar: metnin ortasında duran, nereye ait olduğu
+   belirsiz düğme kalmasın. Durum solda, birincil eylem sağda; çubuk her zaman
+   ait olduğu panelin altına, ince bir çizginin ardına oturur. */
+.eylem-cubugu {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end;
+  gap: var(--s12);
+  padding-top: var(--s12);
   border-top: 1px solid var(--line);
 }
-.hesapla-metin { flex: 1 1 200px; min-width: 0; }
-.hesapla-metin p { margin: 0; }
+.eylem-metin { margin-right: auto; min-width: 0; display: grid; gap: 2px; }
+.eylem-metin p { margin: 0; }
 .hesapla-durum { font: 500 var(--t125)/1.4 var(--yazi-govde); color: var(--ink2); }
 .hesapla-durum.guncel { color: var(--patina); }
 .hesapla-durum.bekliyor { color: var(--copper); }
@@ -700,23 +734,68 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
 }
 
 /* ---- Optimizasyon bölümü ---- */
-.opt-satiri { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s12); }
-.opt-sonuc {
+/* ---- Araç kartı: kontrol solda, kenar notu sağda ----
+   Açıklama metni kontrollerin altında tam genişlik kaplayınca ya çok uzun satır
+   oluyor ya da sayfanın yarısında bitip boş şerit bırakıyordu. Kenar sütunu ona
+   kendi yerini verir: sol tarafta ne yapıldığı, sağ tarafta neden. */
+.arac {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  padding: var(--s16);
+  display: grid;
+  gap: var(--s12);
+}
+.senaryo-satiri { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s8) var(--s12); }
+.senaryo-etiketi {
+  font: 500 var(--t11)/1 var(--yazi-mono);
+  letter-spacing: .1em; text-transform: uppercase; color: var(--ink3);
+}
+.giris-karar {
+  margin: 0;
+  padding: var(--s12);
+  background: var(--sunk);
+  border-left: 2px solid var(--patina);
+  font: 400 var(--t125)/1.5 var(--yazi-govde);
+  color: var(--ink2);
+}
+.arac-adi { margin: 0; font: 600 var(--t16)/1.25 var(--yazi-baslik); color: var(--ink); }
+.arac-govde { display: grid; gap: var(--s16); align-items: start; }
+.arac-kontrol { display: grid; gap: var(--s12); min-width: 0; }
+/* Segment kendi genişliği kadar olsun: ızgara sütununu doldurunca iki seçenekli
+   bir anahtar, sayfa genişliğinde bir şerit gibi görünüyordu. */
+.arac-kontrol > .segment { justify-self: start; }
+.arac-yan { display: grid; gap: var(--s8); min-width: 0; align-content: start; }
+.arac-amac { margin: 0; font: 400 var(--t125)/1.5 var(--yazi-govde); color: var(--ink2); }
+.not {
+  margin: 0;
+  padding-left: var(--s12);
+  border-left: 2px solid var(--line-strong);
+  font: 400 var(--t11)/1.5 var(--yazi-govde);
+  color: var(--ink3);
+}
+@media (min-width: 900px) {
+  .arac-govde { grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr); }
+}
+@media (max-width: 899px) {
+  /* Dar ekranda önce ne olduğunu oku, sonra kullan. */
+  .arac-yan { order: -1; }
+}
+.arac-sonuc {
   border: 1px solid var(--line-strong);
   border-left: 2px solid var(--patina);
-  background: var(--surface);
+  background: var(--sunk);
   padding: var(--s12);
   display: flex; flex-direction: column; gap: var(--s8);
 }
-.opt-ozet {
+.arac-ozet {
   margin: 0;
   font: 600 var(--t16)/1.3 var(--yazi-mono);
   font-variant-numeric: tabular-nums;
   color: var(--ink);
   overflow-wrap: anywhere;
 }
-.opt-liste { margin: 0; padding-left: 1.1em; display: grid; gap: var(--s4); }
-.opt-liste li { font: 400 var(--t125)/1.45 var(--yazi-govde); color: var(--ink2); }
+.arac-liste { margin: 0; padding-left: 1.1em; display: grid; gap: var(--s4); }
+.arac-liste li { font: 400 var(--t125)/1.45 var(--yazi-govde); color: var(--ink2); }
 
 /* ---- Giriş kartı: araç ne işe yarar ----
    Sayfa doğrudan uzman parametreleriyle açılıyordu; terimleri bilmeyen bir
@@ -734,19 +813,28 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
    yarısında bırakıyordu. Satır uzunluğunu kartın kendi genişliği belirler. */
 .giris p { margin: 0; font: 400 var(--t14)/1.55 var(--yazi-govde); color: var(--ink2); }
 .giris .giris-sinir { font-size: var(--t125); color: var(--ink3); }
-.giris ol { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--s8); counter-reset: adim; }
+.giris ol {
+  margin: 0; padding: 0; list-style: none;
+  display: grid; gap: 1px; counter-reset: adim;
+  background: var(--line); border: 1px solid var(--line);
+}
 .giris ol li {
   counter-increment: adim;
-  display: grid; grid-template-columns: 20px 1fr; gap: var(--s8);
-  align-items: start; min-width: 0;
-  font: 400 var(--t125)/1.45 var(--yazi-govde); color: var(--ink2);
+  background: var(--surface);
+  padding: var(--s12);
+  display: grid; gap: var(--s8); align-content: start; min-width: 0;
+  font: 400 var(--t125)/1.5 var(--yazi-govde); color: var(--ink2);
 }
 .giris ol li::before {
   content: counter(adim);
-  width: 20px; height: 20px;
-  font: 600 var(--t11)/18px var(--yazi-mono);
+  width: 22px; height: 22px;
+  font: 600 var(--t11)/20px var(--yazi-mono);
   text-align: center;
-  color: var(--copper); border: 1px solid var(--copper); background: var(--copper-tint);
+  color: var(--copper); border: 1px solid var(--copper);
+}
+.giris ol strong { display: block; font: 600 var(--t14)/1.3 var(--yazi-baslik); color: var(--ink); }
+@media (min-width: 720px) {
+  .giris ol { grid-template-columns: repeat(3, 1fr); }
 }
 
 /* ---- Karar satırı: sonucun tek cümlelik özeti ----
@@ -834,7 +922,7 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
   /* Kontroller ve etkileşimli parçalar basılmaz */
   .ust-kontroller, #senaryoDugmeleri, #panelKatla, .dugme-sirasi, .sekme-satiri,
   #bantAlanlari, .kaydirici-satiri, #paylasimDurumu, .alt-not .dugme,
-  .hesapla-kutusu, #hesaplaAciklama, .yapiskan-cubuk { display: none !important; }
+  .eylem-cubugu, #hesaplaAciklama, .yapiskan-cubuk { display: none !important; }
   /* Baskıda sonuçlar soluk çıkmasın; bekleyen uyarısı metin olarak kalır. */
   .bayat-sonuc { opacity: 1 !important; }
   /* Giriş kartı ve sözlük ekran içindir; baskıda mühendislik özeti kalır. */
@@ -849,7 +937,7 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
                    2 — belirsizlik köşeleri, doğrulama özeti, kabuller. */
   /* DOM sırası zaten yazdırma sırası: sayfa 2 belirsizlik bandıyla başlar. */
   #bantBolumu { break-before: page; }
-  #senaryoBolumu, #hataKutusu, #bilgiKutusu { display: none !important; }
+  .senaryo-satiri, #hataKutusu, #bilgiKutusu { display: none !important; }
 
   .sekme-paneli[hidden] { display: flex !important; }
   #bantKoseler[hidden] { display: flex !important; }
@@ -886,7 +974,7 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
 
   /* Duyarlılık, manuel giriş, formüller ve karşılaştırma basılmaz:
      hedef iki sayfa — mühendislik özeti ve arkasında güven katmanı. */
-  #duyarlilikBolumu, #manuelBolumu, [data-panel="formuller"],
+  #duyarlilikBolumu, #araclarBolumu, [data-panel="formuller"],
   #karsilastirmaKabi, #degisenGirdiler { display: none !important; }
 
   .panel { break-inside: avoid; }
@@ -908,9 +996,13 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
   .rozet { padding: var(--s8); }
   .sozluk dl { padding: 0 var(--s12) var(--s12); }
   /* Telefonda amaç seçimi ve düğme alt alta, ikisi de tam genişlik. */
-  .opt-satiri { flex-direction: column; align-items: stretch; }
-  .opt-satiri .segment, .opt-satiri .dugme { width: 100%; }
-  .opt-satiri .segment button { flex: 1 1 0; }
+  /* Telefonda birincil eylem tam genişlik: başparmakla ulaşılacak tek hedef. */
+  .eylem-cubugu { justify-content: stretch; }
+  .eylem-cubugu .dugme { width: 100%; }
+  .arac-kontrol > .segment { justify-self: stretch; }
+  .arac-kontrol > .segment button { flex: 1 1 0; }
+  .arac { padding: var(--s12); }
+  .bolum-adi { font-size: var(--t16); }
 }
 </style>
 </head>
@@ -943,35 +1035,41 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
     <h2 id="girisBaslik"></h2>
     <p id="girisOzet"></p>
     <p id="girisOrnek"></p>
+    <p class="giris-karar" id="girisKarar"></p>
     <ol id="girisAdimlar"></ol>
     <p class="giris-sinir" id="girisSinir"></p>
   </section>
 
-  <section class="bolum" id="senaryoBolumu">
-    <h2 class="bolum-basligi" data-t="senaryolar"></h2>
-    <div class="dugme-sirasi" id="senaryoDugmeleri"></div>
-  </section>
-
+  <!-- ADIM 1 — Girdiler. Hazır senaryolar ayrı bir bölüm değil, bu adımın
+       başlangıç noktası: aynı işi yapıyorlar, ayrı başlık hak etmiyorlar. -->
   <section class="bolum" id="girdiBolumu">
-    <div class="baslik-satiri">
-      <h2 class="bolum-basligi" data-t="girdiler"></h2>
+    <header class="bolum-ust">
+      <span class="adim-no" aria-hidden="true">1</span>
+      <h2 class="bolum-adi" data-t="adimGirdiler"></h2>
       <button type="button" class="dugme sessiz" id="panelKatla" aria-expanded="true"
               aria-controls="girdiPaneli" data-t="gizle"></button>
+    </header>
+    <p class="bolum-amac" data-t="adimGirdilerAmac"></p>
+
+    <div class="senaryo-satiri">
+      <span class="senaryo-etiketi" data-t="senaryolar"></span>
+      <div class="dugme-sirasi" id="senaryoDugmeleri"></div>
     </div>
+
     <p class="ozet" id="panelOzet" hidden></p>
     <div class="panel" id="girdiPaneli"></div>
-    <p class="gerekce" id="yontemGerekcesi"></p>
+    <p class="not" id="yontemGerekcesi"></p>
 
     <!-- Hesap yalnızca buradan başlar. Girdiyi değiştirmek ekrandaki hiçbir
          sayıyı değiştirmez; bu düğmeye basılana kadar sonuçlar olduğu gibi kalır. -->
-    <div class="hesapla-kutusu" id="hesaplaKutusu">
-      <button type="button" class="dugme birincil" id="hesaplaDugmesi"></button>
-      <div class="hesapla-metin">
+    <div class="eylem-cubugu" id="hesaplaKutusu">
+      <div class="eylem-metin">
         <p class="hesapla-durum" id="hesaplaDurumu" role="status"></p>
         <p class="ipucu" id="hesaplaKisayol"></p>
       </div>
+      <button type="button" class="dugme birincil" id="hesaplaDugmesi"></button>
     </div>
-    <p class="gerekce" id="hesaplaAciklama"></p>
+    <p class="not" id="hesaplaAciklama"></p>
   </section>
 
   <!-- Bekleyen değişiklik şeridi: sonuçlar ile girdiler ayrıştığı anda görünür. -->
@@ -989,68 +1087,13 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
   <div class="uyari" id="hataKutusu" hidden></div>
   <div class="bilgi" id="bilgiKutusu" hidden></div>
 
-  <!-- Sürtünme kalibrasyonu: ölçümden mu çözer. Optimizasyondan önce gelir,
-       çünkü mu bütün taramanın girdisidir. -->
-  <section class="bolum" id="kalibBolumu">
-    <h2 class="bolum-basligi" id="kalibBaslik"></h2>
-    <p class="gerekce" id="kalibAciklama"></p>
-    <div class="panel" id="kalibPaneli">
-      <div class="alan genis">
-        <label for="kalibPas" id="kalibPasEtiketi"></label>
-        <div class="secim">
-          <select id="kalibPas"></select>
-        </div>
-      </div>
-      <div class="alan">
-        <label for="kalibKuvvet" id="kalibKuvvetEtiketi"></label>
-        <input type="text" id="kalibKuvvet" inputmode="decimal" autocomplete="off">
-      </div>
-    </div>
-    <div class="opt-satiri">
-      <button type="button" class="dugme birincil" id="kalibCoz"></button>
-    </div>
-    <div class="opt-sonuc" id="kalibSonuc" hidden>
-      <p class="opt-ozet" id="kalibOzet"></p>
-      <ul class="opt-liste" id="kalibListe"></ul>
-      <div class="dugme-sirasi">
-        <button type="button" class="dugme" id="kalibUygula"></button>
-      </div>
-      <p class="ipucu" id="kalibDurum" hidden></p>
-    </div>
-    <p class="gerekce" id="kalibUyari"></p>
-  </section>
-
-  <!-- Optimizasyon: girdi tarafının yardımcısı. Sonucu doğrudan ekrana yazmaz;
-       "girdilere al" der ve bekleyen değişiklik şeridini açar (K-16). -->
-  <section class="bolum" id="makineBolumu">
-    <h2 class="bolum-basligi" id="makineBaslik"></h2>
-    <p class="gerekce" id="makineAciklama"></p>
-    <div class="panel" id="makinePaneli"></div>
-  </section>
-
-  <section class="bolum" id="optBolumu">
-    <h2 class="bolum-basligi" id="optBaslik"></h2>
-    <p class="gerekce" id="optAciklama"></p>
-    <div class="opt-satiri">
-      <div class="segment" role="group" id="optAmacSecimi">
-        <button type="button" id="optAmacEnerji" aria-pressed="true"></button>
-        <button type="button" id="optAmacKalip" aria-pressed="false"></button>
-      </div>
-      <button type="button" class="dugme birincil" id="optCalistir"></button>
-    </div>
-    <div class="opt-sonuc" id="optSonuc" hidden>
-      <p class="opt-ozet" id="optOzet"></p>
-      <ul class="opt-liste" id="optListe"></ul>
-      <div class="dugme-sirasi">
-        <button type="button" class="dugme" id="optUygula"></button>
-      </div>
-      <p class="ipucu" id="optDurum" hidden></p>
-    </div>
-    <p class="gerekce" id="optUyari"></p>
-  </section>
-
+  <!-- ADIM 2 — Sonuç. Karar satırı önce, dayanağı sonra. -->
   <section class="bolum" id="ozetBolumu">
-    <h2 class="bolum-basligi" data-t="ozetBaslik"></h2>
+    <header class="bolum-ust">
+      <span class="adim-no" aria-hidden="true">2</span>
+      <h2 class="bolum-adi" data-t="adimSonuc"></h2>
+    </header>
+    <p class="bolum-amac" data-t="adimSonucAmac"></p>
     <!-- Karar satırı özet bölümünün içinde: bekleyen değişiklikte diğer
          sonuçlarla birlikte soluklaşır, hesaplanamadığında birlikte gizlenir. -->
     <div class="karar" id="kararKutusu" hidden>
@@ -1062,14 +1105,14 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
     </div>
     <div class="serit" id="ozetSeridi"></div>
     <p class="oneri" id="oneriKutusu"></p>
-    <div class="dugme-sirasi">
-      <button type="button" class="dugme" id="karsilastirSabitle" data-t="karsilastirSabitle"></button>
+    <div class="eylem-cubugu">
+      <p class="ipucu eylem-metin" id="paylasimDurumu" hidden></p>
       <button type="button" class="dugme sessiz" id="karsilastirKapat" data-t="karsilastirKapat" hidden></button>
-      <button type="button" class="dugme sessiz" id="baglantiKopyala" data-t="baglantiKopyala"></button>
-      <button type="button" class="dugme sessiz" id="csvIndir" data-t="csvIndir"></button>
       <button type="button" class="dugme sessiz" id="yazdir" data-t="yazdir"></button>
+      <button type="button" class="dugme sessiz" id="csvIndir" data-t="csvIndir"></button>
+      <button type="button" class="dugme sessiz" id="baglantiKopyala" data-t="baglantiKopyala"></button>
+      <button type="button" class="dugme" id="karsilastirSabitle" data-t="karsilastirSabitle"></button>
     </div>
-    <p class="ipucu" id="paylasimDurumu" hidden></p>
     <p class="degisen" id="degisenGirdiler" hidden></p>
     <div class="tablo-kabi" id="karsilastirmaKabi" hidden>
       <table class="karsilastirma" id="karsilastirmaTablosu">
@@ -1135,8 +1178,14 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
     </details>
   </section>
 
+  <!-- ADIM 3 — Belirsizlik. -->
   <section class="bolum" id="bantBolumu">
-    <h2 class="bolum-basligi" data-t="bantBaslik"></h2>
+    <header class="bolum-ust">
+      <span class="adim-no" aria-hidden="true">3</span>
+      <h2 class="bolum-adi" data-t="adimBelirsizlik"></h2>
+    </header>
+    <p class="bolum-amac" data-t="adimBelirsizlikAmac"></p>
+    <h3 class="bolum-basligi" data-t="bantBaslik"></h3>
     <div class="bant-kutusu">
       <label class="bant-anahtari">
         <span class="kutu"><input type="checkbox" id="bantAnahtari"><span class="gorsel"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3.5 8.5 L6.5 11.5 L12.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span>
@@ -1165,8 +1214,149 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
     </div>
   </section>
 
+
+  <!-- ADIM 4 — Programı iyileştir.
+       Dört aracın ortak sözleşmesi: hiçbiri ekrandaki sayıyı değiştirmez,
+       buldukları değeri girdilere yazar ve hesabı kullanıcı başlatır (K-16).
+       Kart deseni de bunu söyler: solda kontrol, sağda neden. -->
+  <section class="bolum" id="araclarBolumu">
+    <header class="bolum-ust">
+      <span class="adim-no" aria-hidden="true">4</span>
+      <h2 class="bolum-adi" data-t="adimAraclar"></h2>
+    </header>
+    <p class="bolum-amac" data-t="adimAraclarAmac"></p>
+
+    <div class="arac" id="optBolumu">
+      <h3 class="arac-adi" id="optBaslik"></h3>
+      <div class="arac-govde">
+        <div class="arac-kontrol">
+          <div class="segment" role="group" id="optAmacSecimi">
+            <button type="button" id="optAmacEnerji" aria-pressed="true"></button>
+            <button type="button" id="optAmacKalip" aria-pressed="false"></button>
+          </div>
+          <div class="eylem-cubugu">
+            <button type="button" class="dugme birincil" id="optCalistir"></button>
+          </div>
+          <div class="arac-sonuc" id="optSonuc" hidden>
+            <p class="arac-ozet" id="optOzet"></p>
+            <ul class="arac-liste" id="optListe"></ul>
+            <div class="eylem-cubugu">
+              <p class="ipucu eylem-metin" id="optDurum" hidden></p>
+              <button type="button" class="dugme" id="optUygula"></button>
+            </div>
+          </div>
+        </div>
+        <div class="arac-yan">
+          <p class="arac-amac" id="optAciklama"></p>
+          <p class="not" id="optUyari"></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="arac" id="makineBolumu">
+      <h3 class="arac-adi" id="makineBaslik"></h3>
+      <div class="arac-govde">
+        <div class="arac-kontrol">
+          <div class="panel" id="makinePaneli"></div>
+        </div>
+        <div class="arac-yan">
+          <p class="arac-amac" id="makineAciklama"></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="arac" id="kalibBolumu">
+      <h3 class="arac-adi" id="kalibBaslik"></h3>
+      <div class="arac-govde">
+        <div class="arac-kontrol">
+          <div class="panel" id="kalibPaneli">
+            <div class="alan genis">
+              <label for="kalibPas" id="kalibPasEtiketi"></label>
+              <div class="secim">
+                <select id="kalibPas"></select>
+              </div>
+            </div>
+            <div class="alan">
+              <label for="kalibKuvvet" id="kalibKuvvetEtiketi"></label>
+              <input type="text" id="kalibKuvvet" inputmode="decimal" autocomplete="off">
+            </div>
+          </div>
+          <div class="eylem-cubugu">
+            <button type="button" class="dugme birincil" id="kalibCoz"></button>
+          </div>
+          <div class="arac-sonuc" id="kalibSonuc" hidden>
+            <p class="arac-ozet" id="kalibOzet"></p>
+            <ul class="arac-liste" id="kalibListe"></ul>
+            <div class="eylem-cubugu">
+              <p class="ipucu eylem-metin" id="kalibDurum" hidden></p>
+              <button type="button" class="dugme" id="kalibUygula"></button>
+            </div>
+          </div>
+        </div>
+        <div class="arac-yan">
+          <p class="arac-amac" id="kalibAciklama"></p>
+          <p class="not" id="kalibUyari"></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="arac" id="yuvarlaBolumu">
+      <h3 class="arac-adi" id="yuvarlaBaslik"></h3>
+      <div class="arac-govde">
+        <div class="arac-kontrol">
+          <div class="panel">
+            <div class="alan">
+              <label for="yuvarlaAdim" id="yuvarlaAdimEtiketi"></label>
+              <div class="secim">
+                <select id="yuvarlaAdim"></select>
+              </div>
+            </div>
+          </div>
+          <div class="eylem-cubugu">
+            <button type="button" class="dugme birincil" id="yuvarlaCalistir"></button>
+          </div>
+          <div class="arac-sonuc" id="yuvarlaSonuc" hidden>
+            <p class="arac-ozet" id="yuvarlaOzet"></p>
+            <ul class="arac-liste" id="yuvarlaListe"></ul>
+            <div class="eylem-cubugu">
+              <p class="ipucu eylem-metin" id="yuvarlaDurum" hidden></p>
+              <button type="button" class="dugme" id="yuvarlaUygula"></button>
+            </div>
+          </div>
+        </div>
+        <div class="arac-yan">
+          <p class="arac-amac" id="yuvarlaAciklama"></p>
+          <p class="not" id="yuvarlaUyari"></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="arac" id="manuelBolumu">
+      <h3 class="arac-adi" data-t="manuelBaslik"></h3>
+      <div class="arac-govde">
+        <div class="arac-kontrol">
+          <label class="gorsel-gizli" for="manuelMetin" data-t="manuelBaslik"></label>
+          <textarea id="manuelMetin" rows="3" aria-describedby="manuelIpucu"></textarea>
+          <div class="eylem-cubugu">
+            <p class="ipucu eylem-metin" id="manuelIpucu"></p>
+            <button type="button" class="dugme sessiz" id="manuelTemizle" data-t="manuelTemizle"></button>
+            <button type="button" class="dugme birincil" id="manuelHesapla" data-t="manuelHesapla"></button>
+          </div>
+        </div>
+        <div class="arac-yan">
+          <p class="arac-amac" data-t="manuelAciklama"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ADIM 5 — Yöntem ve sınırlar. -->
   <section class="bolum" id="guvenBolumu">
-    <h2 class="bolum-basligi" data-t="guvenBaslik"></h2>
+    <header class="bolum-ust">
+      <span class="adim-no" aria-hidden="true">5</span>
+      <h2 class="bolum-adi" data-t="adimYontem"></h2>
+    </header>
+    <p class="bolum-amac" data-t="adimYontemAmac"></p>
     <div class="sekme-satiri" role="tablist">
       <button type="button" role="tab" data-sekme="dogrulama" aria-selected="true" data-t="sekmeDogrulama"></button>
       <button type="button" role="tab" data-sekme="formuller" aria-selected="false" data-t="sekmeFormuller"></button>
@@ -1197,41 +1387,6 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
     <div class="sekme-paneli" data-panel="kabuller" role="tabpanel" hidden>
       <div id="kabulListesi"></div>
     </div>
-  </section>
-
-  <section class="bolum" id="manuelBolumu">
-    <h2 class="bolum-basligi" data-t="manuelBaslik"></h2>
-    <p class="gerekce" data-t="manuelAciklama"></p>
-    <label class="etiket" for="manuelMetin" style="display:none"></label>
-    <textarea id="manuelMetin" rows="3" aria-describedby="manuelIpucu"></textarea>
-    <div class="dugme-sirasi">
-      <button type="button" class="dugme" id="manuelHesapla" data-t="manuelHesapla"></button>
-      <button type="button" class="dugme sessiz" id="manuelTemizle" data-t="manuelTemizle"></button>
-    </div>
-    <p class="ipucu" id="manuelIpucu"></p>
-
-    <!-- Kalıp çapına yuvarlama: manuel programın yanında durur, çünkü çıktısı da
-         bir çap dizisidir. Sonucu ekrana yazmaz, girdilere alır (K-16). -->
-    <h3 class="bolum-basligi" id="yuvarlaBaslik"></h3>
-    <p class="gerekce" id="yuvarlaAciklama"></p>
-    <div class="opt-satiri">
-      <div class="alan">
-        <label for="yuvarlaAdim" id="yuvarlaAdimEtiketi"></label>
-        <div class="secim">
-          <select id="yuvarlaAdim"></select>
-        </div>
-      </div>
-      <button type="button" class="dugme birincil" id="yuvarlaCalistir"></button>
-    </div>
-    <div class="opt-sonuc" id="yuvarlaSonuc" hidden>
-      <p class="opt-ozet" id="yuvarlaOzet"></p>
-      <ul class="opt-liste" id="yuvarlaListe"></ul>
-      <div class="dugme-sirasi">
-        <button type="button" class="dugme" id="yuvarlaUygula"></button>
-      </div>
-      <p class="ipucu" id="yuvarlaDurum" hidden></p>
-    </div>
-    <p class="gerekce" id="yuvarlaUyari"></p>
   </section>
 
   <footer class="alt-not">
@@ -2062,6 +2217,16 @@ const METIN = {
     baslik: 'Tel Çekme Pas Programı Hesaplayıcısı',
     altBaslik: 'Bakır filmaşinden ince tele inen çekme hattı için pas programı, çekme gerilmesi ve model tarama oranı hesaplar.',
     senaryolar: 'Hazır senaryolar',
+    adimGirdiler: 'Girdiler',
+    adimGirdilerAmac: 'Hattın geometrisini ve malzemesini kurun. Hazır bir senaryoyla başlayıp tek tek değiştirebilirsiniz; ekrandaki sayılar HESAPLA\'ya basana kadar olduğu gibi kalır.',
+    adimSonuc: 'Sonuç',
+    adimSonucAmac: 'Karar satırı programın güvenli olup olmadığını tek cümlede söyler. Altındaki özet, grafikler ve pas tablosu bu cümlenin nereden geldiğini gösterir.',
+    adimBelirsizlik: 'Belirsizlik',
+    adimBelirsizlikAmac: 'Malzeme ve sürtünme verisi kesin değildir. Bu adım sonucun bu belirsizlikle ne kadar kaydığını ve kaydıran parametrenin hangisi olduğunu gösterir.',
+    adimAraclar: 'Programı iyileştir',
+    adimAraclarAmac: 'Beş aracın ortak sözleşmesi var: hiçbiri ekrandaki sayıyı değiştirmez. Buldukları değeri girdilere yazarlar, hesabı siz başlatırsınız.',
+    adimYontem: 'Yöntem ve sınırlar',
+    adimYontemAmac: 'Her formülün kaynağı, sayfa her açıldığında koşan dokuz doğrulama testi ve modelin bilerek dışarıda bıraktıkları.',
     girdiler: 'Girdiler',
     gizle: 'Gizle',
     goster: 'Göster',
@@ -2284,11 +2449,12 @@ const METIN = {
       ozet: 'Bakır filmaşini hedef çapa indirmek için kaç kalıp gerektiğini hesaplar ve her kalıpta telin kopma sınırına ne kadar yaklaştığını gösterir.',
       ornek: '“16 kalıp yerine 11 yeter mi?” ya da “yağlama bozulup sürtünme 0,08’e çıkarsa ne olur?” sorularına sayıyla cevap verir.',
       sinir: 'Ön tasarım aracıdır, üretim reçetesi değildir.',
+      karar: 'Karar sayısı emniyet oranıdır: çekme gerilmesinin telin çıkıştaki dayanımına oranı. Düşük olması iyidir — 0,50 uyarı, 0,60 kritik eşiktir.',
       adimBaslik: 'Üç adımda',
       adimlar: [
-        'Bir hazır senaryo seçin — sayılar hazır gelir.',
-        'İstediğiniz girdiyi değiştirip HESAPLA’ya basın.',
-        'Karar satırına ve tablodaki emniyet oranı sütununa bakın.'
+        { ad: 'Girdileri kurun', metin: 'Hazır senaryolardan birini seçin ya da çapları, malzemeyi ve sürtünmeyi kendiniz girin. Her kutunun altında alanın ne olduğu ve tipik aralığı yazılıdır.' },
+        { ad: 'Hesaplayın', metin: 'HESAPLA düğmesine basın. Girdi yazmak ekrandaki sayıları değiştirmez; böylece hangi sayının hangi girdiye ait olduğu hiçbir an belirsiz kalmaz.' },
+        { ad: 'Kararı okuyun', metin: 'Karar satırı ve emniyet oranı sonucu söyler. Sonra 4. adımdaki araçlarla programı iyileştirebilirsiniz.' }
       ]
     },
     karar: {
@@ -2430,6 +2596,16 @@ const METIN = {
     baslik: 'Wire Drawing Pass Schedule Calculator',
     altBaslik: 'Builds a pass schedule for a copper rod-to-fine-wire drawing line and computes drawing stress and the model screening ratio.',
     senaryolar: 'Presets',
+    adimGirdiler: 'Inputs',
+    adimGirdilerAmac: 'Set up the line geometry and the material. Start from a preset and change what you need; the numbers on screen stay as they are until you press CALCULATE.',
+    adimSonuc: 'Result',
+    adimSonucAmac: 'The verdict line says in one sentence whether the schedule is safe. The summary, the charts and the pass table below show where that sentence comes from.',
+    adimBelirsizlik: 'Uncertainty',
+    adimBelirsizlikAmac: 'Material and friction data are not exact. This step shows how far the result moves with that uncertainty, and which parameter moves it.',
+    adimAraclar: 'Improve the schedule',
+    adimAraclarAmac: 'All five tools share one contract: none of them changes a number on screen. They write what they find into the inputs, and you start the calculation.',
+    adimYontem: 'Method and limits',
+    adimYontemAmac: 'The source of every formula, the nine validation tests that run each time the page opens, and what the model deliberately leaves out.',
     girdiler: 'Inputs',
     gizle: 'Hide',
     goster: 'Show',
@@ -2649,11 +2825,12 @@ const METIN = {
       ozet: 'It works out how many dies are needed to take copper rod down to a target diameter, and shows how close the wire comes to breaking in each one.',
       ornek: 'It answers questions like “would 11 dies do instead of 16?” or “what happens if lubrication degrades and friction reaches 0.08?” with numbers.',
       sinir: 'A preliminary design tool, not a production recipe.',
+      karar: 'The number that decides is the safety ratio: drawing stress over the strength of the wire at the die exit. Lower is better — 0.50 is the warning threshold, 0.60 the critical one.',
       adimBaslik: 'Three steps',
       adimlar: [
-        'Pick a preset scenario — the numbers come ready.',
-        'Change any input and press CALCULATE.',
-        'Read the verdict line and the safety ratio column in the table.'
+        { ad: 'Set the inputs', metin: 'Pick a preset, or enter the diameters, material and friction yourself. Every box says underneath what the field is and what range is typical.' },
+        { ad: 'Calculate', metin: 'Press the CALCULATE button. Typing does not change the numbers on screen, so it is never unclear which number belongs to which input.' },
+        { ad: 'Read the verdict', metin: 'The verdict line and the safety ratio give the answer. The tools in step 4 can then improve the schedule.' }
       ]
     },
     karar: {
@@ -4194,11 +4371,14 @@ function girisiCiz() {
   $('girisOzet').textContent = g.ozet;
   $('girisOrnek').textContent = g.ornek;
   $('girisSinir').textContent = g.sinir;
+  $('girisKarar').textContent = g.karar;
   const ol = $('girisAdimlar');
   ol.textContent = '';
   for (const adim of g.adimlar) {
     const li = document.createElement('li');
-    li.textContent = adim;
+    const ad = document.createElement('strong');
+    ad.textContent = adim.ad;
+    li.append(ad, document.createTextNode(adim.metin));
     ol.appendChild(li);
   }
 }

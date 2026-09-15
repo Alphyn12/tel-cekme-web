@@ -662,3 +662,45 @@ listesi bu maddeyi "hesaba katılmayanlar"dan çıkarıp kendi cümlesine taşı
 Dört test eklendi: `σ_b = 0` eski sayıları birebir üretir; gerilme artar ama artış
 her zaman `σ_b`'den küçüktür; aktarım çarpanı kapalı formla birebir tutar ve
 sürtünmesiz kalıpta tam 1 olur; sınır dışı değerler reddedilir.
+
+## K-24 · Sayfa bir akışa dönüştü: beş adım, tek kart deseni, tek eylem yeri
+**Tarih:** 2026-09-15
+
+Özellikler eklendikçe sayfa on üç bölümlük düz bir yığın olmuştu. Her bölüm aynı
+görsel ağırlıktaydı: 11 piksellik izli büyük harf etiket, altında sayfanın yarısında
+biten gri bir paragraf, arada nereye ait olduğu belirsiz bir düğme. Hesap doğruydu
+ama arayüz "rastgele yazılmış metinler" gibi okunuyordu ve dört yardımcı araç
+girdilerle sonuç arasına sıkışmıştı — kullanıcı HESAPLA'ya basıp sonucu görmek için
+üç araç bloğunu geçmek zorundaydı.
+
+**Karar — akış beş adıma ayrıldı.** 1 Girdiler · 2 Sonuç · 3 Belirsizlik ·
+4 Programı iyileştir · 5 Yöntem ve sınırlar. İçerik gerçekten bir sıra olduğu için
+adımlar numaralı; ara bölümler (görseller, pas tablosu, tornado) numarasızdır,
+çünkü bulundukları adımın parçasıdırlar. Hazır senaryolar ayrı bir bölüm olmaktan
+çıkıp 1. adımın başına girdi: aynı işi yapıyorlardı, ayrı başlık hak etmiyorlardı.
+
+**Beş araç tek gruba toplandı ve sonucun arkasına alındı.** Kalibrasyon, optimizasyon,
+makine kısıtları, kalıp yuvarlama ve manuel program aynı sözleşmeyi paylaşıyor:
+hiçbiri ekrandaki sayıyı değiştirmez, buldukları değeri girdilere yazar (K-16).
+Ortak sözleşme artık ortak bir yerde ve ortak bir kart deseninde duruyor.
+
+**Kart deseni: solda kontrol, sağda neden.** Açıklama metni kontrollerin altında tam
+genişlik kaplayınca ya aşırı uzun satır oluyor ya da sayfanın ortasında bitip boş
+şerit bırakıyordu. Kenar sütunu ona kendi yerini verir; 900 pikselin altında sütun
+yukarı çıkar, yani telefonda önce ne olduğunu okur, sonra kullanırsın.
+
+**Düğmeler yalnızca eylem çubuğunda yaşar.** Durum solda, birincil eylem sağda, üstte
+ince bir çizgi. Aynı desen HESAPLA'da, beş araçta ve dışa aktarma satırında geçerli.
+Telefonda birincil eylem tam genişliğe açılır. Metnin ortasında duran, neye ait
+olduğu belirsiz düğme kalmadı.
+
+**Başlıklar gerçek başlık oldu.** 11 piksellik izli büyük harf etiketler 16–19 piksel
+Archivo'ya çıktı ve cümle düzenine geçti. Büyük harf mono yalnızca alan etiketlerinde
+kaldı — orada enstrüman etiketi olarak çalışıyor, süs değil.
+
+**Giriş kartı kararı öne aldı.** Artık kararın hangi sayı olduğunu (emniyet oranı,
+0,50 uyarı / 0,60 kritik) ve üç adımı başlıklarıyla söylüyor: neyi neden seçtiğini
+bilmeyen ziyaretçi ilk ekranda kalıyordu.
+
+Palet, yazı ailesi ve ölçek değişmedi: sorun renk değil hiyerarşiydi. Baskı kuralları
+yeni sınıf adlarına taşındı; araç grubu ekran içindir, kâğıda basılmaz.
