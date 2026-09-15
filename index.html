@@ -1134,10 +1134,10 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
 
   <!-- ADIM 1 — Girdiler. Hazır senaryolar ayrı bir bölüm değil, bu adımın
        başlangıç noktası: aynı işi yapıyorlar, ayrı başlık hak etmiyorlar. -->
-  <section class="bolum" id="girdiBolumu">
+  <section class="bolum" id="girdiBolumu" aria-labelledby="baslikGirdiler">
     <header class="bolum-ust">
       <span class="adim-no" aria-hidden="true">1</span>
-      <h2 class="bolum-adi" data-t="adimGirdiler"></h2>
+      <h2 class="bolum-adi" id="baslikGirdiler" data-t="adimGirdiler"></h2>
       <button type="button" class="dugme sessiz" id="panelKatla" aria-expanded="true"
               aria-controls="girdiPaneli" data-t="gizle"></button>
     </header>
@@ -1180,10 +1180,10 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
   <div class="bilgi" id="bilgiKutusu" hidden></div>
 
   <!-- ADIM 2 — Sonuç. Karar satırı önce, dayanağı sonra. -->
-  <section class="bolum" id="ozetBolumu">
+  <section class="bolum" id="ozetBolumu" aria-labelledby="baslikSonuc">
     <header class="bolum-ust">
       <span class="adim-no" aria-hidden="true">2</span>
-      <h2 class="bolum-adi" data-t="adimSonuc"></h2>
+      <h2 class="bolum-adi" id="baslikSonuc" data-t="adimSonuc"></h2>
     </header>
     <p class="bolum-amac" data-t="adimSonucAmac"></p>
     <!-- Karar satırı özet bölümünün içinde: bekleyen değişiklikte diğer
@@ -1215,8 +1215,8 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
     </div>
   </section>
 
-  <section class="bolum" id="gorselBolumu">
-    <h2 class="bolum-basligi" data-t="gorsellerBaslik"></h2>
+  <section class="bolum" id="gorselBolumu" aria-labelledby="baslikGorseller">
+    <h2 class="bolum-basligi" id="baslikGorseller" data-t="gorsellerBaslik"></h2>
     <div class="gorsel-bolum">
       <div class="gorsel-kutu">
         <h3 data-t="gorselAnaBaslik"></h3>
@@ -1256,8 +1256,8 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
     </div>
   </section>
 
-  <section class="bolum" id="pasBolumu">
-    <h2 class="bolum-basligi" data-t="pasTablosu"></h2>
+  <section class="bolum" id="pasBolumu" aria-labelledby="baslikPas">
+    <h2 class="bolum-basligi" id="baslikPas" data-t="pasTablosu"></h2>
     <div class="tablo-kabi" id="pasTablosuKabi">
       <table id="pasTablosu">
         <thead><tr id="tabloBaslik"></tr></thead>
@@ -1272,10 +1272,10 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
   </section>
 
   <!-- ADIM 3 — Belirsizlik. -->
-  <section class="bolum" id="bantBolumu">
+  <section class="bolum" id="bantBolumu" aria-labelledby="baslikBelirsizlik">
     <header class="bolum-ust">
       <span class="adim-no" aria-hidden="true">3</span>
-      <h2 class="bolum-adi" data-t="adimBelirsizlik"></h2>
+      <h2 class="bolum-adi" id="baslikBelirsizlik" data-t="adimBelirsizlik"></h2>
     </header>
     <p class="bolum-amac" data-t="adimBelirsizlikAmac"></p>
     <h3 class="bolum-basligi" data-t="bantBaslik"></h3>
@@ -1290,8 +1290,8 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
     </div>
   </section>
 
-  <section class="bolum" id="duyarlilikBolumu">
-    <h2 class="bolum-basligi" data-t="duyarlilikBaslik"></h2>
+  <section class="bolum" id="duyarlilikBolumu" aria-labelledby="baslikDuyarlilik">
+    <h2 class="bolum-basligi" id="baslikDuyarlilik" data-t="duyarlilikBaslik"></h2>
     <p class="gerekce" data-t="duyarlilikAciklama"></p>
     <div class="gorsel-bolum">
       <div class="gorsel-kutu">
@@ -1312,14 +1312,14 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
        Dört aracın ortak sözleşmesi: hiçbiri ekrandaki sayıyı değiştirmez,
        buldukları değeri girdilere yazar ve hesabı kullanıcı başlatır (K-16).
        Kart deseni de bunu söyler: solda kontrol, sağda neden. -->
-  <section class="bolum" id="araclarBolumu">
+  <section class="bolum" id="araclarBolumu" aria-labelledby="baslikAraclar">
     <header class="bolum-ust">
       <span class="adim-no" aria-hidden="true">4</span>
-      <h2 class="bolum-adi" data-t="adimAraclar"></h2>
+      <h2 class="bolum-adi" id="baslikAraclar" data-t="adimAraclar"></h2>
     </header>
     <p class="bolum-amac" data-t="adimAraclarAmac"></p>
 
-    <div class="arac" id="optBolumu">
+    <div class="arac" id="optBolumu" role="group" aria-labelledby="optBaslik">
       <h3 class="arac-adi" id="optBaslik"></h3>
       <div class="arac-govde">
         <div class="arac-kontrol">
@@ -1328,13 +1328,14 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
             <button type="button" id="optAmacKalip" aria-pressed="false"></button>
           </div>
           <div class="eylem-cubugu">
-            <button type="button" class="dugme birincil" id="optCalistir"></button>
+            <button type="button" class="dugme birincil" id="optCalistir" aria-busy="false"></button>
+          <span class="gorsel-gizli" id="optTaramaDurumu" role="status"></span>
           </div>
-          <div class="arac-sonuc" id="optSonuc" hidden>
+          <div class="arac-sonuc" id="optSonuc" role="status" hidden>
             <p class="arac-ozet" id="optOzet"></p>
             <ul class="arac-liste" id="optListe"></ul>
             <div class="eylem-cubugu">
-              <p class="ipucu eylem-metin" id="optDurum" hidden></p>
+              <p class="ipucu eylem-metin" id="optDurum" role="status" hidden></p>
               <button type="button" class="dugme" id="optUygula"></button>
             </div>
           </div>
@@ -1346,7 +1347,7 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
       </div>
     </div>
 
-    <div class="arac" id="makineBolumu">
+    <div class="arac" id="makineBolumu" role="group" aria-labelledby="makineBaslik">
       <h3 class="arac-adi" id="makineBaslik"></h3>
       <div class="arac-govde">
         <div class="arac-kontrol">
@@ -1358,7 +1359,7 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
       </div>
     </div>
 
-    <div class="arac" id="kalibBolumu">
+    <div class="arac" id="kalibBolumu" role="group" aria-labelledby="kalibBaslik">
       <h3 class="arac-adi" id="kalibBaslik"></h3>
       <div class="arac-govde">
         <div class="arac-kontrol">
@@ -1377,11 +1378,11 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
           <div class="eylem-cubugu">
             <button type="button" class="dugme birincil" id="kalibCoz"></button>
           </div>
-          <div class="arac-sonuc" id="kalibSonuc" hidden>
+          <div class="arac-sonuc" id="kalibSonuc" role="status" hidden>
             <p class="arac-ozet" id="kalibOzet"></p>
             <ul class="arac-liste" id="kalibListe"></ul>
             <div class="eylem-cubugu">
-              <p class="ipucu eylem-metin" id="kalibDurum" hidden></p>
+              <p class="ipucu eylem-metin" id="kalibDurum" role="status" hidden></p>
               <button type="button" class="dugme" id="kalibUygula"></button>
             </div>
           </div>
@@ -1393,7 +1394,7 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
       </div>
     </div>
 
-    <div class="arac" id="yuvarlaBolumu">
+    <div class="arac" id="yuvarlaBolumu" role="group" aria-labelledby="yuvarlaBaslik">
       <h3 class="arac-adi" id="yuvarlaBaslik"></h3>
       <div class="arac-govde">
         <div class="arac-kontrol">
@@ -1408,11 +1409,11 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
           <div class="eylem-cubugu">
             <button type="button" class="dugme birincil" id="yuvarlaCalistir"></button>
           </div>
-          <div class="arac-sonuc" id="yuvarlaSonuc" hidden>
+          <div class="arac-sonuc" id="yuvarlaSonuc" role="status" hidden>
             <p class="arac-ozet" id="yuvarlaOzet"></p>
             <ul class="arac-liste" id="yuvarlaListe"></ul>
             <div class="eylem-cubugu">
-              <p class="ipucu eylem-metin" id="yuvarlaDurum" hidden></p>
+              <p class="ipucu eylem-metin" id="yuvarlaDurum" role="status" hidden></p>
               <button type="button" class="dugme" id="yuvarlaUygula"></button>
             </div>
           </div>
@@ -1424,8 +1425,8 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
       </div>
     </div>
 
-    <div class="arac" id="manuelBolumu">
-      <h3 class="arac-adi" data-t="manuelBaslik"></h3>
+    <div class="arac" id="manuelBolumu" role="group" aria-labelledby="manuelKartBaslik">
+      <h3 class="arac-adi" id="manuelKartBaslik" data-t="manuelBaslik"></h3>
       <div class="arac-govde">
         <div class="arac-kontrol">
           <label class="gorsel-gizli" for="manuelMetin" data-t="manuelBaslik"></label>
@@ -1444,10 +1445,10 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
   </section>
 
   <!-- ADIM 5 — Yöntem ve sınırlar. -->
-  <section class="bolum" id="guvenBolumu">
+  <section class="bolum" id="guvenBolumu" aria-labelledby="baslikYontem">
     <header class="bolum-ust">
       <span class="adim-no" aria-hidden="true">5</span>
-      <h2 class="bolum-adi" data-t="adimYontem"></h2>
+      <h2 class="bolum-adi" id="baslikYontem" data-t="adimYontem"></h2>
     </header>
     <p class="bolum-amac" data-t="adimYontemAmac"></p>
     <div class="sekme-satiri" role="tablist">
@@ -2718,6 +2719,7 @@ const METIN = {
       calistir: 'OPTİMİZE ET',
       calisiyor: 'Taranıyor…',
       calisiyorYuzde: 'Taranıyor… %{yuzde}',
+      tarandi: 'Tarama bitti.',
       ozet: '{n} kalıp · α {alpha}° · {yontem} · {enerji} kWh/t',
       enerji: 'Enerji {eski} → {yeni} kWh/t ({fark})',
       enerjiTek: 'Enerji {yeni} kWh/t',
@@ -3103,6 +3105,7 @@ const METIN = {
       calistir: 'OPTIMISE',
       calisiyor: 'Sweeping…',
       calisiyorYuzde: 'Sweeping… {yuzde}%',
+      tarandi: 'Sweep finished.',
       ozet: '{n} dies · α {alpha}° · {yontem} · {enerji} kWh/t',
       enerji: 'Energy {eski} → {yeni} kWh/t ({fark})',
       enerjiTek: 'Energy {yeni} kWh/t',
@@ -4388,6 +4391,7 @@ function yuvarlaUygula() {
   girdiDegisti();
   $('yuvarlaDurum').textContent = S().yuvarla.uygulandi;
   $('yuvarlaDurum').hidden = false;
+  hesaplayaOdaklan();
 }
 
 /* ==== KALİBRASYON ARAYÜZÜ ====
@@ -4505,6 +4509,7 @@ function kalibUygula() {
   girdiDegisti();
   $('kalibDurum').textContent = S().kalib.uygulandi;
   $('kalibDurum').hidden = false;
+  hesaplayaOdaklan();
 }
 
 /* ==== OPTİMİZASYON ARAYÜZÜ ====
@@ -4603,9 +4608,15 @@ function optSonucuCiz(sonuc) {
    telefonda birkaç saniye sayfa donuyordu: "Taranıyor…" yazısı bile boyanmadan
    kalıyordu, yani kullanıcı hiçbir tepki görmüyordu.
 
-   Her karede 20 ms'lik bütçe kadar aday denenir, sonra kare tarayıcıya bırakılır.
+   Her turda 20 ms'lik bütçe kadar aday denenir, sonra kontrol tarayıcıya bırakılır.
    Bütçe adayın maliyetinden bağımsızdır: eşit emniyet adayı tek başına ~70 ms
-   sürer, bu yüzden bütçe HER adaydan sonra ölçülür, sabit bir adım sayısı değil. */
+   sürer, bu yüzden bütçe HER adaydan sonra ölçülür, sabit bir adım sayısı değil.
+
+   Zamanlayıcı requestAnimationFrame DEĞİL, setTimeout. rAF boyamaya bağlıdır:
+   sekme arka plana alınınca tamamen durur, bazı ortamlarda da saniyede bir kez
+   tetiklenir — tarama %69''"'"'da asılı kalıp kullanıcıya takılmış bir düğme
+   bırakır. Ölçüldü: aynı tarama rAF ile 25 saniyede bitmedi, setTimeout ile
+   bitiyor. Boyama turlar arasında zaten yapılıyor. */
 const OPT_KARE_BUTCESI = 20;   // ms
 
 function optCalistir() {
@@ -4613,7 +4624,11 @@ function optCalistir() {
   const dugme = $('optCalistir');
   if (dugme.disabled) return;
   dugme.disabled = true;
+  dugme.setAttribute('aria-busy', 'true');
   dugme.textContent = O.calisiyor;
+  // Yüzde her karede değişiyor; canlı bölgeye yazılsa ekran okuyucu susmazdı.
+  // Bu yüzden yalnızca başlangıç ve bitiş duyurulur.
+  $('optTaramaDurumu').textContent = O.calisiyor;
 
   const temel = {
     d0: taslak.d0, dTarget: taslak.dTarget, mu: taslak.mu,
@@ -4625,7 +4640,11 @@ function optCalistir() {
 
   const bitir = () => {
     dugme.disabled = false;
+    dugme.setAttribute('aria-busy', 'false');
     dugme.textContent = S().opt.calistir;
+    // Düğme tarama boyunca devre dışıydı; devre dışı düğme odağı bırakır ve
+    // klavye kullanıcısı sayfanın başına düşer. Odak geri verilir.
+    if (document.activeElement === document.body) dugme.focus();
   };
 
   const sur = () => {
@@ -4639,19 +4658,31 @@ function optCalistir() {
     if (!tarayici.bitti()) {
       dugme.textContent = doldur(S().opt.calisiyorYuzde,
         { yuzde: fmt(tarayici.ilerleme() * 100, 0) });
-      requestAnimationFrame(sur);
+      setTimeout(sur, 0);
       return;
     }
     sonOptSonuc = tarayici.sonuc();
     optSonucuCiz(sonOptSonuc);
+    // Sonucun kendisi role="status" kutusunda; burada yalnızca taramanın bittiği
+    // söylenir, iki duyuru üst üste binmesin diye kısa tutulur.
+    $('optTaramaDurumu').textContent = S().opt.tarandi;
     bitir();
   };
 
-  requestAnimationFrame(sur);
+  setTimeout(sur, 0);
 }
 
 /* Bulunan programı girdilere alır. Hesap KOŞULMAZ: bekleyen değişiklik şeridi
    açılır, kullanıcı ne değiştiğini görür ve HESAPLA'ya kendisi basar. */
+
+/* Bir araç değeri girdilere aldığında klavye kullanıcısının sıradaki işi HESAPLA'dır;
+   odak oraya taşınır. Durum satırı role="status" olduğu için ne olduğu ayrıca
+   duyurulur — odak sıçraması tek başına bilgi taşımaz. */
+function hesaplayaOdaklan() {
+  const dugme = $('hesaplaDugmesi');
+  if (dugme && !dugme.disabled) dugme.focus({ preventScroll: true });
+}
+
 function optUygula() {
   if (!sonOptSonuc || !sonOptSonuc.bulundu) return;
   taslak.alphaDeg = sonOptSonuc.alphaDeg;
@@ -4663,6 +4694,7 @@ function optUygula() {
   girdiDegisti();
   $('optDurum').textContent = S().opt.uygulandi;
   $('optDurum').hidden = false;
+  hesaplayaOdaklan();
 }
 
 function optAmacSec(amac) {
