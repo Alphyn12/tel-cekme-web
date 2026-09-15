@@ -741,3 +741,43 @@ kuruyor, hiçbir pasın akma gerilmesi tabanın altına düşmüyor; taban varsa
 eski sayıları birebir üretiyor, yükseltilince düşük gerinimli pasta gerilmeyi
 artırıyor, sınır dışı değerler reddediliyor; malzeme eşleşmesi tam — tek alan
 farklıysa "özel".
+
+## K-26 · Çıktılar: gerçek bir Excel dosyası ve rapor gibi basan bir PDF
+**Tarih:** 2026-09-15
+
+Araç tabloyu CSV olarak veriyordu. CSV her yerde açılır ama **biçim taşımaz**: sütun
+genişliği, sayı biçimi, dondurulmuş başlık, eşiği aşan hücrenin rengi — hiçbiri
+gitmez. Baskı çıktısı ise ekranın kâğıda dökülmüş hâliydi; belgenin ne olduğu ilk
+bakışta okunmuyordu.
+
+**Karar 1 — gerçek .xlsx, kütüphanesiz.** Bir xlsx, içinde birkaç XML dosyası olan
+bir ZIP'tir. ZIP'i **sıkıştırmadan** (stored) yazmak yeterlidir; tek gereken doğru
+CRC-32. Yaklaşık yüz satır kodla araç "tek dosya, sıfır bağımlılık, çevrimdışı
+çalışır" iddiasını bozmadan biçimli bir tablo üretiyor: başlık satırı dondurulmuş,
+sütun genişlikleri ve sayı biçimleri sütun başına, emniyet sütunu eşiğe göre üç
+renkten biriyle, ikinci sayfada karar ve girdiler.
+
+Metinler `sharedStrings` yerine satır içi yazılır — bir tablo için dizin kazancı yok,
+karmaşıklık ise fazlaydı.
+
+**Doğrulama gerçek bir okuyucuyla yapıldı.** Dosya openpyxl ile uyarısız açılıyor;
+sayfa sayısı, boyut, dondurma, sayı biçimi ve dolgu renkleri okunarak denetlendi.
+CRC-32 ayrıca standart kontrol vektörüne (`123456789` → `0xCBF43926`) karşı
+sınanıyor: yanlış CRC, Excel'in dosyayı bozuk saymasına yeter.
+
+**Karar 2 — baskı bir belge gibi başlar.** Kâğıdın ilk santimetresinde araç adı,
+tarih, program özeti, karar rozeti ve girdi satırı duruyor; her sayfanın altında
+tekrarlayan bir künye şeridi var (sabit konumlu öğeler Chrome'da her sayfaya düşer).
+Ekrandaki başlık ve kimlik satırı baskıda gizleniyor — belge başlığında zaten varlar.
+
+**Kâğıtta yer, bilgi kadar değerlidir.** Girdi yardım satırları ekranda öğretir,
+kâğıtta yalnızca yer kaplar: baskıda gizlendi ve panel dört sütuna indi. Özet şeridi
+altı hücreyi üçlü iki sıraya oturttu, boş hücre kalmadı. Belirsizlik bandı kapalıyken
+3. adım hiç basılmıyor: boş bir başlık ve boş bir kutu basmak, sayfayı bilgiyle değil
+gürültüyle doldurmak olurdu.
+
+**Yol boyunca bir gerileme bulundu ve düzeltildi.** K-24'te eklenen karar rozeti
+`.rozet` sınıfını kullanıyordu; aynı sınıf doğrulama tablosundaki GEÇTİ/KALDI
+etiketlerinde de kullanılıyor ve onlar bu ölçüyle devleşiyordu. Karar rozeti kendi
+sınıfına (`karar-rozet`) alındı. Ders: paylaşılan bir sınıf adına yeni anlam
+yüklemeden önce kim kullanıyor diye bakmak gerekir.

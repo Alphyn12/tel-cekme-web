@@ -855,16 +855,18 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
   overflow-wrap: anywhere;
 }
 .karar-alt { margin: 0; font: 400 var(--t125)/1.45 var(--yazi-govde); color: var(--ink2); }
-.rozet {
+/* Karar rozeti kendi sınıfında: .rozet doğrulama tablosunda da kullanılıyor ve
+   oradaki GEÇTİ/KALDI etiketleri bu ölçüyle devleşiyordu. */
+.karar-rozet {
   font: 600 var(--t11)/1 var(--yazi-mono);
   letter-spacing: .12em; text-transform: uppercase;
   padding: var(--s12);
   border: 1px solid currentColor;
   white-space: nowrap;
 }
-.rozet.ok   { color: var(--patina); background: var(--patina-tint); }
-.rozet.warn { color: var(--warn);   background: var(--warn-tint); }
-.rozet.crit { color: var(--crit);   background: var(--crit-tint); }
+.karar-rozet.ok   { color: var(--patina); background: var(--patina-tint); }
+.karar-rozet.warn { color: var(--warn);   background: var(--warn-tint); }
+.karar-rozet.crit { color: var(--crit);   background: var(--crit-tint); }
 
 /* ---- Girdi yardımı: her kutunun altında tek satır ---- */
 .alan-yardim { margin: 0; font: 400 var(--t11)/1.4 var(--yazi-govde); color: var(--ink3); }
@@ -890,6 +892,9 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
    Sayfa 1: kimlik, girdiler, özet, ana grafik, pas tablosu.
    Sayfa 2: bant köşeleri, doğrulama ve kabuller.
    Renkler yazdırmada her zaman açık temadan gelir. */
+/* Baskı başlığı ve altbilgisi ekranda yer kaplamaz. */
+.baski-basligi, .baski-altbilgi { display: none; }
+
 @media print {
   :root, :root[data-theme="dark"] {
     --bg:#fff; --surface:#fff; --sunk:#f4f5f4;
@@ -900,8 +905,62 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
     --warn:#6f5010; --warn-tint:#f5eddb;
     --crit:#7a2937; --crit-tint:#f6e3e6;
   }
-  @page { size: A4; margin: 9mm 9mm; }
+  /* Altbilgi sabit konumlu ve her sayfada tekrarlıyor; alt kenar boşluğu onun
+     yüksekliğini bırakır ki metnin üstüne binmesin. */
+  @page { size: A4; margin: 9mm 9mm 13mm; }
   body { background: #fff; font-size: 10px; }
+
+  /* ---- Belge başlığı: kâğıdın ilk santimetresi ---- */
+  .baski-basligi {
+    display: block;
+    border-bottom: 2px solid var(--copper);
+    padding-bottom: var(--s8);
+    margin-bottom: var(--s12);
+    break-inside: avoid; break-after: avoid;
+  }
+  .baski-ust {
+    display: flex; justify-content: space-between; align-items: baseline; gap: var(--s12);
+  }
+  .baski-ad { font: 700 16px/1.2 var(--yazi-baslik); color: var(--ink); }
+  .baski-tarih { font: 400 9px/1.2 var(--yazi-mono); color: var(--ink3); }
+  .baski-karar {
+    display: flex; justify-content: space-between; align-items: center; gap: var(--s12);
+    margin-top: var(--s8);
+  }
+  .baski-program {
+    font: 600 14px/1.2 var(--yazi-mono);
+    font-variant-numeric: tabular-nums; color: var(--ink);
+  }
+  .baski-rozet {
+    font: 600 9px/1 var(--yazi-mono);
+    letter-spacing: .1em; text-transform: uppercase;
+    padding: 3px 6px; border: 1px solid currentColor;
+  }
+  .baski-rozet.ok { color: var(--patina); background: var(--patina-tint); }
+  .baski-rozet.warn { color: var(--warn); background: var(--warn-tint); }
+  .baski-rozet.crit { color: var(--crit); background: var(--crit-tint); }
+  .baski-girdi {
+    display: block; margin-top: 3px;
+    font: 400 9px/1.4 var(--yazi-mono); color: var(--ink2);
+  }
+
+  /* ---- Her sayfanın altında tekrarlayan şerit ---- */
+  .baski-altbilgi {
+    display: flex; justify-content: space-between; gap: var(--s12);
+    position: fixed; left: 0; right: 0; bottom: 0;
+    padding-top: 3px;
+    border-top: 1px solid var(--line);
+    font: 400 8px/1.3 var(--yazi-mono); color: var(--ink3);
+  }
+
+  /* Ekrandaki sayfa başlığı ve kimlik satırı artık belge başlığında; tekrarlamasın. */
+  .ust, .kimlik { display: none !important; }
+
+  /* Adım başlıkları kâğıtta da yapıyı taşır ama daha sessiz. */
+  .bolum-ust { padding-bottom: 2px; border-bottom-color: var(--line-strong); }
+  .bolum-adi { font-size: 12px; }
+  .adim-no { width: 16px; height: 16px; font-size: 8px; line-height: 14px; }
+  .bolum-amac { display: none !important; }
   .kabuk { max-width: none; padding: 0; gap: var(--s8); display: block; }
   .kabuk > * { margin-bottom: var(--s8); }
   .ust h1 { font-size: 18px; }
@@ -941,13 +1000,27 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
 
   .sekme-paneli[hidden] { display: flex !important; }
   #bantKoseler[hidden] { display: flex !important; }
+  /* Bant kapalıysa 3. adım kâğıtta hiç yer almaz: boş bir başlık ve boş bir kutu
+     basmak, sayfayı bilgiyle değil gürültüyle doldurmak olurdu. */
+  #bantBolumu.bos { display: none !important; }
+  #bantBolumu.bos + #duyarlilikBolumu { break-before: page; }
+  /* Doğrulama rozetleri kâğıtta sade metin. */
+  .rozet { padding: 0 2px; font-size: 8px; border: 0; }
   /* Formüller sekmesi basılmaz — özgülük sırası gereği bu kural sonra gelir */
   #guvenBolumu [data-panel="formuller"] { display: none !important; }
+
+  /* Girdi yardımı ekranda öğretir, kâğıtta yer yer. Değerler zaten kutularda ve
+     belge başlığında; açıklama satırları sayfanın yarısını yiyordu. */
+  .alan-yardim { display: none !important; }
+  .panel { grid-template-columns: repeat(4, 1fr); }
+  .alan label, .alan .etiket { min-height: 0; }
+  /* Özet şeridi altı hücre: baskıda üçlü iki sıra, boş hücre kalmaz. */
+  .serit { grid-template-columns: repeat(3, 1fr); }
 
   /* Sıkıştırma: yazdırmada girdi paneli ve özet şeridi daha küçük */
   #girdiBolumu .gerekce, #pasSayisiIpucu, #yontemGerekcesi,
   #bantBolumu .gerekce, .bant-anahtari { display: none !important; }
-  input, select, textarea { min-height: 22px !important; font-size: 10px !important; }
+  input, select, textarea { min-height: 18px !important; font-size: 10px !important; padding: 2px 4px !important; }
   .serit .deger { font-size: 13px; }
   .serit .hucre { padding: var(--s8) var(--s8); }
   .sekme-paneli ul { gap: 2px; }
@@ -993,7 +1066,7 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
   .giris { padding: var(--s12); }
   .karar { padding: var(--s12); }
   .karar-ozet { font-size: var(--t16); }
-  .rozet { padding: var(--s8); }
+  .karar-rozet { padding: var(--s8); }
   .sozluk dl { padding: 0 var(--s12) var(--s12); }
   /* Telefonda amaç seçimi ve düğme alt alta, ikisi de tam genişlik. */
   /* Telefonda birincil eylem tam genişlik: başparmakla ulaşılacak tek hedef. */
@@ -1008,6 +1081,20 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
 </head>
 <body>
 <div class="kabuk">
+
+  <!-- Yalnızca baskıda görünür. Ekranda karar satırı zaten var; kâğıtta ise
+       belgenin ne olduğu ilk bakışta okunmalı: hangi program, hangi karar, ne zaman. -->
+  <div class="baski-basligi" aria-hidden="true">
+    <div class="baski-ust">
+      <span class="baski-ad" id="baskiAd"></span>
+      <span class="baski-tarih" id="baskiTarih"></span>
+    </div>
+    <div class="baski-karar">
+      <span class="baski-program" id="baskiProgram"></span>
+      <span class="baski-rozet" id="baskiRozet"></span>
+    </div>
+    <span class="baski-girdi" id="baskiGirdi"></span>
+  </div>
 
   <header class="ust">
     <div>
@@ -1101,7 +1188,7 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
         <p class="karar-ozet" id="kararOzet"></p>
         <p class="karar-alt" id="kararAlt"></p>
       </div>
-      <span class="rozet" id="kararRozet"></span>
+      <span class="karar-rozet" id="kararRozet"></span>
     </div>
     <div class="serit" id="ozetSeridi"></div>
     <p class="oneri" id="oneriKutusu"></p>
@@ -1398,6 +1485,12 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
     <button type="button" class="dugme sessiz" id="kabullereGit" data-t="kabullereGit"></button>
   </footer>
 
+</div>
+
+<!-- Baskıda her sayfanın altında tekrarlar (sabit konumlu öğeler her sayfaya düşer). -->
+<div class="baski-altbilgi" aria-hidden="true">
+  <span id="baskiAltSol"></span>
+  <span id="baskiAltSag"></span>
 </div>
 
 <!-- Sayfa uzun: tabloya bakarken girdi değiştirildiğinde de Hesapla erişilebilir kalsın.
@@ -4552,6 +4645,39 @@ function satirDegerleri(p) {
 /* Karar satırı: "kaç kalıp, kopar mı" sorusunun cevabı, tablodan önce.
    Emniyet değeri özet şeridiyle aynı kaynaktan gelir — bant açıkken bandın üst
    ucu, kapalıyken nominal değer — ki iki yerde iki farklı sayı görünmesin. */
+/* Baskı başlığını doldurur: kâğıt ekrandan bağımsız okunmalı, o yüzden program,
+   karar ve girdi özeti belgenin başında tekrar eder. */
+function baskiBasliginiYaz(g) {
+  const M = S();
+  const tarih = new Date().toLocaleString(durum.dil === 'tr' ? 'tr-TR' : 'en-GB');
+  $('baskiAd').textContent = M.baslik;
+  $('baskiTarih').textContent = tarih;
+  $('baskiAltSol').textContent = M.baslik + ' · tel-cekme.bariskirli.com';
+  $('baskiAltSag').textContent = M.giris.sinir;
+
+  if (!g) {
+    $('baskiProgram').textContent = '';
+    $('baskiRozet').textContent = '';
+    $('baskiGirdi').textContent = '';
+    return;
+  }
+  $('baskiProgram').textContent = $('kararOzet').textContent;
+  const sinif = safetyDurumu(sonBant ? sonBant.enYuksekEmniyet[1] : g.ozet.enYuksekEmniyet);
+  $('baskiRozet').className = 'baski-rozet ' + sinif;
+  $('baskiRozet').textContent = M.karar.rozet[sinif];
+
+  const ilk = g.prog.passes[0];
+  const malzeme = malzemeBul(ilk);
+  $('baskiGirdi').textContent = [
+    (malzeme ? (durum.dil === 'tr' ? malzeme.tr : malzeme.en) : M.malzemeOzel),
+    M.alan.alphaDeg + ' ' + fmt(ilk.alphaDeg, 1) + '°',
+    M.alan.mu + ' ' + fmt(ilk.mu, 3),
+    M.alan.K + ' ' + fmt(ilk.K, 0) + ' MPa',
+    M.alan.n + ' ' + fmt(ilk.n, 2),
+    M.alan.v0 + ' ' + fmt(ilk.v0, 1) + ' m/s'
+  ].join('  ·  ');
+}
+
 function kararCiz(g) {
   const M = S();
   const kutu = $('kararKutusu');
@@ -4593,7 +4719,7 @@ function kararCiz(g) {
   $('kararAlt').textContent = kritikMetin + ' · ' + sayim;
 
   const rozet = $('kararRozet');
-  rozet.className = 'rozet ' + sinif;
+  rozet.className = 'karar-rozet ' + sinif;
   rozet.textContent = M.karar.rozet[sinif];
 }
 
@@ -4887,6 +5013,7 @@ function gorunumuYaz(g) {
 
   bantKoselerCiz();
   kararCiz(g);
+  baskiBasliginiYaz(g);
   kalibPaslariYaz(g.prog);
   sonYuvarlaSonuc = null;
   yuvarlaMetinleri();
@@ -4927,6 +5054,7 @@ function hesaplanamadiDurumu(hata) {
 
   bantKoselerCiz();
   kararCiz(null);
+  baskiBasliginiYaz(null);
   kalibPaslariYaz(null);
   sonYuvarlaSonuc = null;
   yuvarlaMetinleri();
@@ -5958,6 +6086,8 @@ function bantKoselerCiz() {
   const M = S();
   const kap = $('bantKoseler');
   kap.hidden = !(durum.bant.acik && sonBant);
+  // Bant kapalıyken kâğıda boş bir kutu basılıyordu; bölüm de boş işaretlenir.
+  $('bantBolumu').classList.toggle('bos', kap.hidden);
   if (kap.hidden) { kap.textContent = ''; return; }
 
   kap.textContent = '';

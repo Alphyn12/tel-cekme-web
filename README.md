@@ -243,8 +243,11 @@ taşır: başlık satırı dondurulmuş, sütun genişlikleri ve sayı biçimler
 sütunu eşiğe göre renkli, ikinci sayfada girdiler ve karar özeti. Dosya kütüphanesiz
 üretilir — bir xlsx, içinde XML dosyaları olan bir ZIP'tir; sıkıştırmasız yazmak ve
 doğru CRC-32 vermek yeterlidir, böylece "tek dosya, sıfır bağımlılık" bozulmaz.
-Yazdırma çıktısı yazdırma çıktısı
-pas sayısına göre uzar (mühendislik özeti + belirsizlik, doğrulama ve kabuller).
+**Yazdırma / PDF** bir belge gibi başlar: kâğıdın ilk santimetresinde araç adı, tarih,
+program özeti, karar rozeti ve girdi satırı; her sayfanın altında tekrarlayan künye
+şeridi. Girdi yardım satırları kâğıtta gizlenir, özet şeridi üçlü iki sıraya oturur,
+belirsizlik bandı kapalıysa o adım hiç basılmaz. Çıktı pas sayısına göre uzar
+(mühendislik özeti + belirsizlik, doğrulama ve kabuller).
 
 ## 7 Eylül 2026 incelemesi
 
