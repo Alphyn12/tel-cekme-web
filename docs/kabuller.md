@@ -19,6 +19,12 @@ modelin bilerek dışarıda bıraktığı veya sabitlediği şeylerdir. Araç i�
 
 - Kalıp esnemesi ve elastik geri yaylanma
 - Yağ filmi kalınlığı ve hidrodinamik yağlama rejimi (sürtünme katsayısı sabit alınır)
+- **Geri gerilimin belirsizliği.** Belirsizlik bandı `K`, `n` ve `μ` ile sınırlıdır;
+  `σ_b` banda dahil değildir. Sebep: **σ_b ölçülen bir hat ayarıdır, kestirilen bir
+  malzeme özelliği değil.** Bant malzeme belirsizliği için kuruldu, makine ayarı için
+  değil. Geri gerilimin sonuca etkisini görmek isteyen `σ_b`'yi doğrudan değiştirip
+  yeniden hesaplar; bu, bir aralık kestirmekten daha dürüsttür çünkü değer zaten
+  makinede okunabilir.
 - Geri gerilimin **faydası**: kalıp basıncını ve aşınmayı azaltması. Geri gerilim
   artık modelde (girdi `σ_b`), ama yalnızca **bedeli** görünür — çekme gerilmesini
   artırması. Kalıp aşınması hiç modellenmediği için kazanç tarafı yok; araç geri
