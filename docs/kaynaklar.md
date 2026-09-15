@@ -26,6 +26,7 @@ kısaltılmış hâliyle görünür.
 | 3 | `σ_f = max(K·εⁿ, 70 MPa)` | Dieter — Hollomon bağıntısı ve pekleşme katsayıları tablosu. 70 MPa tabanı bu aracın modelleme tercihidir (tavlanmış ETP bakır akma gerilmesi mertebesi), kaynakta yoktur. |
 | 4 | `σ̄ = K·(ε_out^(n+1) − ε_in^(n+1)) / ((n+1)·ε_pas)` | Dieter — Hollomon'un pas boyunca integrali (ortalama akma gerilmesi) |
 | 5 | `σ_d = σ̄·[(1 + μ/α)·ε_pas + (2/3)·α]` | **Siebel yaklaşımı**; Dieter ve Kalpakjian & Schmid'de bu biçimiyle verilir. Üç terim: şekil verme, sürtünme, fazlalık (redundant) iş. |
+| 5b | `σ_d += σ_b · e^(−μ·cotα·ε_pas)` | **Melez.** Taban Siebel (5), geri gerilim terimi **Sachs** çözümünden: aktarılan pay `(A₁/A₀)^B`, `B = μ·cot α`. `A₁/A₀ = e^(−ε)` olduğu için üstel biçime iner. İki ifade aynı türetmeden gelmez; terim birinci mertebe düzeltme olarak eklenir. Wistreich (1958) geri gerilimin çekme gerilmesini artırıp kalıp basıncını düşürdüğünü ölçer; model yalnızca birincisini taşır. |
 | 6 | `emniyet = σ_d / σ_f,çıkış` | Dieter (çekme gerilmesinin akma gerilmesini aşamaması); pratik 0,60 sınırı Wistreich'in ölçümleriyle uyumludur |
 | 7 | `Δ = α·(1 + √(1−r))² / r` | Wistreich (1958) ve Avitzur — şekil değiştirme bölgesi biçim oranı; Δ < 1,5 aşırı sürtünme, Δ > 3,0 merkezi çatlak riski |
 | 8 | `ΔT = σ_d / (ρ·c_p)` | Kalpakjian & Schmid — adyabatik sıcaklık artışı (bütün işin ısıya döndüğü kabulü) |

@@ -624,3 +624,41 @@ sorgulamalıdır.
 Üç test eklendi: boş ve geniş kısıtlar sessiz kalır; aşım hangi pasta olduğunu
 doğru söyler; optimizasyon kısıtı sağlayan program döndürür ya da imkânsız kısıtta
 "bulunamadı" der — ve bunu taramadan vazgeçerek değil, tarayarak söyler.
+
+## K-23 · Geri gerilim: Siebel tabanına Sachs aktarım terimi
+**Tarih:** 2026-09-15
+
+Geri gerilim kabuller listesinde "hesaba katılmayanlar" arasındaydı. Oysa çok
+kasnaklı hatlarda tel kalıba gerili girer ve bu, çekme gerilmesini ölçülebilir
+biçimde artırır — modelin göremediği bir şey değil, modele konmamış bir şeydi.
+
+**Karar:** `σ_b` girdi oldu (0–300 MPa, varsayılan 0). Çekme gerilmesine eklenen
+terim `σ_b · e^(−μ·cotα·ε_pas)`.
+
+**Neden bu biçim.** Geri gerilimin tamamı kalıbın öbür tarafına geçmez; sürtünme bir
+kısmını yutar. Sachs çözümünde aktarılan pay `(A₁/A₀)^B`, `B = μ·cot α`. Gerçek
+gerinim tanımı gereği `A₁/A₀ = e^(−ε_pas)` olduğundan çarpan üstel biçime iner —
+ayrıca hesaplanacak bir alan oranı kalmaz.
+
+**Melez olduğu saklanmıyor.** Taban Siebel yaklaşımı, terim Sachs çözümü; ikisi aynı
+türetmeden gelmez. `kaynaklar.md` bunu 5b satırında "melez" olarak yazar ve terimin
+birinci mertebe düzeltme olduğunu söyler. Bu aracın kuralı: bir sayı nereden
+geliyorsa orada yazılı olmalı.
+
+**Uç durumlar sonlu.** `μ = 0` → `B = 0` → çarpan 1: sürtünme yoksa geri gerilimin
+tamamı geçer. `α → 0` → `B → ∞` → çarpan 0. T1 doğrulama testi `α = 0,001°` ile
+koştuğu için ikinci uç gerçekten sınanıyor.
+
+**Eşit emniyet çözücüsü de geri gerilimi görür.** Görmese "eşit emniyet" dağıtımı
+gerçekte eşit olmazdı: çözücü geri gerilimsiz oranı hedefe eşitler, paslar ise
+gerilimli koşardı. Bir test sekiz pasın oran yayılımının 5·10⁻³ altında kaldığını
+doğruluyor.
+
+**Asimetri bilinçli ve yazılı.** Model geri gerilimin bedelini (gerilme artışı)
+taşır, faydasını (kalıp basıncı ve aşınmanın azalması) taşımaz — çünkü kalıp aşınması
+hiç modellenmiyor. Araç bu yüzden geri gerilimi her zaman olumsuz gösterir. Kabuller
+listesi bu maddeyi "hesaba katılmayanlar"dan çıkarıp kendi cümlesine taşıdı.
+
+Dört test eklendi: `σ_b = 0` eski sayıları birebir üretir; gerilme artar ama artış
+her zaman `σ_b`'den küçüktür; aktarım çarpanı kapalı formla birebir tutar ve
+sürtünmesiz kalıpta tam 1 olur; sınır dışı değerler reddedilir.

@@ -78,7 +78,26 @@ getirir (K-16).
 **Sınır:** Kasnak momentinden hesaplanan kuvvet aktarma ve yatak kayıplarını da
 içerir, bu yolla çözülen `μ` sistematik olarak yüksek çıkar. Güvenilir sonuç kalıp
 önü/arkası gerilme ölçümü ister. Çözülen sayı, modelin bütün kabullerini (sabit `μ`,
-geri gerilim yok, izotermal akma) üstlenen tek bir değerdir.
+izotermal akma, girilen geri gerilim) üstlenen tek bir değerdir.
+
+## Geri gerilim
+
+Çok kasnaklı hatlarda tel kalıba gerili girer. Geri gerilim `σ_b` artık girdidir
+(varsayılan 0). Çekme gerilmesine eklenen pay `σ_b · e^(−μ·cotα·ε)`: geri gerilimin
+tamamı kalıbın öbür tarafına geçmez, sürtünme bir kısmını yutar. Bu, Sachs
+çözümünün `(A₁/A₀)^B` aktarım çarpanıdır — `A₁/A₀ = e^(−ε)` olduğu için üstel biçime
+iner. **Melezdir:** taban Siebel, terim Sachs; ikisi aynı türetmeden gelmez ve
+[`docs/kaynaklar.md`](docs/kaynaklar.md) bunu böyle yazar.
+
+Referans pasta 40 MPa geri gerilimin 36,6 MPa'ı çıkışa geçiyor (aktarım 0,914) ve
+en yüksek emniyet oranı 0,389'dan 0,466'ya çıkıyor.
+
+**Asimetri bilinçli:** model geri gerilimin **bedelini** gösterir (çekme gerilmesi
+artar), **faydasını** gösteremez (kalıp basıncı ve aşınma azalır), çünkü kalıp
+aşınması hiç modellenmiyor. Yani araç geri gerilimi her zaman olumsuz gösterir;
+gerçek hatta geri gerilim bir kalıp ömrü tercihidir.
+
+`σ_b = 0` girildiğinde bütün eski sayılar birebir korunur — bir test bunu sınar.
 
 ## Makine kısıtları
 
@@ -121,7 +140,7 @@ Bulunan program ekrana yazılmaz, **girdilere alınır**; bekleyen değişiklik 
 ne değiştiğini söyler ve sonucu HESAPLA getirir (K-16).
 
 Sonuç bir **model optimumudur**. Model sürtünmeyi kalıp açısından bağımsız sabit
-alır; kalıp aşınmasını, yağ filmi rejimini ve geri gerilimi görmez. Arayüz bu
+alır; kalıp aşınmasını ve yağ filmi rejimini görmez. Arayüz bu
 cümleyi sonucun altında taşır.
 
 ## Hesap ne zaman çalışır
@@ -190,8 +209,10 @@ python tools/rapor.py     # teknik inceleme raporunu koddan üretir
 ## Kabuller ve sınırlar
 
 Bu bir **ön tasarım** aracıdır, üretim reçetesi değildir. Kalıp esnemesi, yağ filmi
-rejimi, geri gerilim, şekil değiştirme hızı, sıcaklığın akmaya geri beslenmesi, kalıp
-aşınması ve artık gerilmeler hesaba katılmaz.
+rejimi, şekil değiştirme hızı, sıcaklığın akmaya geri beslenmesi, kalıp aşınması ve
+artık gerilmeler hesaba katılmaz. Geri gerilim modeldedir ama yalnızca bedeliyle:
+çekme gerilmesini artırması hesaplanır, kalıp basıncını ve aşınmayı azaltması
+hesaplanmaz — çünkü aşınma hiç modellenmiyor.
 
 Malzeme yoğunluğu ve özgül ısısı artık girdidir, ama `K`, `n` ve 70 MPa akma tabanı
 hâlâ tavlanmış ETP bakıra göre kalibrelidir. Yoğunluk bakır dışına ayarlanınca araç

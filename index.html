@@ -1282,7 +1282,7 @@ body.cubuk-acik .kabuk { padding-bottom: 96px; }
 
    SINIRLAR
    Ön tasarım aracıdır, üretim reçetesi değildir. Kalıp esnemesi, yağ filmi
-   rejimi, geri gerilim, şekil değiştirme hızı, kalıp aşınması ve artık
+   rejimi, şekil değiştirme hızı, kalıp aşınması ve artık
    gerilmeler hesaba katılmaz. Tamamı: Kabuller sekmesi ve docs/kabuller.md.
 
    KAYNAKLAR
@@ -1357,7 +1357,8 @@ const GIRDI_SINIRLARI = {
   n:        { alt: 0.05,  ust: 0.80 },   // —
   v0:       { alt: 0.1,   ust: 20 },     // m/s
   rho:      { alt: 1000,  ust: 20000 },  // kg/m3 — alüminyum 2700, bakır 8960, tungsten 19300
-  cp:       { alt: 100,   ust: 2000 }    // J/(kg·K) — bakır 385, çelik 470, alüminyum 900
+  cp:       { alt: 100,   ust: 2000 },   // J/(kg·K) — bakır 385, çelik 470, alüminyum 900
+  sigmaB:   { alt: 0,     ust: 300 }     // MPa — geri gerilim; 0 = geri gerilim yok
 };
 
 /* --- Çekirdek savunma sınırları ---
@@ -1373,6 +1374,7 @@ const CEKIRDEK_SINIRLARI = {
   K:        { alt: 0, ust: GIRDI_SINIRLARI.K.ust,        sifirDisi: true },
   rho:      { alt: 0, ust: GIRDI_SINIRLARI.rho.ust,      sifirDisi: true },
   cp:       { alt: 0, ust: GIRDI_SINIRLARI.cp.ust,       sifirDisi: true },
+  sigmaB:   { alt: 0, ust: GIRDI_SINIRLARI.sigmaB.ust },
   n:        { alt: 0, ust: GIRDI_SINIRLARI.n.ust },
   v0:       { alt: 0, ust: Infinity,                     sifirDisi: true }
 };
@@ -1417,7 +1419,7 @@ function yuzdeTR(oran) {
 /* Bir pasın gerilme büyüklükleri — fiziğin TEK kaynağı.
    Çaptan bağımsızdır: Siebel bağıntısında yalnızca gerinimler, sürtünme ve kalıp açısı geçer.
    Hem calcPass hem eşit emniyet çözücüsü bunu çağırır; formül başka hiçbir yerde tekrarlanmaz. */
-function passStress(epsIn, epsPas, { alphaRad, mu, K, n }) {
+function passStress(epsIn, epsPas, { alphaRad, mu, K, n, sigmaB = 0 }) {
   const epsOut = epsIn + epsPas;
 
   /* Pas boyunca ortalama akma gerilmesi. Taban HEM burada hem çıkış akma
@@ -1439,12 +1441,30 @@ function passStress(epsIn, epsPas, { alphaRad, mu, K, n }) {
   const tabanPayi = (sigmaBar - tabansizBar) / sigmaBar;
 
   // SIEBEL: şekil verme + sürtünme + fazlalık (redundant) iş
-  const sigmaD = sigmaBar * ((1 + mu / alphaRad) * epsPas + (2 / 3) * alphaRad);
+  const sigmaSiebel = sigmaBar * ((1 + mu / alphaRad) * epsPas + (2 / 3) * alphaRad);
+
+  /* GERİ GERİLİM. Kalıba gerili giren tel, çekme gerilmesini artırır — ama geri
+     gerilimin tamamı kalıbın öbür tarafına geçmez: sürtünme bir kısmını yutar.
+     Sachs çözümünde aktarılan pay (A₁/A₀)^B, B = μ·cot α. Gerçek gerinim tanımı
+     gereği A₁/A₀ = e^(−ε_pas), dolayısıyla çarpan e^(−B·ε_pas) olarak sadeleşir.
+
+     Bu bir MELEZDİR: taban Siebel yaklaşımı, geri gerilim terimi Sachs çözümünden.
+     İkisi aynı türetmeden gelmez; terim birinci mertebe bir düzeltme olarak eklenir
+     (bkz. kaynaklar.md). σ_b = 0'da çarpanın hiçbir etkisi yoktur ve bütün eski
+     sayılar birebir korunur.
+
+     Uç durumlar: μ = 0 → B = 0 → çarpan 1, geri gerilimin tamamı geçer (sürtünme
+     yoksa yutan bir şey de yok). α → 0 → B → ∞ → çarpan 0. İkisi de sonlu. */
+  const B = mu / Math.tan(alphaRad);
+  const aktarim = Math.exp(-B * epsPas);
+  const sigmaGeri = sigmaB * aktarim;
+  const sigmaD = sigmaSiebel + sigmaGeri;
 
   // Hollomon eps=0'da sıfır verir; tavlanmış bakır tabanı uygulanır.
   const sigmaFOut = Math.max(K * epsOut ** n, SIGMA_Y0);
 
-  return { epsOut, sigmaBar, tabanPayi, sigmaD, sigmaFOut, safety: sigmaD / sigmaFOut };
+  return { epsOut, sigmaBar, tabanPayi, sigmaD, sigmaFOut, sigmaGeri, geriAktarim: aktarim,
+           safety: sigmaD / sigmaFOut };
 }
 
 /* Verilen gerinim için emniyet oranı. Eşit emniyet çözücüsünün iç fonksiyonu. */
@@ -1453,20 +1473,21 @@ function safetyForStrain(epsPas, epsIn, params) {
 }
 
 /* Tek pasın bütün çıktıları. Girdiler: çaplar mm, açı derece, hız m/s, K MPa. */
-function calcPass({ d0, d1, epsIn = 0, alphaDeg, mu, K, n, v0, rho = RHO, cp = CP }) {
+function calcPass({ d0, d1, epsIn = 0, alphaDeg, mu, K, n, v0, rho = RHO, cp = CP,
+                    sigmaB = 0 }) {
   // Çekirdek savunması. CEKIRDEK_SINIRLARI arayüzünkinden bilerek daha geniştir:
   // doğrulama testleri limitleri sınamak için μ = 0 ve α = 0,001° gibi değerler
   // kullanır. Üst uçlar GIRDI_SINIRLARI ile ortaktır, sabit tekrarlanmaz.
   const sinirDisi = Object.keys(CEKIRDEK_SINIRLARI).some((alan) => {
-    const v = { d0, alphaDeg, mu, K, n, v0, rho, cp }[alan];
+    const v = { d0, alphaDeg, mu, K, n, v0, rho, cp, sigmaB }[alan];
     const s = CEKIRDEK_SINIRLARI[alan];
     return v < s.alt || v > s.ust || (s.sifirDisi && v === 0);
   });
-  if (![d0, d1, epsIn, alphaDeg, mu, K, n, v0, rho, cp].every(Number.isFinite) ||
-      epsIn < 0 || sinirDisi) {
+  if (![d0, d1, epsIn, alphaDeg, mu, K, n, v0, rho, cp, sigmaB].every(Number.isFinite) ||
+      epsIn < 0 || sigmaB < 0 || sinirDisi) {
     throw new DrawingError('GECERSIZ_PARAMETRE',
       'Hesap parametreleri modelin geçerli olduğu aralıkta ve sonlu olmalı.',
-      { d0, d1, epsIn, alphaDeg, mu, K, n, v0, rho, cp });
+      { d0, d1, epsIn, alphaDeg, mu, K, n, v0, rho, cp, sigmaB });
   }
   if (!(d0 > 0) || !(d1 > 0)) {
     throw new DrawingError('GECERSIZ_CAP', 'Çaplar sıfırdan büyük olmalı.', { d0, d1 });
@@ -1492,8 +1513,8 @@ function calcPass({ d0, d1, epsIn = 0, alphaDeg, mu, K, n, v0, rho = RHO, cp = C
   const epsPas = 2 * Math.log(d0 / d1);
 
   // Gerilmeler tek kaynaktan (passStress) gelir.
-  const { epsOut, sigmaBar, tabanPayi, sigmaD, sigmaFOut, safety } =
-    passStress(epsIn, epsPas, { alphaRad, mu, K, n });
+  const { epsOut, sigmaBar, tabanPayi, sigmaD, sigmaFOut, safety, sigmaGeri, geriAktarim } =
+    passStress(epsIn, epsPas, { alphaRad, mu, K, n, sigmaB });
   const sigmaFIn = Math.max(K * epsIn ** n, SIGMA_Y0);
 
   const delta = alphaRad * (1 + Math.sqrt(1 - r)) ** 2 / r;
@@ -1508,7 +1529,8 @@ function calcPass({ d0, d1, epsIn = 0, alphaDeg, mu, K, n, v0, rho = RHO, cp = C
   const P  = F * v1;                          // W
 
   return { d0, d1, r, epsPas, epsIn, epsOut, sigmaFIn, sigmaFOut, sigmaBar, tabanPayi,
-           sigmaD, safety, delta, dT, A0, A1, F, v0, v1, P, alphaDeg, mu, K, n, rho, cp };
+           sigmaD, safety, delta, dT, A0, A1, F, v0, v1, P, alphaDeg, mu, K, n, rho, cp,
+           sigmaB, sigmaGeri, geriAktarim };
 }
 
 /* ==== SÜRTÜNME KALİBRASYONU (ters problem) ====
@@ -1522,8 +1544,9 @@ function calcPass({ d0, d1, epsIn = 0, alphaDeg, mu, K, n, v0, rho = RHO, cp = C
    Siebel'de çekme gerilmesi mu'da monoton artandır (sürtünme terimi mu ile
    doğrusal), bu yüzden ikili arama tek köke yakınsar. Aralık dışı ölçümde sayı
    uydurulmaz: hangi sınırın aşıldığı söylenir. */
-function muCoz(hedefSigmaD, { d0, d1, epsIn = 0, alphaDeg, K, n, v0, rho = RHO, cp = CP }) {
-  const dene = (mu) => calcPass({ d0, d1, epsIn, alphaDeg, mu, K, n, v0, rho, cp }).sigmaD;
+function muCoz(hedefSigmaD, { d0, d1, epsIn = 0, alphaDeg, K, n, v0, rho = RHO, cp = CP,
+                              sigmaB = 0 }) {
+  const dene = (mu) => calcPass({ d0, d1, epsIn, alphaDeg, mu, K, n, v0, rho, cp, sigmaB }).sigmaD;
   const muAlt = 0;                       // sürtünmesiz alt sınır: şekil verme + fazlalık iş
   const muUst = GIRDI_SINIRLARI.mu.ust;  // arayüzün kabul ettiği üst uç
 
@@ -1630,7 +1653,8 @@ function diametersFromStrains(d0, dTarget, strains) {
    `diameters`: yalnızca "manual" yönteminde, d0 dahil azalan çap dizisi.
    `anneals`: 1-indeksli pas numaraları; o pastan sonra birikmiş gerinim sıfırlanır. */
 function buildSchedule({ d0, dTarget, method = 'equalStrain', passes = null, diameters = null,
-                         alphaDeg, mu, K, n, v0, rho = RHO, cp = CP, anneals = [] }) {
+                         alphaDeg, mu, K, n, v0, rho = RHO, cp = CP, sigmaB = 0,
+                         anneals = [] }) {
   const anneal = Array.isArray(anneals) ? anneals : [];
   let d, autoN_sonuc = null;   // yöntemine göre hesaplanan otomatik pas sayısı
 
@@ -1652,7 +1676,7 @@ function buildSchedule({ d0, dTarget, method = 'equalStrain', passes = null, dia
     }
 
     const epsTotal = 2 * Math.log(d0 / dTarget);
-    const params   = { alphaRad: alphaDeg * Math.PI / 180, mu, K, n };
+    const params   = { alphaRad: alphaDeg * Math.PI / 180, mu, K, n, sigmaB };
     const automatic = passes === null || passes === undefined || passes === 'auto';
     let autoN = null;
     try {
@@ -1707,7 +1731,8 @@ function buildSchedule({ d0, dTarget, method = 'equalStrain', passes = null, dia
     const no = i + 1;
     let pass;
     try {
-      pass = calcPass({ d0: d[i], d1: d[i + 1], epsIn, alphaDeg, mu, K, n, v0: hiz, rho, cp });
+      pass = calcPass({ d0: d[i], d1: d[i + 1], epsIn, alphaDeg, mu, K, n, v0: hiz,
+                        rho, cp, sigmaB });
     } catch (err) {
       if (err instanceof DrawingError && err.code === 'R_TEORIK_ASIM') {
         throw new DrawingError('R_TEORIK_ASIM',
@@ -1868,9 +1893,9 @@ const REFERANS_GIRDI = { d0: 8.00, d1: 7.16, epsIn: 0, alphaDeg: 8, mu: 0.05, K:
 
 // Hazır senaryolar — d0, hedef çap ve proses parametreleri.
 const SENARYOLAR = [
-  { id: 'otomotiv', tr: 'Otomotiv ince', en: 'Automotive fine', d0: 8.00, dTarget: 1.38, alphaDeg: 8, mu: 0.05, K: 450, n: 0.35, v0: 2.0, rho: RHO, cp: CP, beklenenN: 16, beklenenNes: 11 },
-  { id: 'genel',    tr: 'Genel amaçlı',  en: 'General purpose', d0: 8.00, dTarget: 2.50, alphaDeg: 8, mu: 0.06, K: 450, n: 0.35, v0: 3.0, rho: RHO, cp: CP, beklenenN: 11, beklenenNes:  8 },
-  { id: 'ultra',    tr: 'Çok ince',      en: 'Ultra fine',      d0: 8.00, dTarget: 0.50, alphaDeg: 6, mu: 0.04, K: 450, n: 0.35, v0: 1.0, rho: RHO, cp: CP, beklenenN: 25, beklenenNes: 17 }
+  { id: 'otomotiv', tr: 'Otomotiv ince', en: 'Automotive fine', d0: 8.00, dTarget: 1.38, alphaDeg: 8, mu: 0.05, K: 450, n: 0.35, v0: 2.0, rho: RHO, cp: CP, sigmaB: 0, beklenenN: 16, beklenenNes: 11 },
+  { id: 'genel',    tr: 'Genel amaçlı',  en: 'General purpose', d0: 8.00, dTarget: 2.50, alphaDeg: 8, mu: 0.06, K: 450, n: 0.35, v0: 3.0, rho: RHO, cp: CP, sigmaB: 0, beklenenN: 11, beklenenNes:  8 },
+  { id: 'ultra',    tr: 'Çok ince',      en: 'Ultra fine',      d0: 8.00, dTarget: 0.50, alphaDeg: 6, mu: 0.04, K: 450, n: 0.35, v0: 1.0, rho: RHO, cp: CP, sigmaB: 0, beklenenN: 25, beklenenNes: 17 }
 ];
 
 function runValidation() {
@@ -2002,7 +2027,7 @@ function runValidation() {
   // Geçerli taban da sınanır; aksi hâlde "her şeyi reddet" diyen bir denetim de
   // testi geçerdi.
   const t9Taban = { d0: 8.00, dTarget: 1.38, alphaDeg: 8, mu: 0.05, K: 450, n: 0.35,
-                    v0: 2.0, rho: RHO, cp: CP };
+                    v0: 2.0, rho: RHO, cp: CP, sigmaB: 0 };
   const t9Vakalar = [
     { ad: 'geçerli taban', girdi: {},              bekle: null },
     { ad: 'negatif μ',     girdi: { mu: -0.05 },   bekle: 'mu' },
@@ -2128,7 +2153,7 @@ const METIN = {
     csvBant: 'belirsizlik bandı açık: alt – üst',
     yazdir: 'Yazdır',
     muafiyet: 'Bu araç bağımsız bir mühendislik çalışmasıdır ve herhangi bir şirketle resmî ilişkisi yoktur. Ön tasarım amaçlıdır; üretim reçetesi olarak kullanılamaz.',
-    altNot: 'Bu model bir ön tasarım aracıdır, üretim reçetesi değildir: kalıp esnemesi, yağlama rejimi, geri gerilim, şekil değiştirme hızı ve kalıp aşınması hesaba katılmaz.',
+    altNot: 'Bu model bir ön tasarım aracıdır, üretim reçetesi değildir: kalıp esnemesi, yağlama rejimi, şekil değiştirme hızı ve kalıp aşınması hesaba katılmaz.',
     kabullereGit: 'Kabuller ve sınırlar',
     sekmeDogrulama: 'Doğrulama', sekmeFormuller: 'Formüller', sekmeKabuller: 'Kabuller',
     dogrulama: { gecti: 'GEÇTİ', kaldi: 'KALDI', ozet: '{gecen}/{toplam} test geçiyor. Testler sayfa her açıldığında canlı çalışır.' },
@@ -2160,6 +2185,9 @@ const METIN = {
       { ad: 'Ortalama akma gerilmesi', formul: 'σ̄ = K·(ε_out^(n+1) − ε_in^(n+1)) / ((n+1)·ε_pas)',
         aciklama: 'Hollomon bağıntısının pas boyunca integrali; tabana tabi değildir.',
         aralik: 'ε_pas > 0', kaynak: 'Dieter, şekil verme bölümü' },
+      { ad: 'Geri gerilim aktarımı', formul: 'σ_d += σ_b · e^(−μ·cotα·ε_pas)',
+        aciklama: 'Geri gerilimin kalıbın öbür tarafına geçen payı. Sachs çözümünün (A₁/A₀)^B çarpanı; A₁/A₀ = e^(−ε) olduğu için üstel biçime iner. Sürtünme arttıkça daha azı geçer.',
+        aralik: 'σ_b = 0 – 300 MPa; taban Siebel, terim Sachs — melez', kaynak: 'Sachs / Wistreich, The Fundamentals of Wire Drawing' },
       { ad: 'Çekme gerilmesi (Siebel)', formul: 'σ_d = σ̄ · [ (1 + μ/α) · ε_pas + (2/3)·α ]',
         aciklama: 'Üç iş toplanır: şekil verme, sürtünme ve fazlalık (redundant) iş. α radyan cinsindendir.',
         aralik: 'Küçük yarı açı (α ≲ 15°), sabit sürtünme', kaynak: 'Siebel yaklaşımı; Dieter · Kalpakjian & Schmid' },
@@ -2178,7 +2206,7 @@ const METIN = {
       maddeler: [
         'Kalıp esnemesi ve elastik geri yaylanma',
         'Yağ filmi kalınlığı ve hidrodinamik yağlama rejimi (sürtünme sabit alınır)',
-        'Geri gerilim (back tension)',
+        'Geri gerilimin kalıp basıncını ve aşınmayı azaltması (gerilme artışı hesaba katılır, faydası katılmaz)',
         'Şekil değiştirme hızının akma gerilmesine etkisi',
         'Sıcaklığa bağlı akma gerilmesi değişimi (sıcaklık artışı hesaplanır ama akmaya geri beslenmez)',
         'Kalıp aşınmasının pas boyunca geometriyi değiştirmesi',
@@ -2215,7 +2243,7 @@ const METIN = {
     alan: {
       d0: 'Başlangıç çapı', dTarget: 'Hedef çap', alphaDeg: 'Kalıp yarı açısı',
       mu: 'Sürtünme katsayısı', K: 'Pekleşme katsayısı', n: 'Pekleşme üsteli',
-      v0: 'Hat giriş hızı', rho: 'Yoğunluk', cp: 'Özgül ısı',
+      v0: 'Hat giriş hızı', rho: 'Yoğunluk', cp: 'Özgül ısı', sigmaB: 'Geri gerilim',
       method: 'Pas dağıtım yöntemi', passes: 'Pas sayısı'
     },
     /* Her girdinin altındaki tek satır: alan ne demek, tipik aralığı ne. Sayfa
@@ -2230,6 +2258,7 @@ const METIN = {
       v0: 'Filmaşinin hatta giriş hızı. Gerilmeyi değiştirmez; gücü ve çıkış hızını ölçekler.',
       rho: 'Malzeme yoğunluğu. Bakır 8960, çelik 7850, alüminyum 2700 kg/m³. Kütle debisini ve kWh/ton değerini belirler.',
       cp: 'Özgül ısı. Bakır 385, çelik 470, alüminyum 900 J/(kg·K). Sıcaklık artışını belirler.',
+      sigmaB: 'Telin kalıba gerili girmesi. Çok kasnaklı hatlarda vardır; bilmiyorsanız 0 bırakın. Çekme gerilmesini artırır.',
       method: 'Azaltmanın paslara nasıl dağıtılacağı. Emin değilseniz eşit emniyet seçin.',
       passes: 'Boş bırakın: araç gereken en az pas sayısını bulur. Kalıp sayınız sabitse yazın.'
     },
@@ -2317,7 +2346,7 @@ const METIN = {
       gecersiz: 'Geçerli bir kuvvet girin.',
       uygula: 'Bu μ değerini girdilere al',
       uygulandi: 'Girdilere alındı — sonucu görmek için HESAPLA.',
-      uyari: 'Kasnak momentinden hesaplanan kuvvet aktarma ve yatak kayıplarını da içerir; bu yolla çözülen μ sistematik olarak yüksek çıkar. Güvenilir sonuç için kalıp önü/arkası gerilme ölçümü gerekir. Çözülen değer, modelin bütün kabullerini (sabit μ, geri gerilim yok, izotermal akma) üstlenen tek bir sayıdır.'
+      uyari: 'Kasnak momentinden hesaplanan kuvvet aktarma ve yatak kayıplarını da içerir; bu yolla çözülen μ sistematik olarak yüksek çıkar. Güvenilir sonuç için kalıp önü/arkası gerilme ölçümü gerekir. Çözülen değer, modelin bütün kabullerini (sabit μ, izotermal akma, girilen geri gerilim) üstlenen tek bir sayıdır.'
     },
     opt: {
       baslik: 'Optimizasyon',
@@ -2524,6 +2553,9 @@ const METIN = {
       { ad: 'Mean flow stress', formul: 'σ̄ = K·(ε_out^(n+1) − ε_in^(n+1)) / ((n+1)·ε_pass)',
         aciklama: 'The integral of the Hollomon relation across the pass; the floor does not apply to it.',
         aralik: 'ε_pass > 0', kaynak: 'Dieter, deformation processing' },
+      { ad: 'Back tension transmitted', formul: 'σ_d += σ_b · e^(−μ·cotα·ε_pass)',
+        aciklama: 'The share of back tension that reaches the far side of the die. It is the (A₁/A₀)^B factor of the Sachs solution; A₁/A₀ = e^(−ε) reduces it to the exponential form. More friction, less transmitted.',
+        aralik: 'σ_b = 0 – 300 MPa; Siebel base with a Sachs term — hybrid', kaynak: 'Sachs / Wistreich, The Fundamentals of Wire Drawing' },
       { ad: 'Drawing stress (Siebel)', formul: 'σ_d = σ̄ · [ (1 + μ/α) · ε_pass + (2/3)·α ]',
         aciklama: 'Three terms added: deformation, friction and redundant work. α is in radians.',
         aralik: 'Small semi-angle (α ≲ 15°), constant friction', kaynak: 'Siebel approximation; Dieter · Kalpakjian & Schmid' },
@@ -2542,7 +2574,7 @@ const METIN = {
       maddeler: [
         'Die deflection and elastic springback',
         'Lubricant film thickness and the hydrodynamic regime (friction is constant)',
-        'Back tension',
+        'The benefit of back tension — lower die pressure and wear (the stress increase is modelled, the benefit is not)',
         'The effect of strain rate on flow stress',
         'Temperature dependence of flow stress (the rise is computed but not fed back)',
         'Die wear changing the geometry along the schedule',
@@ -2579,7 +2611,7 @@ const METIN = {
     alan: {
       d0: 'Starting diameter', dTarget: 'Target diameter', alphaDeg: 'Die semi-angle',
       mu: 'Friction coefficient', K: 'Strength coefficient', n: 'Strain-hardening exponent',
-      v0: 'Line entry speed', rho: 'Density', cp: 'Specific heat',
+      v0: 'Line entry speed', rho: 'Density', cp: 'Specific heat', sigmaB: 'Back tension',
       method: 'Pass distribution method', passes: 'Number of passes'
     },
     alanYardim: {
@@ -2592,6 +2624,7 @@ const METIN = {
       v0: 'Speed of the rod entering the line. Does not change stress; it scales power and exit speed.',
       rho: 'Material density. Copper 8960, steel 7850, aluminium 2700 kg/m³. Sets the mass flow and the kWh per tonne.',
       cp: 'Specific heat. Copper 385, steel 470, aluminium 900 J/(kg·K). Sets the temperature rise.',
+      sigmaB: 'Tension in the wire as it enters the die. Present on multi-block lines; leave it at 0 if you do not know it. It raises the drawing stress.',
       method: 'How the reduction is spread over the passes. If unsure, pick equal safety.',
       passes: 'Leave it empty and the tool finds the smallest workable pass count. Type a number if your die count is fixed.'
     },
@@ -2678,7 +2711,7 @@ const METIN = {
       gecersiz: 'Enter a valid force.',
       uygula: 'Load this μ into the inputs',
       uygulandi: 'Loaded into the inputs — press CALCULATE to see the result.',
-      uyari: 'A force derived from capstan torque also carries drivetrain and bearing losses, so a μ solved this way comes out systematically high. A reliable answer needs stress measured across the die. The solved value is a single number that absorbs every assumption of the model: constant μ, no back tension, isothermal flow.'
+      uyari: 'A force derived from capstan torque also carries drivetrain and bearing losses, so a μ solved this way comes out systematically high. A reliable answer needs stress measured across the die. The solved value is a single number that absorbs every assumption of the model: constant μ, isothermal flow, and whatever back tension was entered.'
     },
     opt: {
       baslik: 'Optimisation',
@@ -2763,7 +2796,7 @@ const METIN = {
 const durum = {
   dil: 'tr',
   d0: 8.00, dTarget: 1.38, alphaDeg: 8, mu: 0.05, K: 450, n: 0.35, v0: 2.0,
-  rho: RHO, cp: CP,
+  rho: RHO, cp: CP, sigmaB: 0,
   method: 'equalStrain',
   passes: null,            // null = Otomatik
   anneals: [],             // 1-indeksli pas numaraları
@@ -2801,11 +2834,12 @@ const durum = {
 // Hesabı etkileyen alanlar. Bu listede olan her şey HESAPLA'yı bekler;
 // olmayan her şey (dil, tema, seçili pas, karşılaştırma) anında uygulanır.
 const HESAP_ALANLARI = ['d0', 'dTarget', 'alphaDeg', 'mu', 'K', 'n', 'v0', 'rho', 'cp',
-                        'method', 'passes'];
+                        'sigmaB', 'method', 'passes'];
 
 const taslak = {
   d0: durum.d0, dTarget: durum.dTarget, alphaDeg: durum.alphaDeg, mu: durum.mu,
   K: durum.K, n: durum.n, v0: durum.v0, rho: durum.rho, cp: durum.cp,
+  sigmaB: durum.sigmaB,
   method: durum.method,
   passes: durum.passes,
   anneals: durum.anneals.slice(),
@@ -2846,9 +2880,10 @@ const ayniDizi = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]
 function bekleyenDegisiklikler() {
   const M = S();
   const liste = [];
-  const bas = { d0: 2, dTarget: 2, alphaDeg: 1, mu: 3, K: 0, n: 2, v0: 1, rho: 0, cp: 0 };
+  const bas = { d0: 2, dTarget: 2, alphaDeg: 1, mu: 3, K: 0, n: 2, v0: 1,
+                rho: 0, cp: 0, sigmaB: 1 };
 
-  for (const k of ['d0', 'dTarget', 'alphaDeg', 'mu', 'K', 'n', 'v0', 'rho', 'cp']) {
+  for (const k of ['d0', 'dTarget', 'alphaDeg', 'mu', 'K', 'n', 'v0', 'rho', 'cp', 'sigmaB']) {
     if (taslak[k] === durum[k]) continue;
     liste.push(M.alan[k] + ': ' + fmt(durum[k], bas[k]) + ' → ' + fmt(taslak[k], bas[k]));
   }
@@ -2899,7 +2934,8 @@ const ALANLAR = [
   { k: 'n',        birim: '' },
   { k: 'v0',       birim: 'm/s' },
   { k: 'rho',      birim: 'kg/m³' },
-  { k: 'cp',       birim: 'J/(kg·K)' }
+  { k: 'cp',       birim: 'J/(kg·K)' },
+  { k: 'sigmaB',   birim: 'MPa' }
 ];
 
 // Tablo sütunları: anahtar, ondalık basamak ve birim. Aynı sütundaki bütün sayılar
@@ -2951,7 +2987,8 @@ function sayiOku(metin) {
    geri okunabiliyorsa biçimli yazılır (8 -> "8,00"); okunamıyorsa ham değer
    korunur (0,0523 -> "0,0523"). Böylece panel hizalı kalır ama paylaşılan
    bağlantıdaki hassasiyet sessizce yuvarlanmaz. */
-const GIRDI_BASAMAK = { d0: 2, dTarget: 2, alphaDeg: 1, mu: 3, K: 0, n: 2, v0: 1, rho: 0, cp: 0 };
+const GIRDI_BASAMAK = { d0: 2, dTarget: 2, alphaDeg: 1, mu: 3, K: 0, n: 2, v0: 1,
+                        rho: 0, cp: 0, sigmaB: 1 };
 function girdiMetni(v, anahtar) {
   const basamak = GIRDI_BASAMAK[anahtar];
   const ham = String(v);
@@ -3181,7 +3218,8 @@ function gerekliAci(pas, sinir) {
 function oneriCumleleri(prog) {
   const M = S();
   const cumleler = [];
-  const params = { alphaRad: durum.alphaDeg * Math.PI / 180, mu: durum.mu, K: durum.K, n: durum.n };
+  const params = { alphaRad: durum.alphaDeg * Math.PI / 180, mu: durum.mu, K: durum.K,
+                   n: durum.n, sigmaB: durum.sigmaB };
 
   const riskli = prog.passes.reduce((a, b) => (b.safety > a.safety ? b : a));
 
@@ -3272,6 +3310,7 @@ function girdiGoruntusu(prog) {
   return {
     d0: durum.d0, dTarget: durum.dTarget, alphaDeg: durum.alphaDeg, mu: durum.mu,
     K: durum.K, n: durum.n, v0: durum.v0, rho: durum.rho, cp: durum.cp,
+    sigmaB: durum.sigmaB,
     method: durum.manuelCaplar ? 'manual' : durum.method,
     passes: durum.passes,                  // null = otomatik
     passCount: prog.passCount,
@@ -3573,7 +3612,7 @@ function kurTabloBasligi() {
 function senaryoYukle(s) {
   taslak.d0 = s.d0; taslak.dTarget = s.dTarget; taslak.alphaDeg = s.alphaDeg;
   taslak.mu = s.mu; taslak.K = s.K; taslak.n = s.n; taslak.v0 = s.v0;
-  taslak.rho = s.rho; taslak.cp = s.cp;
+  taslak.rho = s.rho; taslak.cp = s.cp; taslak.sigmaB = s.sigmaB;
   taslak.passes = null;          // K-01: senaryo düğmesi pas sayısını otomatiğe döndürür
   taslak.anneals = [];
   taslak.manuelCaplar = null;
@@ -3979,7 +4018,8 @@ function kalibCoz() {
   // Çekme gerilmesi ÇIKIŞ kesitinde tanımlıdır: sigma_d = F / A1.
   const sigmaOlculen = F / pas.A1;
   const geometri = { d0: pas.d0, d1: pas.d1, epsIn: pas.epsIn, alphaDeg: pas.alphaDeg,
-                     K: pas.K, n: pas.n, v0: pas.v0, rho: pas.rho, cp: pas.cp };
+                     K: pas.K, n: pas.n, v0: pas.v0, rho: pas.rho, cp: pas.cp,
+                     sigmaB: pas.sigmaB };
   const cozum = muCoz(sigmaOlculen, geometri);
 
   if (cozum.durum !== 'tamam') {
@@ -4110,7 +4150,7 @@ function optCalistir() {
   const temel = {
     d0: taslak.d0, dTarget: taslak.dTarget, mu: taslak.mu,
     K: taslak.K, n: taslak.n, v0: taslak.v0, rho: taslak.rho, cp: taslak.cp,
-    anneals: taslak.anneals.slice()
+    sigmaB: taslak.sigmaB, anneals: taslak.anneals.slice()
   };
 
   requestAnimationFrame(() => setTimeout(() => {
@@ -4497,10 +4537,12 @@ function gorunumHesapla() {
   const prog = manuel
     ? buildSchedule({ method: 'manual', diameters: durum.manuelCaplar,
         alphaDeg: durum.alphaDeg, mu: durum.mu, K: durum.K, n: durum.n,
-        v0: durum.v0, rho: durum.rho, cp: durum.cp, anneals: durum.anneals })
+        v0: durum.v0, rho: durum.rho, cp: durum.cp, sigmaB: durum.sigmaB,
+        anneals: durum.anneals })
     : buildSchedule({ d0: durum.d0, dTarget: durum.dTarget, method: durum.method,
         passes: durum.passes, alphaDeg: durum.alphaDeg, mu: durum.mu, K: durum.K,
-        n: durum.n, v0: durum.v0, rho: durum.rho, cp: durum.cp, anneals: durum.anneals });
+        n: durum.n, v0: durum.v0, rho: durum.rho, cp: durum.cp, sigmaB: durum.sigmaB,
+        anneals: durum.anneals });
 
   // Seçili pas artık yoksa (pas sayısı düştüyse) ilk pasa dönülür.
   const secilenPas = prog.passes.find(x => x.no === durum.secilenPas) || prog.passes[0];
@@ -5428,7 +5470,7 @@ function programKopyasi(prog, K, n, mu) {
   return buildSchedule({
     method: 'manual', diameters: caplar, alphaDeg: prog.passes[0].alphaDeg,
     mu, K, n, v0: prog.v0Line, rho: prog.passes[0].rho, cp: prog.passes[0].cp,
-    anneals: prog.anneals
+    sigmaB: prog.passes[0].sigmaB, anneals: prog.anneals
   });
 }
 
@@ -5487,7 +5529,8 @@ function bandHesapla(prog) {
 /* Duyarlılık — emniyet oranı. Seçili pas için her girdi kendi aralığında oynatılır.
    K çubuğunun sıfır çıkması beklenir: bu, grafiğin kendi doğrulamasıdır. */
 function duyarlilikEmniyet(pas) {
-  const temel = { alphaRad: pas.alphaDeg * Math.PI / 180, mu: pas.mu, K: pas.K, n: pas.n };
+  const temel = { alphaRad: pas.alphaDeg * Math.PI / 180, mu: pas.mu, K: pas.K, n: pas.n,
+                  sigmaB: pas.sigmaB };
   const olc = (degistir, alt, ust) => {
     const a = degistir(alt), b = degistir(ust);
     return { alt: Math.min(a, b), ust: Math.max(a, b), etki: Math.abs(b - a) };
@@ -5521,7 +5564,7 @@ function duyarlilikEnerji(prog) {
       diameters: prog.method === 'manual' ? [prog.passes[0].d0, ...prog.passes.map(p => p.d1)] : null,
       alphaDeg: prog.passes[0].alphaDeg, mu: prog.passes[0].mu, K: prog.passes[0].K,
       n: prog.passes[0].n, v0: prog.v0Line, rho: prog.passes[0].rho, cp: prog.passes[0].cp,
-      anneals: prog.anneals
+      sigmaB: prog.passes[0].sigmaB, anneals: prog.anneals
     };
     return enerjiOf(buildSchedule(Object.assign(temel, degisim)));
   };
@@ -5897,6 +5940,7 @@ function adresYaz() {
   // Malzeme varsayılandan (bakır) farklıysa bağlantıda taşınır.
   if (durum.rho !== RHO) p.set('rho', s(durum.rho));
   if (durum.cp !== CP) p.set('cp', s(durum.cp));
+  if (durum.sigmaB !== 0) p.set('sb', s(durum.sigmaB));
   p.set('m', durum.method);
   if (durum.passes !== null) p.set('N', String(durum.passes));
   // Liste ayırıcısı '_': ondalık noktayla çakışmaz.
@@ -5932,7 +5976,7 @@ function adrestenOku() {
   };
   sayi('d0', 'd0'); sayi('d1', 'dTarget'); sayi('a', 'alphaDeg'); sayi('mu', 'mu');
   sayi('K', 'K'); sayi('n', 'n'); sayi('v0', 'v0');
-  sayi('rho', 'rho'); sayi('cp', 'cp');
+  sayi('rho', 'rho'); sayi('cp', 'cp'); sayi('sb', 'sigmaB');
   const yontem = p.get('m');
   if (['equalStrain', 'tapered', 'equalSafety'].includes(yontem)) durum.method = yontem;
   const N = sayiOku(p.get('N'));
@@ -5999,7 +6043,8 @@ function csvUret(prog) {
                  M.alan.K, girdiMetni(first.K) + ' MPa', M.alan.n, girdiMetni(first.n),
                  M.alan.v0, girdiMetni(prog.v0Line) + ' m/s'].map(alan).join(ayirici));
   satirlar.push([M.alan.rho, girdiMetni(first.rho) + ' kg/m3',
-                 M.alan.cp, girdiMetni(first.cp) + ' J/(kg.K)'].map(alan).join(ayirici));
+                 M.alan.cp, girdiMetni(first.cp) + ' J/(kg.K)',
+                 M.alan.sigmaB, girdiMetni(first.sigmaB) + ' MPa'].map(alan).join(ayirici));
   satirlar.push(alan(sonBant ? M.csvBant : M.csvMerkez));
   if (sonBant) {
     for (const key of ['K', 'n', 'mu']) satirlar.push([key, ...durum.bant[key].map(girdiMetni)].map(alan).join(ayirici));

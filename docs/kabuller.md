@@ -19,7 +19,10 @@ modelin bilerek dışarıda bıraktığı veya sabitlediği şeylerdir. Araç i�
 
 - Kalıp esnemesi ve elastik geri yaylanma
 - Yağ filmi kalınlığı ve hidrodinamik yağlama rejimi (sürtünme katsayısı sabit alınır)
-- Geri gerilim (back tension)
+- Geri gerilimin **faydası**: kalıp basıncını ve aşınmayı azaltması. Geri gerilim
+  artık modelde (girdi `σ_b`), ama yalnızca **bedeli** görünür — çekme gerilmesini
+  artırması. Kalıp aşınması hiç modellenmediği için kazanç tarafı yok; araç geri
+  gerilimi her zaman olumsuz gösterir. Bu asimetri bilinçlidir ve arayüzde yazılıdır.
 - Şekil değiştirme hızının akma gerilmesine etkisi
 - Sıcaklığa bağlı akma gerilmesi değişimi (sıcaklık artışı hesaplanır ama akmaya
   geri beslenmez)
