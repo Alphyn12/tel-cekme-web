@@ -43,13 +43,21 @@ sabit tutup yöntemleri karşılaştırmaktır. Kullanıcı 13 girip yöntem de�
 13 kaybolursa alanın işlevi kalmaz.
 
 ## K-02 · Yayın: private çalışma deposu + temiz public depo
-**Tarih:** 2026-09-03, 2026-09-04'te güncellendi
+**Tarih:** 2026-09-03, 2026-09-04 ve 2026-09-15'te güncellendi
 
 Geliştirme boyunca depo private tutuldu. Yayında ikiye ayrıldı: bütün geçmişi ve
 çalışma notlarını taşıyan **private arşiv**, ve teslim edilen hâli taşıyan
 **public depo** (`index.html`, `og.png`, `favicon.svg`, README, LICENSE ve dört
 teknik doküman). Site public depodan Vercel ile yayınlanır; `og:url` ve
 `og:image` mutlak adrestir, çünkü önizleme robotları göreli yolu okumaz.
+
+İki depolu düzenin bedeli, eşitlemenin elle yapılmasıdır: 4–15 Eylül arasında
+yedi commit çalışma deposunda kaldı, site eski sürümü sunmaya devam etti. Hata
+sessizdi, çünkü push her iki depoya da sorunsuz gidiyordu ve fark yalnızca
+canlı sayfada görünüyordu. Eşitleme artık `tools/yayinla.sh` ile yapılır: yayın
+dosyalarının listesi betikte sabittir, işlenmemiş değişiklik veya itilmemiş
+commit varsa durur, private yolların listeye sızmasını denetler ve itişten sonra
+canlı sayfanın gerçekten yeni sürümü sunduğunu doğrular.
 
 ## K-03 · Dağıtım yöntemleri yeniden tanımlandı
 **Tarih:** 2026-09-03
